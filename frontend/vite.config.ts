@@ -53,6 +53,8 @@ export default defineConfig(({ mode }) => {
   ) || Boolean(googleClientId);
 
   const allowedHosts = [
+    'edurite.org',
+    'www.edurite.org',
     'edurite.net',
     'www.edurite.net',
     'localhost',

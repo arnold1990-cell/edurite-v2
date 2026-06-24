@@ -186,7 +186,7 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://192.168.1.120:5173,http://192.168.1.120:5174,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}") String allowedOriginsCsv
+            @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://192.168.1.120:5173,http://192.168.1.120:5174,http://edurite.org,http://www.edurite.org,https://edurite.org,https://www.edurite.org,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}") String allowedOriginsCsv
     ) {
         Set<String> requiredOrigins = new LinkedHashSet<>(List.of(
                 "http://localhost:5173",
@@ -195,6 +195,8 @@ public class SecurityConfig {
                 "http://127.0.0.1:5174",
                 "http://192.168.1.120:5173",
                 "http://192.168.1.120:5174",
+                "https://edurite.org",
+                "https://www.edurite.org",
                 "https://edurite.net",
                 "https://www.edurite.net"
         ));

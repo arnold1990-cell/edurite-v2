@@ -91,7 +91,7 @@ export const PrivacyPolicyPage = () => (
 
     <Section title="13. Contact Us">
       <p>Email: info@edificegroup.africa</p>
-      <p>Website: https://www.edurite.net</p>
+      <p>Website: https://www.edurite.org</p>
     </Section>
   </div>
 );

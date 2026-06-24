@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component;
 public class WebFallbackBursarySource implements BursarySource {
 
     private static final String SEARCH_ENDPOINT = "https://html.duckduckgo.com/html/?q=";
-    private static final String USER_AGENT = "Mozilla/5.0 (compatible; EduRiteBursarySearch/1.0; +https://edurite.ai/bot)";
+    private static final String USER_AGENT = "Mozilla/5.0 (compatible; EduRiteBursarySearch/1.0; +https://edurite.org/bot)";
 
     private final BursarySourceProperties properties;
 

@@ -1,6 +1,6 @@
 import { ChevronDown, Globe, Headphones } from 'lucide-react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import eduRiteLogo from '@/assets/edurite-icon.jpeg';
+import eduRiteLogo from '@/assets/Edurite-dashboard.jpeg';
 
 const footerLinks = [
   { to: '/', label: 'Home' },
