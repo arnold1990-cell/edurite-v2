@@ -14,6 +14,7 @@ import com.edurite.curriculum.entity.TeacherCurriculumProgress;
 import com.edurite.curriculum.repository.AtpCalendarItemRepository;
 import com.edurite.curriculum.repository.AtpTeacherReminderRepository;
 import com.edurite.curriculum.repository.CurriculumAssetRepository;
+import com.edurite.curriculum.repository.CurriculumAssetSummaryView;
 import com.edurite.curriculum.repository.CurriculumReminderDispatchRepository;
 import com.edurite.curriculum.repository.CurriculumRiskAlertRepository;
 import com.edurite.curriculum.repository.CurriculumWeekPlanRepository;
@@ -175,32 +176,68 @@ public class CurriculumService {
 
     @Transactional(readOnly = true)
     public List<CurriculumDtos.CurriculumAssetDto> districtAssets(UUID districtId, String repositoryType) {
-        return assetsForDistrict(districtId, repositoryType).stream().map(this::toAssetDto).toList();
+        List<CurriculumAssetSummaryView> assets = (repositoryType == null || repositoryType.isBlank())
+                ? curriculumAssetRepository.findActiveDistrictAssetSummaries(districtId)
+                : curriculumAssetRepository.findActiveDistrictAssetSummariesByRepositoryType(districtId, normalizeRepositoryType(repositoryType));
+        Map<UUID, String> uploaderNames = uploadedByNames(assets.stream()
+                .map(CurriculumAssetSummaryView::getUploadedByUserId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
+        return assets.stream()
+                .map(asset -> curriculumResourceService.toAssetDto(asset, uploaderNames.get(asset.getUploadedByUserId())))
+                .toList();
     }
 
     @Transactional
     public CurriculumDtos.CurriculumAssetDto saveDistrictAsset(UUID districtId, UUID actorUserId, CurriculumDtos.CurriculumAssetUpsertRequest request) {
-        District district = districtRepository.findById(districtId).orElseThrow(() -> new ResourceConflictException("District not found"));
-        CurriculumAsset asset = new CurriculumAsset();
-        populateAsset(asset, request, actorUserId, OWNER_DISTRICT, CONTENT_OFFICIAL);
-        asset.setDistrictId(districtId);
-        if (asset.getProvince() == null || asset.getProvince().isBlank()) {
-            asset.setProvince(district.getProvince());
+        try {
+            District district = districtRepository.findById(districtId).orElseThrow(() -> new ResourceConflictException("District not found"));
+            CurriculumAsset asset = new CurriculumAsset();
+            populateAsset(asset, request, actorUserId, OWNER_DISTRICT, CONTENT_OFFICIAL);
+            asset.setDistrictId(districtId);
+            if (asset.getProvince() == null || asset.getProvince().isBlank()) {
+                asset.setProvince(district.getProvince());
+            }
+            CurriculumAsset saved = curriculumAssetRepository.save(asset);
+            logStoredFiles(saved);
+            triggerAtpExtraction(saved, actorUserId);
+            return toAssetDto(saved);
+        } catch (ResourceConflictException ex) {
+            log.warn("District curriculum upload rejected districtId={} actorUserId={} repositoryType={} title={} reason={}",
+                    districtId, actorUserId, request.repositoryType(), request.title(), ex.getMessage());
+            throw ex;
+        } catch (RuntimeException ex) {
+            log.error("District curriculum upload failed districtId={} actorUserId={} repositoryType={} title={} pdf={} docx={} excel={}",
+                    districtId,
+                    actorUserId,
+                    request.repositoryType(),
+                    request.title(),
+                    request.pdf() == null ? null : request.pdf().fileName(),
+                    request.docx() == null ? null : request.docx().fileName(),
+                    request.excel() == null ? null : request.excel().fileName(),
+                    ex);
+            throw new ResourceConflictException("Unable to save the curriculum asset right now. Confirm the uploaded file is valid and try again.");
         }
-        CurriculumAsset saved = curriculumAssetRepository.save(asset);
-        logStoredFiles(saved);
-        triggerAtpExtraction(saved, actorUserId);
-        return toAssetDto(saved);
     }
 
     @Transactional
     public CurriculumDtos.CurriculumAssetDto updateDistrictAsset(UUID districtId, UUID actorUserId, UUID assetId, CurriculumDtos.CurriculumAssetUpsertRequest request) {
-        CurriculumAsset asset = requireDistrictAsset(districtId, assetId);
-        populateAsset(asset, request, actorUserId, asset.getOwnerScope(), asset.getContentSource());
-        CurriculumAsset saved = curriculumAssetRepository.save(asset);
-        logStoredFiles(saved);
-        triggerAtpExtraction(saved, actorUserId);
-        return toAssetDto(saved);
+        try {
+            CurriculumAsset asset = requireDistrictAsset(districtId, assetId);
+            populateAsset(asset, request, actorUserId, asset.getOwnerScope(), asset.getContentSource());
+            CurriculumAsset saved = curriculumAssetRepository.save(asset);
+            logStoredFiles(saved);
+            triggerAtpExtraction(saved, actorUserId);
+            return toAssetDto(saved);
+        } catch (ResourceConflictException ex) {
+            log.warn("District curriculum update rejected districtId={} actorUserId={} assetId={} repositoryType={} title={} reason={}",
+                    districtId, actorUserId, assetId, request.repositoryType(), request.title(), ex.getMessage());
+            throw ex;
+        } catch (RuntimeException ex) {
+            log.error("District curriculum update failed districtId={} actorUserId={} assetId={} repositoryType={} title={}",
+                    districtId, actorUserId, assetId, request.repositoryType(), request.title(), ex);
+            throw new ResourceConflictException("Unable to update the curriculum asset right now. Confirm the uploaded file is valid and try again.");
+        }
     }
 
     @Transactional
@@ -804,6 +841,14 @@ public class CurriculumService {
                     return fullName.isBlank() ? user.getEmail() : fullName;
                 })
                 .orElse("System");
+    }
+
+    private Map<UUID, String> uploadedByNames(Set<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, this::fullName));
     }
 
     private void regenerateWeekPlans(CurriculumAsset asset) {

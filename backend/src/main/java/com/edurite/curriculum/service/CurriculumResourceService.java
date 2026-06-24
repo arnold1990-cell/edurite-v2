@@ -4,6 +4,7 @@ import com.edurite.common.exception.ResourceConflictException;
 import com.edurite.curriculum.dto.CurriculumDtos;
 import com.edurite.curriculum.entity.CurriculumAsset;
 import com.edurite.curriculum.repository.CurriculumAssetRepository;
+import com.edurite.curriculum.repository.CurriculumAssetSummaryView;
 import com.edurite.school.portal.entity.School;
 import com.edurite.school.portal.entity.SchoolSubject;
 import com.edurite.school.portal.entity.TeacherAssignment;
@@ -158,6 +159,39 @@ public class CurriculumResourceService {
                 hasContent(asset.getPdfBytes(), asset.getPdfBase64()),
                 hasContent(asset.getDocxBytes(), asset.getDocxBase64()),
                 hasContent(asset.getExcelBytes(), asset.getExcelBase64())
+        );
+    }
+
+    public CurriculumDtos.CurriculumAssetDto toAssetDto(CurriculumAssetSummaryView asset, String uploadedBy) {
+        return new CurriculumDtos.CurriculumAssetDto(
+                asset.getId(),
+                asset.getRepositoryType(),
+                asset.getContentSource(),
+                normalizeSource(asset),
+                firstNonBlank(asset.getVisibility(), defaultVisibility(asset)),
+                firstNonBlank(asset.getStatus(), STATUS_ACTIVE),
+                firstNonBlank(asset.getExtractionStatus(), "PENDING"),
+                asset.getExtractionError(),
+                badgeForAsset(asset),
+                asset.getTitle(),
+                asset.getSubject(),
+                asset.getGrade(),
+                asset.getCurriculumPhase(),
+                asset.getAcademicYear(),
+                asset.getProvince(),
+                asset.getVersionNumber(),
+                asset.getDescription(),
+                asset.getTerm(),
+                asset.getWeekNumber(),
+                firstNonBlank(uploadedBy, "System"),
+                asset.getUploadDate(),
+                asset.getExtractedAt(),
+                asset.isArchived(),
+                asset.isActive(),
+                asset.isDeleted(),
+                hasFileReference(asset.getPdfFileName()),
+                hasFileReference(asset.getDocxFileName()),
+                hasFileReference(asset.getExcelFileName())
         );
     }
 
@@ -355,7 +389,22 @@ public class CurriculumResourceService {
                 || "OFFICIAL".equalsIgnoreCase(firstNonBlank(asset.getContentSource(), ""));
     }
 
+    private boolean isDistrictAsset(CurriculumAssetSummaryView asset) {
+        return OWNER_DISTRICT.equalsIgnoreCase(firstNonBlank(asset.getOwnerScope(), ""))
+                || SOURCE_DISTRICT.equalsIgnoreCase(firstNonBlank(asset.getSource(), ""))
+                || SOURCE_SUBJECT_ADVISOR.equalsIgnoreCase(firstNonBlank(asset.getSource(), ""))
+                || "OFFICIAL".equalsIgnoreCase(firstNonBlank(asset.getContentSource(), ""));
+    }
+
     private String badgeForAsset(CurriculumAsset asset) {
+        String source = normalizeSource(asset);
+        if (SOURCE_SUBJECT_ADVISOR.equalsIgnoreCase(source)) {
+            return "Subject Advisor Uploaded";
+        }
+        return isDistrictAsset(asset) ? "District Approved" : "School Uploaded";
+    }
+
+    private String badgeForAsset(CurriculumAssetSummaryView asset) {
         String source = normalizeSource(asset);
         if (SOURCE_SUBJECT_ADVISOR.equalsIgnoreCase(source)) {
             return "Subject Advisor Uploaded";
@@ -377,8 +426,23 @@ public class CurriculumResourceService {
         return isDistrictAsset(asset) ? SOURCE_DISTRICT : SOURCE_SCHOOL;
     }
 
+    private String normalizeSource(CurriculumAssetSummaryView asset) {
+        if (asset.getSource() != null && !asset.getSource().isBlank()) {
+            return asset.getSource().trim().toUpperCase(Locale.ROOT);
+        }
+        return isDistrictAsset(asset) ? SOURCE_DISTRICT : SOURCE_SCHOOL;
+    }
+
     private String defaultVisibility(CurriculumAsset asset) {
         return isDistrictAsset(asset) ? VISIBILITY_DISTRICT_WIDE : VISIBILITY_SCHOOL_ONLY;
+    }
+
+    private String defaultVisibility(CurriculumAssetSummaryView asset) {
+        return isDistrictAsset(asset) ? VISIBILITY_DISTRICT_WIDE : VISIBILITY_SCHOOL_ONLY;
+    }
+
+    private boolean hasFileReference(String fileName) {
+        return fileName != null && !fileName.isBlank();
     }
 
     private boolean hasContent(byte[] binaryContent, String legacyBase64Content) {
