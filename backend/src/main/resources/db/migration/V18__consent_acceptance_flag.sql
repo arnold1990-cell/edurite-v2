@@ -1,0 +1,2 @@
+ALTER TABLE consent_records
+    ADD COLUMN IF NOT EXISTS consent_accepted BOOLEAN NOT NULL DEFAULT TRUE;

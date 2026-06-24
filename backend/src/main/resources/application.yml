@@ -1,0 +1,771 @@
+gemini:
+  model: ${GEMINI_MODEL:gemini-2.5-flash}
+  base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+  api-key: ${GEMINI_API_KEY:}
+  connect-timeout-seconds: ${GEMINI_CONNECT_TIMEOUT_SECONDS:20}
+  read-timeout-seconds: ${GEMINI_READ_TIMEOUT_SECONDS:45}
+  write-timeout-seconds: ${GEMINI_WRITE_TIMEOUT_SECONDS:45}
+  call-timeout-seconds: ${GEMINI_CALL_TIMEOUT_SECONDS:60}
+  max-retries: ${GEMINI_MAX_RETRIES:2}
+
+ai:
+  primary-provider: ${AI_PRIMARY_PROVIDER:gemini}
+  fallback-provider: ${AI_FALLBACK_PROVIDER:openai}
+
+openai:
+  api-key: ${OPENAI_API_KEY:}
+  model: ${OPENAI_MODEL:gpt-4o-mini}
+  base-url: ${OPENAI_BASE_URL:https://api.openai.com}
+
+openrouter:
+  api-key: ${OPENROUTER_API_KEY:}
+  model: ${OPENROUTER_MODEL:openai/gpt-4o-mini}
+  base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api}
+
+adzuna:
+  app-id: ${ADZUNA_APP_ID:}
+  app-key: ${ADZUNA_APP_KEY:}
+  country: ${ADZUNA_COUNTRY:za}
+
+whatsapp:
+  bot:
+    enabled: ${WHATSAPP_BOT_ENABLED:false}
+  verify-token: ${WHATSAPP_VERIFY_TOKEN:}
+
+spring:
+  config:
+    import: "optional:file:.env[.properties],optional:file:backend/.env[.properties],optional:file:../.env[.properties]"
+
+  application:
+    name: edurite-backend
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/edurite}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    open-in-view: false
+    show-sql: ${SPRING_JPA_SHOW_SQL:false}
+
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    locations: ${SPRING_FLYWAY_LOCATIONS:classpath:db/migration}
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      repositories:
+        enabled: false
+
+  cache:
+    type: simple
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: ${GOOGLE_REDIRECT_URI:{baseUrl}/login/oauth2/code/{registrationId}}
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+
+server:
+  address: ${SERVER_ADDRESS:0.0.0.0}
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:framework}
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:change-me}
+    access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:3600}
+    refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+app:
+  base-url: ${APP_BASE_URL:http://localhost:5173}
+  backend-base-url: ${BACKEND_BASE_URL:http://localhost:8080}
+
+  frontend:
+    base-url: ${APP_FRONTEND_BASE_URL:${APP_BASE_URL:http://localhost:5173}}
+
+  frontend-url: ${APP_FRONTEND_URL:${APP_FRONTEND_BASE_URL:${APP_BASE_URL:http://localhost:5173}}}
+
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://192.168.1.120:5173,http://192.168.1.120:5174,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}
+
+  popi:
+    consent-version: ${POPI_CONSENT_VERSION:v1.0}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+edurite:
+  flyway:
+    repair-on-startup: ${EDURITE_FLYWAY_REPAIR_ON_STARTUP:false}
+  seed:
+    enabled: ${EDURITE_SEED_ENABLED:false}
+  admin:
+    seed:
+      enabled: ${EDURITE_ADMIN_SEED_ENABLED:false}
+    email: ${EDURITE_ADMIN_EMAIL:}
+    password: ${EDURITE_ADMIN_PASSWORD:}
+    first-name: ${EDURITE_ADMIN_FIRST_NAME:}
+    last-name: ${EDURITE_ADMIN_LAST_NAME:}
+
+  auth:
+    seed:
+      admin:
+        email: ${EDURITE_AUTH_SEED_ADMIN_EMAIL:admin@edurite.com}
+        password: ${EDURITE_AUTH_SEED_ADMIN_PASSWORD:Admin@123}
+      student:
+        email: ${EDURITE_AUTH_SEED_STUDENT_EMAIL:arnoldmadaz@gmail.com}
+        password: ${EDURITE_AUTH_SEED_STUDENT_PASSWORD:Student@123}
+      company:
+        email: ${EDURITE_AUTH_SEED_COMPANY_EMAIL:company@edurite.com}
+        password: ${EDURITE_AUTH_SEED_COMPANY_PASSWORD:Company@123}
+
+    otp:
+      enabled: ${OTP_ENABLED:true}
+
+      twilio:
+        account-sid: ${TWILIO_ACCOUNT_SID:}
+        auth-token: ${TWILIO_AUTH_TOKEN:}
+        verify-service-sid: ${TWILIO_VERIFY_SERVICE_SID:}
+        base-url: ${TWILIO_VERIFY_BASE_URL:https://verify.twilio.com/v2}
+
+    google:
+      enabled: ${GOOGLE_OAUTH_ENABLED:false}
+      client-id: ${GOOGLE_CLIENT_ID:}
+      token-info-url: ${GOOGLE_TOKEN_INFO_URL:https://oauth2.googleapis.com/tokeninfo}
+
+  payment:
+    provider: ${PAYMENT_PROVIDER:payfast}
+    callback-url: ${PAYMENT_CALLBACK_URL:http://localhost:8080/api/payments/callback}
+    api-key: ${PAYMENT_GATEWAY_API_KEY:}
+    secret: ${PAYMENT_GATEWAY_SECRET:}
+    base-url: ${PAYMENT_GATEWAY_BASE_URL:}
+
+    payfast:
+      merchant-id: ${PAYFAST_MERCHANT_ID:}
+      merchant-key: ${PAYFAST_MERCHANT_KEY:}
+      passphrase: ${PAYFAST_PASSPHRASE:}
+      sandbox: ${PAYFAST_SANDBOX:true}
+      debug-signature: ${PAYFAST_DEBUG_SIGNATURE:false}
+      process-url: ${PAYFAST_PROCESS_URL:https://sandbox.payfast.co.za/eng/process}
+      validate-url: ${PAYFAST_VALIDATE_URL:https://sandbox.payfast.co.za/eng/query/validate}
+      return-url: ${PAYFAST_RETURN_URL:}
+      cancel-url: ${PAYFAST_CANCEL_URL:}
+      notify-url: ${PAYFAST_NOTIFY_URL:}
+
+  bursary:
+    fallback:
+      trusted-domains: ${EDURITE_BURSARY_TRUSTED_DOMAINS:bursaries-southafrica.co.za,zabursaries.co.za,careerwise.co.za,gov.za}
+      max-results: ${EDURITE_BURSARY_FALLBACK_MAX_RESULTS:5}
+
+  university:
+    crawl:
+      cron: "0 0 2 * * *"
+      timeout-ms: 10000
+      max-fetch-retries: 2
+      retry-backoff-max-ms: 2000
+      fetch-concurrency: 6
+      overall-fetch-timeout-ms: 18000
+      discovery-score-threshold: 3
+      max-body-size-bytes: 1500000
+      max-discovered-candidates-per-university: 24
+      max-fetched-pages-per-university: 6
+      max-crawl-depth: 1
+      candidate-paths:
+        - "/programmes"
+        - "/programs"
+        - "/study"
+        - "/studies"
+        - "/courses"
+        - "/course-finder"
+        - "/undergraduate"
+        - "/postgraduate"
+        - "/faculties"
+        - "/admissions"
+        - "/academic-programmes"
+
+    registry:
+      - university-name: "University of Cape Town"
+        base-domain: "uct.ac.za"
+        allowed-domains: ["uct.ac.za"]
+        seed-urls:
+          - "https://www.uct.ac.za/"
+          - "https://www.uct.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 1
+
+      - university-name: "University of the Witwatersrand"
+        base-domain: "wits.ac.za"
+        allowed-domains: ["wits.ac.za"]
+        seed-urls:
+          - "https://www.wits.ac.za/"
+          - "https://www.wits.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 2
+
+      - university-name: "University of Pretoria"
+        base-domain: "up.ac.za"
+        allowed-domains: ["up.ac.za"]
+        seed-urls:
+          - "https://www.up.ac.za/"
+          - "https://www.up.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 3
+
+      - university-name: "Stellenbosch University"
+        base-domain: "sun.ac.za"
+        allowed-domains: ["sun.ac.za"]
+        seed-urls:
+          - "https://www.sun.ac.za/"
+          - "https://www.sun.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 4
+
+      - university-name: "University of Johannesburg"
+        base-domain: "uj.ac.za"
+        allowed-domains: ["uj.ac.za"]
+        seed-urls:
+          - "https://www.uj.ac.za/"
+          - "https://www.uj.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 5
+
+      - university-name: "University of South Africa"
+        base-domain: "unisa.ac.za"
+        allowed-domains: ["unisa.ac.za"]
+        seed-urls:
+          - "https://www.unisa.ac.za/"
+          - "https://www.unisa.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 6
+
+      - university-name: "North-West University"
+        base-domain: "nwu.ac.za"
+        allowed-domains: ["nwu.ac.za"]
+        seed-urls:
+          - "https://www.nwu.ac.za/"
+          - "https://www.nwu.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 7
+
+      - university-name: "University of KwaZulu-Natal"
+        base-domain: "ukzn.ac.za"
+        allowed-domains: ["ukzn.ac.za"]
+        seed-urls:
+          - "https://www.ukzn.ac.za/"
+          - "https://www.ukzn.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 8
+
+      - university-name: "Nelson Mandela University"
+        base-domain: "mandela.ac.za"
+        allowed-domains: ["mandela.ac.za"]
+        seed-urls:
+          - "https://www.mandela.ac.za/"
+          - "https://www.mandela.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 9
+
+      - university-name: "University of the Free State"
+        base-domain: "ufs.ac.za"
+        allowed-domains: ["ufs.ac.za"]
+        seed-urls:
+          - "https://www.ufs.ac.za/"
+          - "https://www.ufs.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 10
+
+      - university-name: "Rhodes University"
+        base-domain: "ru.ac.za"
+        allowed-domains: ["ru.ac.za"]
+        seed-urls:
+          - "https://www.ru.ac.za/"
+          - "https://www.ru.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 11
+
+      - university-name: "University of Limpopo"
+        base-domain: "ul.ac.za"
+        allowed-domains: ["ul.ac.za"]
+        seed-urls:
+          - "https://www.ul.ac.za/"
+          - "https://www.ul.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 12
+
+      - university-name: "University of Venda"
+        base-domain: "univen.ac.za"
+        allowed-domains: ["univen.ac.za"]
+        seed-urls:
+          - "https://www.univen.ac.za/"
+          - "https://www.univen.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 13
+
+      - university-name: "Sefako Makgatho Health Sciences University"
+        base-domain: "smu.ac.za"
+        allowed-domains: ["smu.ac.za"]
+        seed-urls:
+          - "https://www.smu.ac.za/"
+          - "https://www.smu.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 14
+
+      - university-name: "University of Fort Hare"
+        base-domain: "ufh.ac.za"
+        allowed-domains: ["ufh.ac.za"]
+        seed-urls:
+          - "https://www.ufh.ac.za/"
+          - "https://www.ufh.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 15
+
+      - university-name: "University of Zululand"
+        base-domain: "unizulu.ac.za"
+        allowed-domains: ["unizulu.ac.za"]
+        seed-urls:
+          - "https://www.unizulu.ac.za/"
+          - "https://www.unizulu.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 16
+
+      - university-name: "Walter Sisulu University"
+        base-domain: "wsu.ac.za"
+        allowed-domains: ["wsu.ac.za"]
+        seed-urls:
+          - "https://www.wsu.ac.za/"
+          - "https://www.wsu.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 17
+
+      - university-name: "Cape Peninsula University of Technology"
+        base-domain: "cput.ac.za"
+        allowed-domains: ["cput.ac.za"]
+        seed-urls:
+          - "https://www.cput.ac.za/"
+          - "https://www.cput.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 18
+
+      - university-name: "Tshwane University of Technology"
+        base-domain: "tut.ac.za"
+        allowed-domains: ["tut.ac.za"]
+        seed-urls:
+          - "https://www.tut.ac.za/"
+          - "https://www.tut.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 19
+
+      - university-name: "Durban University of Technology"
+        base-domain: "dut.ac.za"
+        allowed-domains: ["dut.ac.za"]
+        seed-urls:
+          - "https://www.dut.ac.za/"
+          - "https://www.dut.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 20
+
+      - university-name: "Central University of Technology"
+        base-domain: "cut.ac.za"
+        allowed-domains: ["cut.ac.za"]
+        seed-urls:
+          - "https://www.cut.ac.za/"
+          - "https://www.cut.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 21
+
+      - university-name: "Mangosuthu University of Technology"
+        base-domain: "mut.ac.za"
+        allowed-domains: ["mut.ac.za"]
+        seed-urls:
+          - "https://www.mut.ac.za/"
+          - "https://www.mut.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 22
+
+      - university-name: "Vaal University of Technology"
+        base-domain: "vut.ac.za"
+        allowed-domains: ["vut.ac.za"]
+        seed-urls:
+          - "https://www.vut.ac.za/"
+          - "https://www.vut.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 23
+
+      - university-name: "Sol Plaatje University"
+        base-domain: "spu.ac.za"
+        allowed-domains: ["spu.ac.za"]
+        seed-urls:
+          - "https://www.spu.ac.za/"
+          - "https://www.spu.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 24
+
+      - university-name: "University of Mpumalanga"
+        base-domain: "ump.ac.za"
+        allowed-domains: ["ump.ac.za"]
+        seed-urls:
+          - "https://www.ump.ac.za/"
+          - "https://www.ump.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 25
+
+      - university-name: "IIE Varsity College"
+        base-domain: "varsitycollege.co.za"
+        allowed-domains: ["varsitycollege.co.za"]
+        seed-urls:
+          - "https://www.varsitycollege.co.za/"
+          - "https://www.varsitycollege.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 26
+
+      - university-name: "Eduvos"
+        base-domain: "eduvos.com"
+        allowed-domains: ["eduvos.com"]
+        seed-urls:
+          - "https://www.eduvos.com/"
+          - "https://www.eduvos.com/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 27
+
+      - university-name: "Belgium Campus"
+        base-domain: "belgiumcampus.ac.za"
+        allowed-domains: ["belgiumcampus.ac.za"]
+        seed-urls:
+          - "https://www.belgiumcampus.ac.za/"
+          - "https://www.belgiumcampus.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 28
+
+      - university-name: "Milpark Education"
+        base-domain: "milpark.ac.za"
+        allowed-domains: ["milpark.ac.za"]
+        seed-urls:
+          - "https://www.milpark.ac.za/"
+          - "https://www.milpark.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 29
+
+      - university-name: "STADIO Higher Education"
+        base-domain: "stadio.ac.za"
+        allowed-domains: ["stadio.ac.za"]
+        seed-urls:
+          - "https://www.stadio.ac.za/"
+          - "https://www.stadio.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 30
+
+      - university-name: "Regenesys Business School"
+        base-domain: "regenesys.net"
+        allowed-domains: ["regenesys.net"]
+        seed-urls:
+          - "https://www.regenesys.net/"
+          - "https://www.regenesys.net/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 31
+
+      - university-name: "IMM Graduate School"
+        base-domain: "imm.ac.za"
+        allowed-domains: ["imm.ac.za"]
+        seed-urls:
+          - "https://www.imm.ac.za/"
+          - "https://www.imm.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 32
+
+      - university-name: "Boston City Campus"
+        base-domain: "boston.co.za"
+        allowed-domains: ["boston.co.za"]
+        seed-urls:
+          - "https://www.boston.co.za/"
+          - "https://www.boston.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 33
+
+      - university-name: "Damelin"
+        base-domain: "damelin.co.za"
+        allowed-domains: ["damelin.co.za"]
+        seed-urls:
+          - "https://www.damelin.co.za/"
+          - "https://www.damelin.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 34
+
+      - university-name: "Richfield Graduate Institute of Technology"
+        base-domain: "richfield.ac.za"
+        allowed-domains: ["richfield.ac.za"]
+        seed-urls:
+          - "https://www.richfield.ac.za/"
+          - "https://www.richfield.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 35
+
+      - university-name: "AFDA"
+        base-domain: "afda.co.za"
+        allowed-domains: ["afda.co.za"]
+        seed-urls:
+          - "https://www.afda.co.za/"
+          - "https://www.afda.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 36
+
+      - university-name: "Academy of Sound Engineering"
+        base-domain: "ase.co.za"
+        allowed-domains: ["ase.co.za"]
+        seed-urls:
+          - "https://www.ase.co.za/"
+          - "https://www.ase.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 37
+
+      - university-name: "Monash South Africa"
+        base-domain: "iie.ac.za"
+        allowed-domains: ["iie.ac.za"]
+        seed-urls:
+          - "https://www.iie.ac.za/"
+          - "https://www.iie.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 38
+
+      - university-name: "SACAP"
+        base-domain: "sacap.edu.za"
+        allowed-domains: ["sacap.edu.za"]
+        seed-urls:
+          - "https://www.sacap.edu.za/"
+          - "https://www.sacap.edu.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 39
+
+      - university-name: "MANCOSA"
+        base-domain: "mancosa.co.za"
+        allowed-domains: ["mancosa.co.za"]
+        seed-urls:
+          - "https://www.mancosa.co.za/"
+          - "https://www.mancosa.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 40
+
+      - university-name: "Management College of Southern Africa"
+        base-domain: "mancosa.co.za"
+        allowed-domains: ["mancosa.co.za"]
+        seed-urls:
+          - "https://www.mancosa.co.za/"
+          - "https://www.mancosa.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 41
+
+      - university-name: "Lyceum College"
+        base-domain: "lyceum.co.za"
+        allowed-domains: ["lyceum.co.za"]
+        seed-urls:
+          - "https://www.lyceum.co.za/"
+          - "https://www.lyceum.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 42
+
+      - university-name: "Open Window Institute"
+        base-domain: "openwindow.co.za"
+        allowed-domains: ["openwindow.co.za"]
+        seed-urls:
+          - "https://www.openwindow.co.za/"
+          - "https://www.openwindow.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 43
+
+      - university-name: "Vega School"
+        base-domain: "vegaschool.com"
+        allowed-domains: ["vegaschool.com"]
+        seed-urls:
+          - "https://www.vegaschool.com/"
+          - "https://www.vegaschool.com/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 44
+
+      - university-name: "Red and Yellow Creative School"
+        base-domain: "redandyellow.co.za"
+        allowed-domains: ["redandyellow.co.za"]
+        seed-urls:
+          - "https://www.redandyellow.co.za/"
+          - "https://www.redandyellow.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 45
+
+      - university-name: "Design Academy of Fashion"
+        base-domain: "daf-academy.com"
+        allowed-domains: ["daf-academy.com"]
+        seed-urls:
+          - "https://www.daf-academy.com/"
+          - "https://www.daf-academy.com/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 46
+
+      - university-name: "ICESA Education"
+        base-domain: "icesa.co.za"
+        allowed-domains: ["icesa.co.za"]
+        seed-urls:
+          - "https://www.icesa.co.za/"
+          - "https://www.icesa.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 47
+
+      - university-name: "Cornerstone Institute"
+        base-domain: "cornerstone.ac.za"
+        allowed-domains: ["cornerstone.ac.za"]
+        seed-urls:
+          - "https://www.cornerstone.ac.za/"
+          - "https://www.cornerstone.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 48
+
+      - university-name: "Helderberg College"
+        base-domain: "hche.ac.za"
+        allowed-domains: ["hche.ac.za"]
+        seed-urls:
+          - "https://www.hche.ac.za/"
+          - "https://www.hche.ac.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 49
+
+      - university-name: "The South African College of Applied Psychology"
+        base-domain: "sacap.edu.za"
+        allowed-domains: ["sacap.edu.za"]
+        seed-urls:
+          - "https://www.sacap.edu.za/"
+          - "https://www.sacap.edu.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 50
+
+      - university-name: "Oakfields College"
+        base-domain: "oakfieldscollege.co.za"
+        allowed-domains: ["oakfieldscollege.co.za"]
+        seed-urls:
+          - "https://www.oakfieldscollege.co.za/"
+          - "https://www.oakfieldscollege.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 51
+
+      - university-name: "CityVarsity"
+        base-domain: "cityvarsity.co.za"
+        allowed-domains: ["cityvarsity.co.za"]
+        seed-urls:
+          - "https://www.cityvarsity.co.za/"
+          - "https://www.cityvarsity.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 52
+
+      - university-name: "Optimi College"
+        base-domain: "optimi.co.za"
+        allowed-domains: ["optimi.co.za"]
+        seed-urls:
+          - "https://www.optimi.co.za/"
+          - "https://www.optimi.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 53
+
+      - university-name: "Emendy Multimedia Technology Institute"
+        base-domain: "emendy.co.za"
+        allowed-domains: ["emendy.co.za"]
+        seed-urls:
+          - "https://www.emendy.co.za/"
+          - "https://www.emendy.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 54
+
+      - university-name: "The Animation School"
+        base-domain: "theanimationschool.co.za"
+        allowed-domains: ["theanimationschool.co.za"]
+        seed-urls:
+          - "https://www.theanimationschool.co.za/"
+          - "https://www.theanimationschool.co.za/programmes"
+        qualification-levels-supported: ["Undergraduate", "Postgraduate"]
+        active: true
+        crawl-priority: 55

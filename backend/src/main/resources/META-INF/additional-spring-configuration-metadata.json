@@ -1,0 +1,69 @@
+{
+  "properties": [
+    {
+      "name": "app.base-url",
+      "type": "java.lang.String",
+      "description": "Public base URL for the EduRite web application."
+    },
+    {
+      "name": "app.backend-base-url",
+      "type": "java.lang.String",
+      "description": "Public base URL for backend callbacks and generated API links."
+    },
+    {
+      "name": "app.frontend.base-url",
+      "type": "java.lang.String",
+      "description": "Public base URL for frontend redirects."
+    },
+    {
+      "name": "app.frontend-url",
+      "type": "java.lang.String",
+      "description": "Legacy frontend redirect URL used by payment and auth flows."
+    },
+    {
+      "name": "app.cors.allowed-origins",
+      "type": "java.lang.String",
+      "description": "Comma-separated list of origins allowed by CORS."
+    },
+    {
+      "name": "edurite.seed.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enables or disables startup data seeders."
+    },
+    {
+      "name": "edurite.auth.google.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enables Google sign-in support."
+    },
+    {
+      "name": "edurite.auth.google.client-id",
+      "type": "java.lang.String",
+      "description": "Google OAuth client ID used for token validation."
+    },
+    {
+      "name": "edurite.auth.google.token-info-url",
+      "type": "java.lang.String",
+      "description": "Google token info endpoint."
+    },
+    {
+      "name": "edurite.payment.callback-url",
+      "type": "java.lang.String",
+      "description": "Backend payment callback URL."
+    },
+    {
+      "name": "edurite.payment.payfast.return-url",
+      "type": "java.lang.String",
+      "description": "PayFast browser return URL after payment."
+    },
+    {
+      "name": "edurite.payment.payfast.cancel-url",
+      "type": "java.lang.String",
+      "description": "PayFast browser return URL after cancellation."
+    },
+    {
+      "name": "edurite.payment.payfast.notify-url",
+      "type": "java.lang.String",
+      "description": "PayFast server notification URL."
+    }
+  ]
+}

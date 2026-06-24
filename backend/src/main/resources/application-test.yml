@@ -1,0 +1,35 @@
+spring:
+  task:
+    scheduling:
+      enabled: false
+
+  datasource:
+    url: ${TEST_DB_URL:jdbc:postgresql://localhost:5432/edurite_test}
+    username: ${TEST_DB_USERNAME:postgres}
+    password: ${TEST_DB_PASSWORD:}
+    driver-class-name: ${TEST_DB_DRIVER_CLASS_NAME:org.postgresql.Driver}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.jdbc.time_zone: UTC
+
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+
+  cache:
+    type: none
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:test-jwt-secret-key-that-is-at-least-32-bytes-long}
+
+gemini:
+  api-key: ${GEMINI_API_KEY:test-gemini-api-key}

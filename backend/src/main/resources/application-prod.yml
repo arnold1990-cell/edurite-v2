@@ -1,0 +1,76 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/edurite}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:redis}
+      port: ${SPRING_REDIS_PORT:6379}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    validate-on-migrate: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:}
+            client-secret: ${GOOGLE_CLIENT_SECRET:}
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: ${GOOGLE_REDIRECT_URI:https://edurite.net/login/oauth2/code/google}
+
+server:
+  address: 0.0.0.0
+  port: 8080
+  forward-headers-strategy: framework
+
+management:
+  health:
+    redis:
+      enabled: ${MANAGEMENT_HEALTH_REDIS_ENABLED:true}
+
+app:
+  base-url: ${APP_BASE_URL:https://edurite.net}
+  backend-base-url: ${BACKEND_BASE_URL:https://edurite.net}
+  frontend:
+    base-url: ${APP_FRONTEND_BASE_URL:${APP_BASE_URL:https://edurite.net}}
+  frontend-url: ${APP_FRONTEND_URL:${APP_FRONTEND_BASE_URL:${APP_BASE_URL:https://edurite.net}}}
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}
+
+edurite:
+  flyway:
+    repair-on-startup: ${EDURITE_FLYWAY_REPAIR_ON_STARTUP:false}
+  seed:
+    enabled: ${EDURITE_SEED_ENABLED:false}
+
+  auth:
+    google:
+      enabled: ${GOOGLE_OAUTH_ENABLED:false}
+      client-id: ${GOOGLE_CLIENT_ID:}
+      token-info-url: ${GOOGLE_TOKEN_INFO_URL:https://oauth2.googleapis.com/tokeninfo}
+
+  payment:
+    callback-url: ${PAYMENT_CALLBACK_URL:https://edurite.net/api/payments/callback}
+    payfast:
+      return-url: ${PAYFAST_RETURN_URL:https://edurite.net/payments/payfast/return}
+      cancel-url: ${PAYFAST_CANCEL_URL:https://edurite.net/payments/payfast/cancel}
+      notify-url: ${PAYFAST_NOTIFY_URL:https://edurite.net/api/payments/payfast/notify}
+
+logging:
+  level:
+    org.flywaydb: INFO

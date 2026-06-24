@@ -1,0 +1,292 @@
+/* noinspection CssUnknownAtRule */
+/* stylelint-disable at-rule-no-unknown */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --font-body: 16px;
+    --font-small: 14px;
+    --font-card-title: 17px;
+    --font-section-title: 24px;
+    --card-padding: 20px;
+    --card-radius: 18px;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-family: 'Inter', 'Plus Jakarta Sans', sans-serif;
+    font-size: var(--font-body);
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl bg-white shadow-card border border-slate-200;
+  }
+
+  .student-dashboard-shell {
+    min-height: 100%;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    border-radius: 28px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 250, 255, 0.96));
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.1);
+  }
+
+  .student-page-section {
+    @apply min-w-0 space-y-5;
+  }
+
+  .student-page-title {
+    @apply break-words text-xl font-bold tracking-normal text-slate-950 sm:text-2xl lg:text-3xl;
+  }
+
+  .student-page-subtitle {
+    @apply mt-1 max-w-3xl break-words text-sm leading-6 text-slate-600 sm:text-base;
+  }
+
+  .student-hero-card {
+    @apply overflow-hidden border border-slate-200 bg-white p-5 shadow-card md:p-6;
+    border-radius: 28px;
+  }
+
+  .student-soft-card {
+    @apply min-w-0 border border-slate-200 bg-white p-4 shadow-sm transition duration-200;
+    border-radius: 22px;
+  }
+
+  .student-soft-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 32px rgba(37, 99, 235, 0.12);
+  }
+
+  .student-metric-card {
+    @apply min-w-0 border border-slate-200 bg-white p-4 shadow-sm;
+    border-radius: 22px;
+  }
+
+  .student-dashboard-shell .card {
+    @apply rounded-2xl shadow-sm;
+  }
+
+  .student-dashboard-shell article.rounded.border,
+  .student-dashboard-shell div.rounded.border,
+  .student-dashboard-shell form.rounded.border,
+  .student-dashboard-shell aside.rounded.border {
+    border-radius: 1rem;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  }
+
+  .sidebar-nav {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .top-module-nav {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .top-module-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .student-top-tabs-row {
+    margin-left: clamp(6.5rem, 8.2vw, 8.75rem);
+    padding-right: 1rem;
+  }
+
+  .responsive-modal-panel {
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+  }
+
+  .school-admin-command {
+    font-size: var(--font-body);
+  }
+
+  .school-admin-command table,
+  .school-admin-command td,
+  .school-admin-command th,
+  .school-admin-command label,
+  .school-admin-command input,
+  .school-admin-command select,
+  .school-admin-command textarea,
+  .school-admin-command button {
+    font-size: inherit;
+  }
+
+  .school-admin-command .text-xs {
+    font-size: 12px !important;
+    line-height: 1.45 !important;
+    letter-spacing: 0.08em;
+  }
+
+  .school-admin-command .text-sm {
+    font-size: 15px !important;
+    line-height: 1.6 !important;
+  }
+
+  .school-admin-command .text-base {
+    font-size: var(--font-card-title) !important;
+    line-height: 1.5 !important;
+  }
+
+  .school-admin-command .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.125rem;
+  }
+
+  .school-admin-command .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 1.375rem;
+  }
+
+  .school-admin-command .shadow-2xl,
+  .school-admin-command .shadow-xl {
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12) !important;
+  }
+
+  @media (min-width: 1920px) {
+    .student-top-tabs-row {
+      margin-left: clamp(8.25rem, 8.5vw, 10.5rem);
+    }
+  }
+
+  @media (max-width: 1279px) {
+    .student-top-tabs-row {
+      margin-left: clamp(4.25rem, 6.4vw, 6rem);
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .student-top-tabs-row {
+      margin-left: clamp(1rem, 4vw, 2rem);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .student-top-tabs-row {
+      margin-left: 0.5rem;
+    }
+  }
+}
+
+@layer components {
+  .site-header {
+    @apply flex;
+    min-height: 120px;
+  }
+
+  .site-header-inner {
+    @apply flex w-full items-end justify-between px-8;
+    min-height: 120px;
+    padding-bottom: 1px;
+  }
+
+  .brand {
+    @apply flex items-end;
+    height: 100%;
+  }
+
+  .brand-logo {
+    height: 40px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+  }
+
+  .site-header-auth {
+    min-height: 170px;
+  }
+
+  .site-header-inner-auth {
+    min-height: 170px;
+    align-items: center;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .brand-auth {
+    align-items: center;
+  }
+
+  .brand-logo-auth {
+    height: clamp(70px, 9vw, 126px);
+  }
+
+  @media (max-width: 1024px) {
+    .site-header-auth {
+      min-height: 138px;
+    }
+
+    .site-header-inner-auth {
+      min-height: 138px;
+    }
+
+    .brand-logo-auth {
+      height: clamp(70px, 11vw, 90px);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .site-header-auth {
+      min-height: 120px;
+    }
+
+    .site-header-inner-auth {
+      min-height: 120px;
+      padding-top: 0.75rem;
+      padding-bottom: 0.75rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    .brand-logo-auth {
+      height: clamp(50px, 15vw, 70px);
+    }
+  }
+
+  .main-nav {
+    @apply flex items-center gap-7;
+    align-self: center;
+  }
+}
+
+@layer components {
+  .auth-hero-heading {
+    font-size: clamp(2.4rem, 3.8vw, 3.8rem) !important;
+    line-height: 1.02 !important;
+    letter-spacing: -0.03em !important;
+    font-weight: 700 !important;
+    color: white !important;
+    max-width: 420px !important;
+  }
+
+  @media (max-width: 1024px) {
+    .auth-hero-heading {
+      font-size: 3rem !important;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .auth-hero-heading {
+      font-size: 2.2rem !important;
+      line-height: 1.05 !important;
+    }
+  }
+}
+

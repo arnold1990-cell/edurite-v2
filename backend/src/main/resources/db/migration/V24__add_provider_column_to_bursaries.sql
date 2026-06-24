@@ -1,0 +1,2 @@
+ALTER TABLE bursaries
+    ADD COLUMN IF NOT EXISTS provider VARCHAR(120);

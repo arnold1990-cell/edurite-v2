@@ -1,0 +1,61 @@
+ALTER TABLE students
+    ADD COLUMN IF NOT EXISTS first_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS last_name VARCHAR(100),
+    ADD COLUMN IF NOT EXISTS phone VARCHAR(30),
+    ADD COLUMN IF NOT EXISTS date_of_birth DATE,
+    ADD COLUMN IF NOT EXISTS gender VARCHAR(20),
+    ADD COLUMN IF NOT EXISTS bio TEXT,
+    ADD COLUMN IF NOT EXISTS qualification_level VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS qualifications TEXT,
+    ADD COLUMN IF NOT EXISTS experience TEXT,
+    ADD COLUMN IF NOT EXISTS skills TEXT,
+    ADD COLUMN IF NOT EXISTS career_goals TEXT,
+    ADD COLUMN IF NOT EXISTS cv_file_url VARCHAR(500),
+    ADD COLUMN IF NOT EXISTS transcript_file_url VARCHAR(500),
+    ADD COLUMN IF NOT EXISTS profile_completed BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE careers
+    ADD COLUMN IF NOT EXISTS industry VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS qualification_level VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS location VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS salary_range VARCHAR(80),
+    ADD COLUMN IF NOT EXISTS demand_level VARCHAR(30);
+
+ALTER TABLE bursaries
+    ADD COLUMN IF NOT EXISTS region VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS qualification_level VARCHAR(120),
+    ADD COLUMN IF NOT EXISTS eligibility TEXT,
+    ADD COLUMN IF NOT EXISTS amount DECIMAL(12,2);
+
+CREATE TABLE IF NOT EXISTS saved_opportunities (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL REFERENCES students(id),
+    career_id UUID REFERENCES careers(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS saved_bursaries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    student_id UUID NOT NULL REFERENCES students(id),
+    bursary_id UUID NOT NULL REFERENCES bursaries(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE notifications
+    ADD COLUMN IF NOT EXISTS title VARCHAR(160),
+    ADD COLUMN IF NOT EXISTS message TEXT,
+    ADD COLUMN IF NOT EXISTS is_read BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS notification_preferences (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE NOT NULL REFERENCES users(id),
+    email_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    sms_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    bursary_alerts BOOLEAN NOT NULL DEFAULT TRUE,
+    deadline_reminders BOOLEAN NOT NULL DEFAULT TRUE,
+    career_insights BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
