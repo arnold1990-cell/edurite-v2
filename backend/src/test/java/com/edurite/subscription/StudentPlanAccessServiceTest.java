@@ -8,6 +8,7 @@ import com.edurite.security.service.CurrentUserService;
 import com.edurite.subscription.entity.SubscriptionRecord;
 import com.edurite.subscription.repository.SubscriptionRepository;
 import com.edurite.subscription.service.StudentPlanAccessService;
+import com.edurite.user.entity.User;
 import com.edurite.user.repository.UserRepository;
 import java.time.OffsetDateTime;
 import java.util.Optional;
@@ -70,6 +71,29 @@ class StudentPlanAccessServiceTest {
         var access = service.resolveByUserId(userId);
         assertThat(access.premium()).isTrue();
         assertThat(access.planCode()).isEqualTo("PLAN_PREMIUM");
+    }
+
+    @Test
+    void ownerOverrideAlwaysResolvesAsPremiumWithoutLimits() {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("arnoldmadaz@gmail.com");
+
+        SubscriptionRecord subscription = new SubscriptionRecord();
+        subscription.setPlanCode("PLAN_BASIC");
+        subscription.setStatus("CANCELLED");
+        subscription.setTrialEndDate(OffsetDateTime.now().minusDays(30));
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId)).thenReturn(Optional.of(subscription));
+
+        var access = service.resolveByUserId(userId);
+        assertThat(access.premium()).isTrue();
+        assertThat(access.planCode()).isEqualTo("PLAN_PREMIUM");
+        assertThat(access.status()).isEqualTo("ACTIVE");
+        assertThat(access.careerSuggestionLimit()).isNull();
+        assertThat(access.upgradeMessage()).isNull();
     }
 }
 

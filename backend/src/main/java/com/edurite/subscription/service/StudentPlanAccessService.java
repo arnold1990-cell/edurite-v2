@@ -20,7 +20,11 @@ public class StudentPlanAccessService {
     public static final int BASIC_CAREER_GUIDANCE_LIMIT = 3;
     public static final String BASIC_UPGRADE_MESSAGE =
             "You are on the Basic plan. Upgrade to Premium to unlock deeper analysis and more recommendations.";
-    private static final String PREMIUM_TEST_STUDENT_EMAIL = "recess_thymes0h@icloud.com";
+    /**
+     * Development / owner override.
+     * This specific account must always resolve to Premium regardless of subscription state.
+     */
+    static final String OWNER_PREMIUM_OVERRIDE_EMAIL = "arnoldmadaz@gmail.com";
 
     private final SubscriptionRepository subscriptionRepository;
     private final CurrentUserService currentUserService;
@@ -42,7 +46,7 @@ public class StudentPlanAccessService {
     }
 
     public StudentPlanAccess resolveByUserId(UUID userId) {
-        if (isPremiumTestStudent(userId)) {
+        if (isPermanentPremiumOverride(userId)) {
             return new StudentPlanAccess(
                     PLAN_PREMIUM,
                     STATUS_ACTIVE,
@@ -75,6 +79,17 @@ public class StudentPlanAccessService {
         return resolveByUserId(userId).premium();
     }
 
+    public boolean isPermanentPremiumOverride(UUID userId) {
+        return userRepository.findById(userId)
+                .map(User::getEmail)
+                .map(this::isPermanentPremiumOverrideEmail)
+                .orElse(false);
+    }
+
+    public boolean isPermanentPremiumOverrideEmail(String email) {
+        return email != null && OWNER_PREMIUM_OVERRIDE_EMAIL.equalsIgnoreCase(email.trim());
+    }
+
     private boolean isTrialActive(SubscriptionRecord subscription) {
         if (subscription == null || subscription.getTrialEndDate() == null) {
             return false;
@@ -101,13 +116,6 @@ public class StudentPlanAccessService {
             return STATUS_ACTIVE;
         }
         return status.trim().toUpperCase(Locale.ROOT);
-    }
-
-    private boolean isPremiumTestStudent(UUID userId) {
-        return userRepository.findById(userId)
-                .map(User::getEmail)
-                .map(email -> email != null && PREMIUM_TEST_STUDENT_EMAIL.equalsIgnoreCase(email.trim()))
-                .orElse(false);
     }
 
     public record StudentPlanAccess(

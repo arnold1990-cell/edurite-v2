@@ -101,6 +101,7 @@ class SubscriptionServiceTest {
         when(currentUserService.requireUser(any())).thenReturn(user);
         when(userRepository.findById(any())).thenReturn(Optional.of(user));
         when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(studentPlanAccessService.isPermanentPremiumOverride(any())).thenReturn(false);
         when(studentPlanAccessService.resolveByUserId(any())).thenReturn(
                 new StudentPlanAccessService.StudentPlanAccess("PLAN_BASIC", "ACTIVE", false, 3, "Upgrade to Premium")
         );
@@ -571,6 +572,34 @@ class SubscriptionServiceTest {
         assertThat(payment.getStatus()).isEqualTo("COMPLETED");
         assertThat(payment.getProviderPaymentId()).isEqualTo("CAPTURE-777");
         assertThat(subscription.getStatus()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void currentNormalizesOwnerOverrideSubscriptionToPermanentPremium() {
+        user.setEmail("arnoldmadaz@gmail.com");
+        SubscriptionRecord existing = existingSubscription(user.getId());
+        existing.setPlanCode("PLAN_BASIC");
+        existing.setStatus("CANCELLED");
+        existing.setEndDate(LocalDate.now().minusDays(1));
+        existing.setRenewalDate(LocalDate.now().minusDays(1));
+        existing.setTrialEndDate(OffsetDateTime.now().minusDays(10));
+        existing.setPremiumUntil(OffsetDateTime.now().minusDays(10));
+
+        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(existing));
+        when(studentPlanAccessService.isPermanentPremiumOverride(user.getId())).thenReturn(true);
+        when(studentPlanAccessService.resolveByUserId(user.getId())).thenReturn(
+                new StudentPlanAccessService.StudentPlanAccess("PLAN_PREMIUM", "ACTIVE", true, null, null)
+        );
+
+        SubscriptionRecord result = subscriptionService.current(principal);
+
+        assertThat(result.getPlanCode()).isEqualTo("PLAN_PREMIUM");
+        assertThat(result.getStatus()).isEqualTo("ACTIVE");
+        assertThat(result.getEndDate()).isNull();
+        assertThat(result.getRenewalDate()).isNull();
+        assertThat(result.getTrialEndDate()).isNull();
+        assertThat(result.getPremiumUntil()).isNull();
+        assertThat(result.getPremiumAccess()).isTrue();
     }
 
     private PricingPlan premiumPlan() {

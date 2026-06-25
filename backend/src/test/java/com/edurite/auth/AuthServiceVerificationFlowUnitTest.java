@@ -263,6 +263,29 @@ class AuthServiceVerificationFlowUnitTest {
     }
 
     @Test
+    void ownerOverrideLoginAlwaysReturnsPremiumPlanType() {
+        String email = "arnoldmadaz@gmail.com";
+        String phone = "+26770000999";
+        User user = activeStudent(email, phone);
+
+        when(userRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("StrongPass@123", "encoded-password")).thenReturn(true);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(companyProfileRepository.findByUserId(user.getId())).thenReturn(Optional.empty());
+        when(studentProfileRepository.findByUserId(user.getId())).thenReturn(Optional.empty());
+        when(studentPlanAccessService.hasPremiumAccess(user.getId())).thenReturn(true);
+        when(jwtService.generateAccessToken(eq(user), any(), eq(null), eq("PREMIUM"))).thenReturn("access-token");
+        when(jwtService.generateRefreshToken(user)).thenReturn("refresh-token");
+        when(jwtService.accessTokenExpirationSeconds()).thenReturn(3600L);
+
+        AuthResponse response = authService.login(new com.edurite.auth.dto.LoginRequest(email, "StrongPass@123"));
+
+        assertThat(response.accessToken()).isEqualTo("access-token");
+        assertThat(response.user().planType()).isEqualTo("PREMIUM");
+        verify(jwtService).generateAccessToken(eq(user), any(), eq(null), eq("PREMIUM"));
+    }
+
+    @Test
     void loginIsCaseInsensitiveForRegisteredEmail() {
         User user = activeStudent("Student@Login.com", "+26770000011");
 
