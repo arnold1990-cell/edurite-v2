@@ -177,9 +177,14 @@ public class SchoolSeedDataSeeder {
             schoolRegistrationRequestRepository.delete(byUserId.get());
         }
 
-        SchoolRegistrationRequest registration = byEmis
-                .or(() -> byUserId.filter(existing -> byEmis.isEmpty()))
-                .orElseGet(SchoolRegistrationRequest::new);
+        SchoolRegistrationRequest registration;
+        if (byEmis.isPresent()) {
+            registration = byEmis.get();
+        } else if (byUserId.isPresent()) {
+            registration = byUserId.get();
+        } else {
+            registration = new SchoolRegistrationRequest();
+        }
 
         registration.setUserId(schoolAdminUser.getId());
         registration.setSchoolId(school.getId());

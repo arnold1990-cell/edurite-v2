@@ -14,7 +14,6 @@ import com.edurite.user.entity.User;
 import com.edurite.user.entity.UserStatus;
 import com.edurite.user.repository.RoleRepository;
 import com.edurite.user.repository.UserRepository;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -47,7 +46,7 @@ class SchoolSeedDataSeederTest {
         SchoolSeedDataSeeder seeder = new SchoolSeedDataSeeder();
         Role schoolAdminRole = new Role();
         schoolAdminRole.setName("ROLE_SCHOOL_ADMIN");
-        District district = district("Kgale", "Gauteng");
+        District district = district();
 
         when(districtRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(district));
         when(schoolRepository.findByRegistrationNumberIgnoreCase("99999999")).thenReturn(Optional.empty());
@@ -189,7 +188,7 @@ class SchoolSeedDataSeederTest {
         SchoolSeedDataSeeder seeder = new SchoolSeedDataSeeder();
         UUID seededSchoolId = UUID.randomUUID();
         Role schoolAdminRole = role("ROLE_SCHOOL_ADMIN");
-        District district = district("Kgale", "Gauteng");
+        District district = district();
         School existingSeededSchool = new School();
         existingSeededSchool.setId(seededSchoolId);
         existingSeededSchool.setSchoolName("Old Name");
@@ -246,12 +245,12 @@ class SchoolSeedDataSeederTest {
     }
 
     @Test
-    void schoolSeederSecondStartupReusesExistingRegistrationRow() throws Exception {
+    void schoolSeederUpdatesExistingRegistrationFoundByUser() throws Exception {
         SchoolSeedDataSeeder seeder = new SchoolSeedDataSeeder();
         UUID schoolId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
         UUID registrationId = UUID.randomUUID();
-        District district = district("Kgale", "Gauteng");
+        District district = district();
 
         School school = new School();
         school.setId(schoolId);
@@ -296,7 +295,7 @@ class SchoolSeedDataSeederTest {
         when(schoolUserProfileRepository.findByUserIdAndDeletedFalse(any())).thenReturn(Optional.empty());
         when(schoolUserProfileRepository.save(any(SchoolUserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(schoolRegistrationRequestRepository.findByUserId(userId)).thenReturn(Optional.of(existingRegistration));
-        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.of(existingRegistration));
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.empty());
         when(schoolRegistrationRequestRepository.save(any(SchoolRegistrationRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ApplicationRunner runner = seeder.schoolSeedRunner(
@@ -329,11 +328,163 @@ class SchoolSeedDataSeederTest {
     }
 
     @Test
+    void schoolSeederUpdatesExistingRegistrationFoundByEmis() throws Exception {
+        SchoolSeedDataSeeder seeder = new SchoolSeedDataSeeder();
+        UUID schoolId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID registrationId = UUID.randomUUID();
+        District district = district();
+
+        School school = new School();
+        school.setId(schoolId);
+        school.setRegistrationNumber("99999999");
+
+        Role schoolAdminRole = role("ROLE_SCHOOL_ADMIN");
+        User existingAdmin = new User();
+        existingAdmin.setId(userId);
+        existingAdmin.setEmail("schooladmin@edurite.com");
+        existingAdmin.setPasswordHash("encoded-admin");
+        existingAdmin.setStatus(UserStatus.ACTIVE);
+        existingAdmin.setEmailVerified(true);
+        existingAdmin.getRoles().add(schoolAdminRole);
+
+        SchoolRegistrationRequest existingRegistration = new SchoolRegistrationRequest();
+        existingRegistration.setId(registrationId);
+        existingRegistration.setUserId(UUID.randomUUID());
+        existingRegistration.setEmisNumber("99999999");
+
+        when(districtRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(district));
+        when(schoolRepository.findByRegistrationNumberIgnoreCase("99999999")).thenReturn(Optional.of(school));
+        when(schoolRepository.save(any(School.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleRepository.findByName("ROLE_SCHOOL_ADMIN")).thenReturn(Optional.of(schoolAdminRole));
+        when(roleRepository.findByName("ROLE_TEACHER")).thenReturn(Optional.of(role("ROLE_TEACHER")));
+        when(roleRepository.findByName("ROLE_SCHOOL_STUDENT")).thenReturn(Optional.of(role("ROLE_SCHOOL_STUDENT")));
+        when(userRepository.findByEmailIgnoreCase("schooladmin@edurite.com")).thenReturn(Optional.of(existingAdmin));
+        when(userRepository.findByEmailIgnoreCase("teacher@edurite.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("schoolstudent@edurite.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("arnold.student@edurite.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.matches("Admin@123", "encoded-admin")).thenReturn(true);
+        when(passwordEncoder.encode(any())).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            if (user.getId() == null) {
+                user.setId(UUID.randomUUID());
+            }
+            return user;
+        });
+        when(schoolUserProfileRepository.findByUserIdAndDeletedFalse(any())).thenReturn(Optional.empty());
+        when(schoolUserProfileRepository.save(any(SchoolUserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(schoolRegistrationRequestRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.of(existingRegistration));
+        when(schoolRegistrationRequestRepository.save(any(SchoolRegistrationRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ApplicationRunner runner = seeder.schoolSeedRunner(
+                schoolRepository,
+                schoolRegistrationRequestRepository,
+                schoolUserProfileRepository,
+                districtRepository,
+                userRepository,
+                roleRepository,
+                passwordEncoder,
+                "schooladmin@edurite.com",
+                "Admin@123",
+                "teacher@edurite.com",
+                "Teacher@123",
+                "schoolstudent@edurite.com",
+                "SchoolStudent@123",
+                "arnold.student@edurite.com",
+                "Student@123"
+        );
+
+        runner.run(null);
+
+        ArgumentCaptor<SchoolRegistrationRequest> registrationCaptor = ArgumentCaptor.forClass(SchoolRegistrationRequest.class);
+        verify(schoolRegistrationRequestRepository).save(registrationCaptor.capture());
+        assertThat(registrationCaptor.getValue().getId()).isEqualTo(registrationId);
+        assertThat(registrationCaptor.getValue().getUserId()).isEqualTo(userId);
+        assertThat(registrationCaptor.getValue().getDistrictId()).isEqualTo(district.getId());
+        assertThat(registrationCaptor.getValue().getDistrictName()).isEqualTo("Kgale");
+        assertThat(registrationCaptor.getValue().getProvince()).isEqualTo("Gauteng");
+    }
+
+    @Test
+    void schoolSeederCreatesNewRegistrationOnlyWhenNoExistingRecordExists() throws Exception {
+        SchoolSeedDataSeeder seeder = new SchoolSeedDataSeeder();
+        UUID schoolId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        District district = district();
+
+        School school = new School();
+        school.setId(schoolId);
+        school.setRegistrationNumber("99999999");
+
+        Role schoolAdminRole = role("ROLE_SCHOOL_ADMIN");
+        User existingAdmin = new User();
+        existingAdmin.setId(userId);
+        existingAdmin.setEmail("schooladmin@edurite.com");
+        existingAdmin.setPasswordHash("encoded-admin");
+        existingAdmin.setStatus(UserStatus.ACTIVE);
+        existingAdmin.setEmailVerified(true);
+        existingAdmin.getRoles().add(schoolAdminRole);
+
+        when(districtRepository.findFirstByOrderByCreatedAtAsc()).thenReturn(Optional.of(district));
+        when(schoolRepository.findByRegistrationNumberIgnoreCase("99999999")).thenReturn(Optional.of(school));
+        when(schoolRepository.save(any(School.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleRepository.findByName("ROLE_SCHOOL_ADMIN")).thenReturn(Optional.of(schoolAdminRole));
+        when(roleRepository.findByName("ROLE_TEACHER")).thenReturn(Optional.of(role("ROLE_TEACHER")));
+        when(roleRepository.findByName("ROLE_SCHOOL_STUDENT")).thenReturn(Optional.of(role("ROLE_SCHOOL_STUDENT")));
+        when(userRepository.findByEmailIgnoreCase("schooladmin@edurite.com")).thenReturn(Optional.of(existingAdmin));
+        when(userRepository.findByEmailIgnoreCase("teacher@edurite.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("schoolstudent@edurite.com")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("arnold.student@edurite.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.matches("Admin@123", "encoded-admin")).thenReturn(true);
+        when(passwordEncoder.encode(any())).thenReturn("encoded");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            if (user.getId() == null) {
+                user.setId(UUID.randomUUID());
+            }
+            return user;
+        });
+        when(schoolUserProfileRepository.findByUserIdAndDeletedFalse(any())).thenReturn(Optional.empty());
+        when(schoolUserProfileRepository.save(any(SchoolUserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(schoolRegistrationRequestRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.empty());
+        when(schoolRegistrationRequestRepository.save(any(SchoolRegistrationRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        ApplicationRunner runner = seeder.schoolSeedRunner(
+                schoolRepository,
+                schoolRegistrationRequestRepository,
+                schoolUserProfileRepository,
+                districtRepository,
+                userRepository,
+                roleRepository,
+                passwordEncoder,
+                "schooladmin@edurite.com",
+                "Admin@123",
+                "teacher@edurite.com",
+                "Teacher@123",
+                "schoolstudent@edurite.com",
+                "SchoolStudent@123",
+                "arnold.student@edurite.com",
+                "Student@123"
+        );
+
+        runner.run(null);
+
+        ArgumentCaptor<SchoolRegistrationRequest> registrationCaptor = ArgumentCaptor.forClass(SchoolRegistrationRequest.class);
+        verify(schoolRegistrationRequestRepository).save(registrationCaptor.capture());
+        assertThat(registrationCaptor.getValue().getId()).isNull();
+        assertThat(registrationCaptor.getValue().getUserId()).isEqualTo(userId);
+        assertThat(registrationCaptor.getValue().getDistrictId()).isEqualTo(district.getId());
+    }
+
+    @Test
     void schoolSeederConsolidatesConflictingRegistrationRowsByEmis() throws Exception {
         SchoolSeedDataSeeder seeder = new SchoolSeedDataSeeder();
         UUID schoolId = UUID.randomUUID();
         UUID currentUserId = UUID.randomUUID();
-        District district = district("Kgale", "Gauteng");
+        District district = district();
 
         School school = new School();
         school.setId(schoolId);
@@ -418,11 +569,11 @@ class SchoolSeedDataSeederTest {
         return role;
     }
 
-    private District district(String districtName, String province) {
+    private District district() {
         District district = new District();
         district.setId(UUID.randomUUID());
-        district.setDistrictName(districtName);
-        district.setProvince(province);
+        district.setDistrictName("Kgale");
+        district.setProvince("Gauteng");
         return district;
     }
 }
