@@ -282,7 +282,9 @@ class AuthServiceVerificationFlowUnitTest {
 
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.user().planType()).isEqualTo("PREMIUM");
+        assertThat(user.getPlanType()).isEqualTo(com.edurite.subscription.entity.PlanType.PREMIUM);
         verify(jwtService).generateAccessToken(eq(user), any(), eq(null), eq("PREMIUM"));
+        verify(userRepository, atLeastOnce()).save(user);
     }
 
     @Test

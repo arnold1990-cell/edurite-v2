@@ -97,10 +97,18 @@ const normalizeApprovalStatus = (status?: string | null): ApprovalStatus | undef
   return ['PENDING', 'APPROVED', 'REJECTED', 'MORE_INFO_REQUIRED', 'SUSPENDED'].includes(status) ? status as ApprovalStatus : undefined;
 };
 
+const normalizePlanType = (planType?: string | null): User['planType'] | undefined => {
+  if (!planType) return undefined;
+  const normalized = planType.trim().toUpperCase();
+  if (normalized === 'PREMIUM') return 'PREMIUM';
+  if (normalized === 'BASIC') return 'BASIC';
+  return undefined;
+};
+
 const normalizeRefreshedUser = (payload: unknown): User | null => {
   if (!payload || typeof payload !== 'object') return null;
 
-  const data = payload as { user?: { id?: string; email?: string; username?: string; fullName?: string; companyName?: string; roles?: string[]; role?: string; primaryRole?: string; approvalStatus?: string; verified?: boolean; passwordChangeRequired?: boolean; profileCompleted?: boolean; profileCompleteness?: number }; roles?: string[]; role?: string; primaryRole?: string; approvalStatus?: string; mustChangePassword?: boolean };
+  const data = payload as { user?: { id?: string; email?: string; username?: string; fullName?: string; companyName?: string; schoolName?: string; roles?: string[]; role?: string; primaryRole?: string; approvalStatus?: string; verified?: boolean; passwordChangeRequired?: boolean; profileCompleted?: boolean; profileCompleteness?: number; planType?: string }; roles?: string[]; role?: string; primaryRole?: string; approvalStatus?: string; mustChangePassword?: boolean };
   const rawRoles = data.user?.roles ?? data.roles ?? (data.user?.role ? [data.user.role] : data.role ? [data.role] : []);
   const roles = Array.from(new Set(rawRoles
     .map((role) => normalizeBackendRole(role))
@@ -114,11 +122,13 @@ const normalizeRefreshedUser = (payload: unknown): User | null => {
     username: data.user?.username,
     fullName: data.user?.fullName,
     companyName: data.user?.companyName,
+    schoolName: data.user?.schoolName,
     roles,
     role: (normalizeBackendRole(data.user?.primaryRole ?? data.primaryRole ?? data.user?.role ?? data.role) ?? roles[0])?.replace('ROLE_', '') as User['role'] | undefined,
     primaryRole: normalizeBackendRole(data.user?.primaryRole ?? data.primaryRole ?? data.user?.role ?? data.role) ?? roles[0],
     approvalStatus: normalizeApprovalStatus(data.user?.approvalStatus ?? data.approvalStatus),
     verified: data.user?.verified,
+    planType: normalizePlanType(data.user?.planType),
     passwordChangeRequired: data.user?.passwordChangeRequired ?? data.mustChangePassword,
     profileCompleted: data.user?.profileCompleted,
     profileCompleteness: data.user?.profileCompleteness,

@@ -166,7 +166,7 @@ public class AuthService {
         this.notificationService = notificationService;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponse me(Principal principal) {
         if (principal == null || principal.getName() == null || principal.getName().isBlank()) {
             throw new InvalidCredentialsException();
@@ -411,6 +411,7 @@ public class AuthService {
         );
     }
 
+    @Transactional
     public AuthResponse refresh(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new InvalidCredentialsException();
@@ -952,7 +953,7 @@ public class AuthService {
                 ? companyProfile.getStatus().name()
                 : schoolRegistration == null ? null : schoolRegistration.getStatus().name();
         String primaryRole = resolvePrimaryRole(roles);
-        String planType = studentPlanAccessService.hasPremiumAccess(user.getId()) ? PlanType.PREMIUM.name() : PlanType.BASIC.name();
+        String planType = resolveAndSyncPlanType(user);
 
         String accessToken = jwtService.generateAccessToken(user, roles, approvalStatus, planType);
         String refreshToken = jwtService.generateRefreshToken(user);
@@ -1000,6 +1001,17 @@ public class AuthService {
                 ),
                 message
         );
+    }
+
+    private String resolveAndSyncPlanType(User user) {
+        PlanType resolvedPlanType = studentPlanAccessService.hasPremiumAccess(user.getId())
+                ? PlanType.PREMIUM
+                : PlanType.BASIC;
+        if (user.getPlanType() != resolvedPlanType) {
+            user.setPlanType(resolvedPlanType);
+            userRepository.save(user);
+        }
+        return resolvedPlanType.name();
     }
 
     private User resolveUserForLoginIdentifier(String identifier) {

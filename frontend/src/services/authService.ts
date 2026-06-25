@@ -101,6 +101,7 @@ export const normalizeAuthResponse = (payload: AuthResponseRaw): AuthResponse =>
 };
 
 export const authService = {
+  me: () => apiClient.get<AuthResponseRaw>('/auth/me').then((response) => normalizeAuthResponse(response.data)),
   login: (payload: { email?: string; schoolName?: string; emisNumber?: string; password: string }) => {
     authStore.clear();
     return apiClient.post<AuthResponseRaw>('/auth/login', {

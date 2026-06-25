@@ -112,6 +112,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (storedUser) {
       setUser(storedUser);
+      authService.me()
+        .then((session) => {
+          if (!active) return;
+          setSession(session, { rememberMe: authStore.shouldPersistSession() });
+        })
+        .catch(() => undefined);
       const roles = getNormalizedUserRoles(storedUser);
       if (roles.includes('ROLE_STUDENT')) {
         setIsStudentProfileStatusSyncing(true);
