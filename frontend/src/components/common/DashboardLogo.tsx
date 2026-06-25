@@ -1,5 +1,5 @@
 import type { ImgHTMLAttributes } from 'react';
-import eduriteLogo from '@/assets/edurite-icon.jpeg';
+import eduriteLogo from '@/assets/Edurite-dashboard.jpeg';
 
 type DashboardLogoProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt'>;
 
