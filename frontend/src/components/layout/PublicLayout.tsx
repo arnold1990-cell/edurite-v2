@@ -1,6 +1,6 @@
 import { ChevronDown, Globe, Headphones } from 'lucide-react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import eduRiteLogo from '@/assets/Edurite-dashboard.jpeg';
+import { EduRiteLogo } from '@/components/common/EduRiteLogo';
 
 const footerLinks = [
   { to: '/', label: 'Home' },
@@ -29,14 +29,9 @@ export const PublicLayout = () => {
             aria-label="EduRite home"
             className={`flex shrink-0 items-end self-end ${isAuthRoute ? 'mb-0 pb-0 pt-0' : ''}`}
           >
-            <img
-              src={eduRiteLogo}
-              alt="EduRite"
-              className={`${isAuthRoute ? 'block max-h-none max-w-none object-contain align-bottom' : 'block h-12 w-12 object-contain'}`}
+            <EduRiteLogo
+              className={`${isAuthRoute ? 'block max-h-none max-w-none object-contain align-bottom' : 'block h-12 md:h-14 w-auto object-contain'}`}
               style={isAuthRoute ? { height: 'clamp(92px, 11vw, 120px)', width: 'auto', objectFit: 'contain' } : undefined}
-              onError={(event) => {
-                event.currentTarget.style.display = 'none';
-              }}
             />
           </Link>
 

@@ -5,6 +5,7 @@ import bursariesBackgroundImage from '@/assets/images/bursaries.jpeg';
 import coursesBackgroundImage from '@/assets/images/courses.jpeg';
 import { MetricCard } from '@/components/cards/MetricCard';
 import { PlaceholderChart } from '@/components/charts/PlaceholderChart';
+import { EduRiteLogo } from '@/components/common/EduRiteLogo';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback/States';
 import { BackgroundSection } from '@/components/sections/BackgroundSection';
 import { DataTable } from '@/components/tables/DataTable';
@@ -362,7 +363,12 @@ const LiveDataStatusNotice = ({ visible, message }: { visible: boolean; message:
 export const LandingPage = () => (
   <div className="space-y-8">
     <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm lg:grid lg:grid-cols-[1.05fr_1fr] lg:gap-10">
-      <div>
+      <div className="lg:col-span-2">
+        <EduRiteLogo
+          className="mx-auto h-auto w-[200px] object-contain sm:w-[240px] md:w-[280px] lg:w-[320px] xl:w-[360px]"
+        />
+      </div>
+      <div className="pt-8 lg:pt-0">
         <Badge color="blue">Career intelligence for students and sponsors</Badge>
         <h1 className="mt-5 text-4xl font-bold leading-tight text-slate-900 md:text-5xl">
           Build brighter futures with smarter career and bursary matching.
