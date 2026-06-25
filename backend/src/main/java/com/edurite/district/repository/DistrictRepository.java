@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DistrictRepository extends JpaRepository<District, UUID> {
+    Optional<District> findFirstByOrderByCreatedAtAsc();
     Optional<District> findByIdAndActiveTrue(UUID id);
     Optional<District> findByDistrictCodeIgnoreCase(String districtCode);
     List<District> findByProvinceIdAndActiveTrueOrderByDistrictNameAsc(UUID provinceId);

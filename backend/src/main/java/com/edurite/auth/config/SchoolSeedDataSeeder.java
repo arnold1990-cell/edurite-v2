@@ -1,5 +1,7 @@
 package com.edurite.auth.config;
 
+import com.edurite.district.entity.District;
+import com.edurite.district.repository.DistrictRepository;
 import com.edurite.school.portal.entity.School;
 import com.edurite.school.portal.entity.SchoolRegistrationRequest;
 import com.edurite.school.portal.entity.SchoolStatus;
@@ -22,9 +24,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Configuration
 public class SchoolSeedDataSeeder {
+    private static final Logger log = LoggerFactory.getLogger(SchoolSeedDataSeeder.class);
     private static final String SEEDED_SCHOOL_NAME = "EduRite";
     private static final String SEEDED_EMIS_NUMBER = "99999999";
     private static final String SEEDED_SCHOOL_STATUS = "ACTIVE";
@@ -37,6 +42,7 @@ public class SchoolSeedDataSeeder {
             SchoolRepository schoolRepository,
             SchoolRegistrationRequestRepository schoolRegistrationRequestRepository,
             SchoolUserProfileRepository schoolUserProfileRepository,
+            DistrictRepository districtRepository,
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
@@ -50,6 +56,7 @@ public class SchoolSeedDataSeeder {
             @Value("${edurite.auth.seed.demo-learner.password:Student@123}") String demoLearnerPassword
     ) {
         return args -> {
+            District seededDistrict = districtRepository.findFirstByOrderByCreatedAtAsc().orElse(null);
             School school = schoolRepository.findByRegistrationNumberIgnoreCase(SEEDED_EMIS_NUMBER).orElseGet(School::new);
             school.setSchoolName(SEEDED_SCHOOL_NAME);
             school.setRegistrationNumber(SEEDED_EMIS_NUMBER);
@@ -59,11 +66,17 @@ public class SchoolSeedDataSeeder {
             if (school.getStatus() == null || school.getStatus().isBlank()) {
                 school.setStatus(SEEDED_SCHOOL_STATUS);
             }
+            if (isBlank(school.getProvince())) {
+                school.setProvince(firstNonBlank(seededDistrict == null ? null : seededDistrict.getProvince(), "Gauteng"));
+            }
+            if (isBlank(school.getDistrict())) {
+                school.setDistrict(firstNonBlank(seededDistrict == null ? null : seededDistrict.getDistrictName(), "Johannesburg"));
+            }
+            if (seededDistrict != null && school.getDistrictId() == null) {
+                school.setDistrictId(seededDistrict.getId());
+            }
             if (school.getProvince() == null || school.getProvince().isBlank()) {
                 school.setProvince("Gauteng");
-            }
-            if (school.getDistrict() == null || school.getDistrict().isBlank()) {
-                school.setDistrict("Johannesburg");
             }
             if (school.getContactEmail() == null || school.getContactEmail().isBlank()) {
                 school.setContactEmail("school@edurite.com");
@@ -72,7 +85,7 @@ public class SchoolSeedDataSeeder {
 
             User schoolAdminUser = ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
                     schoolAdminEmail, schoolAdminPassword, SEEDED_SCHOOL_ADMIN_ROLE, "School", "Admin");
-            ensureSchoolRegistration(school, schoolRegistrationRequestRepository, schoolAdminUser);
+            ensureSchoolRegistration(school, schoolRegistrationRequestRepository, schoolAdminUser, seededDistrict);
             ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
                     teacherEmail, teacherPassword, "ROLE_TEACHER", "EduRite", "Teacher");
             ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
@@ -149,8 +162,14 @@ public class SchoolSeedDataSeeder {
     private void ensureSchoolRegistration(
             School school,
             SchoolRegistrationRequestRepository schoolRegistrationRequestRepository,
-            User schoolAdminUser
+            User schoolAdminUser,
+            District seededDistrict
     ) {
+        if (seededDistrict == null) {
+            log.warn("Skipping seeded school registration because no district exists.");
+            return;
+        }
+
         Optional<SchoolRegistrationRequest> byUserId = schoolRegistrationRequestRepository.findByUserId(schoolAdminUser.getId());
         Optional<SchoolRegistrationRequest> byEmis = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(SEEDED_EMIS_NUMBER);
 
@@ -166,14 +185,16 @@ public class SchoolSeedDataSeeder {
         registration.setSchoolId(school.getId());
         registration.setSchoolName(SEEDED_SCHOOL_NAME);
         registration.setEmisNumber(SEEDED_EMIS_NUMBER);
-        registration.setProvince(Optional.ofNullable(school.getProvince()).filter(value -> !value.isBlank()).orElse("Gauteng"));
-        registration.setDistrictName(Optional.ofNullable(school.getDistrict()).filter(value -> !value.isBlank()).orElse("Johannesburg"));
+        registration.setDistrictId(seededDistrict.getId());
+        registration.setProvinceId(seededDistrict.getProvinceId());
+        registration.setProvince(firstNonBlank(seededDistrict.getProvince(), school.getProvince(), "Gauteng"));
+        registration.setDistrictName(firstNonBlank(seededDistrict.getDistrictName(), school.getDistrict(), "Johannesburg"));
         registration.setSchoolType("Public");
         registration.setPrincipalName("EduRite Admin");
         registration.setPrincipalEmail(schoolAdminUser.getEmail());
-        registration.setSchoolEmail(Optional.ofNullable(school.getContactEmail()).filter(value -> !value.isBlank()).orElse("school@edurite.com"));
-        registration.setPhoneNumber(Optional.ofNullable(school.getContactPhone()).filter(value -> !value.isBlank()).orElse("+26770000100"));
-        registration.setPhysicalAddress(Optional.ofNullable(school.getAddress()).filter(value -> !value.isBlank()).orElse("EduRite Campus"));
+        registration.setSchoolEmail(firstNonBlank(school.getContactEmail(), "school@edurite.com"));
+        registration.setPhoneNumber(firstNonBlank(school.getContactPhone(), "+26770000100"));
+        registration.setPhysicalAddress(firstNonBlank(school.getAddress(), "EduRite Campus"));
         registration.setStatus(SchoolStatus.ACTIVE);
         if (registration.getSubmittedAt() == null) {
             registration.setSubmittedAt(OffsetDateTime.now());
@@ -182,6 +203,19 @@ public class SchoolSeedDataSeeder {
             registration.setApprovedAt(OffsetDateTime.now());
         }
         schoolRegistrationRequestRepository.save(registration);
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (!isBlank(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }
 
