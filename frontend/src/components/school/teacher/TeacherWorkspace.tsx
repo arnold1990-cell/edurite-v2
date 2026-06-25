@@ -357,7 +357,6 @@ export const TeacherWorkspace = ({
           <div className="mb-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5">
             <DashboardLogo className="h-12 shrink-0" />
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-slate-500">EduRite</p>
               <p className="text-sm font-bold text-slate-900">Teacher Portal</p>
             </div>
           </div>

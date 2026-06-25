@@ -165,7 +165,6 @@ export const DistrictAdminLayout = () => {
             <button type="button" className="flex min-w-0 items-center gap-3 text-left" onClick={() => { navigate('/district/dashboard'); setOpen(false); }}>
               <DashboardLogo className="h-12 shrink-0" />
               <div className={collapsed ? 'hidden' : 'block'}>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-blue-200">EduRite</p>
                 <h1 className="mt-1 text-xl font-semibold">District Portal</h1>
               </div>
             </button>

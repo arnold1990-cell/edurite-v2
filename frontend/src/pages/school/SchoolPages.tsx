@@ -59,11 +59,10 @@ export const SchoolPendingApprovalPage = () => {
       <header className="border-b border-slate-200/80 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <Link to={PUBLIC_HOME_PATH} className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="EduRite home">
-              <EduRiteLogo className="h-9 w-9" />
+            <Link to={PUBLIC_HOME_PATH} className="flex h-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-white px-3 shadow-sm" aria-label="EduRite home">
+              <EduRiteLogo className="h-9 w-auto" />
             </Link>
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">EduRite</p>
               <h1 className="truncate text-lg font-semibold text-slate-900 sm:text-xl">{title}</h1>
             </div>
           </div>

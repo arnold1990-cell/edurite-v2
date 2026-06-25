@@ -1544,7 +1544,6 @@ export const SchoolAdminPortalPage = () => {
             <div className="flex items-center gap-3">
               <DashboardLogo className="h-10 shrink-0" />
               <div>
-                <p className="text-[12px] font-semibold uppercase tracking-[0.16em] text-slate-400">EduRite</p>
                 <p className="text-[15px] font-semibold leading-6 text-white">{dashboardQuery.data?.schoolName || user?.fullName || 'School Admin Portal'}</p>
               </div>
             </div>
@@ -1604,7 +1603,6 @@ export const SchoolAdminPortalPage = () => {
                 <div className="flex items-center gap-3">
                   <DashboardLogo className="h-10 shrink-0" />
                   <div>
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-blue-200">EduRite</p>
                     <p className="text-[15px] font-semibold">{dashboardQuery.data?.schoolName || 'School Admin Portal'}</p>
                   </div>
                 </div>

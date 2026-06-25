@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, FileBarChart2, GraduationCap, MessageSquare, Sparkles, Users } from 'lucide-react';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { useAuth } from '@/hooks/useAuth';
+import { DashboardLogo } from '@/components/common/DashboardLogo';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ErrorState, LoadingState } from '@/components/feedback/States';
@@ -290,14 +291,16 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
     <DashboardShell>
       <div className="rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_#e8f1ff,_#ffffff_55%)] p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#0B5BFF]">EduRite School & Teacher Portal</p>
+          <div className="flex min-w-0 items-start gap-3">
+            <DashboardLogo className="h-12 shrink-0" />
+            <div>
             <h1 className="mt-1.5 text-2xl font-semibold text-slate-900">{mode === 'school' ? 'School readiness command centre' : 'Teacher learner readiness workspace'}</h1>
             <p className="mt-2 max-w-3xl text-[13px] leading-6 text-slate-600">
               {mode === 'school'
                 ? 'Track learner readiness, academic risk, career alignment, bursary eligibility, and intervention progress from one school-scoped portal.'
                 : 'Monitor only your assigned learners, surface readiness gaps early, and log evidence-backed interventions without leaving the teacher workflow.'}
             </p>
+            </div>
           </div>
           <div className="grid gap-2 rounded-2xl border border-white/70 bg-white/85 p-3 backdrop-blur sm:grid-cols-3">
             <div><p className="text-xs uppercase tracking-[0.16em] text-slate-500">Profiles complete</p><p className="mt-1 text-xl font-semibold text-slate-900">{learnerCards.profileComplete}</p></div>

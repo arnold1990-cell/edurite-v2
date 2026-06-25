@@ -7,9 +7,9 @@ export const DashboardLogo = ({ className, onError, ...props }: DashboardLogoPro
   <img
     {...props}
     src={eduriteLogo}
-    alt="EduRite - Education done right"
+    alt="EduRite"
     loading="lazy"
-    className={['block w-auto object-contain', className].filter(Boolean).join(' ')}
+    className={['block h-auto w-auto max-w-full object-contain', className].filter(Boolean).join(' ')}
     onError={(event) => {
       event.currentTarget.style.display = 'none';
       onError?.(event);

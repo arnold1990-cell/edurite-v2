@@ -548,7 +548,9 @@ export const DashboardLayout = () => {
         <div className="flex-shrink-0">
           <Link to={homePath} className="mb-4 block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70" aria-label="EduRite home" onClick={() => setOpen(false)}>
             <DashboardLogo className="hidden h-12 lg:block" />
-            <div className="hidden h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-xs font-bold text-white md:flex lg:hidden">ER</div>
+            <div className="hidden h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white/10 px-1 md:flex lg:hidden">
+              <DashboardLogo className="h-8" />
+            </div>
           </Link>
         </div>
         <nav className="sidebar-nav min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">

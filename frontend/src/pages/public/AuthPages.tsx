@@ -436,7 +436,7 @@ const AuthShell = ({ children, role, mode }: { children: React.ReactNode; role: 
         <div className="pointer-events-none absolute bottom-12 right-10 h-20 w-20 rounded-full bg-sky-200/20 blur-2xl" aria-hidden="true" />
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-h-[80px] items-center rounded-[24px] bg-white px-4 py-3 shadow-lg shadow-slate-950/15 md:min-h-[96px] md:px-5">
-            <EduRiteLogo className="h-10 w-10 object-contain sm:h-12 sm:w-12 md:h-14 md:w-14 lg:h-16 lg:w-16" />
+            <EduRiteLogo className="h-auto w-[160px] sm:w-[180px] md:w-[200px] lg:w-[220px]" />
           </div>
           <span className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/90">
             {roleLabel[role]} Portal
@@ -1333,8 +1333,8 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
     <form className="w-full max-w-[420px] rounded-[24px] border border-[#e2e8f0] bg-white p-6 shadow-[0_30px_80px_-42px_rgba(15,23,42,0.35)] sm:p-8" onSubmit={handleSubmit}>
       <div className="space-y-6">
         <div className="space-y-4 text-center">
-          <div className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dbeafe] to-[#bfdbfe] shadow-inner shadow-white">
-            <EduRiteLogo className="h-8 w-8 object-contain" />
+          <div className="mx-auto inline-flex min-h-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#dbeafe] to-[#bfdbfe] px-4 py-3 shadow-inner shadow-white">
+            <EduRiteLogo className="h-auto w-[110px]" />
           </div>
           <div className="space-y-2">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#2563eb]">{portalTitle}</p>
