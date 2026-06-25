@@ -332,7 +332,7 @@ class AuthServiceVerificationFlowUnitTest {
 
         assertThatThrownBy(() -> authService.login(new com.edurite.auth.dto.LoginRequest("company@edurite.com", "wrong-password")))
                 .isInstanceOf(InvalidCredentialsException.class)
-                .hasMessage("Invalid email or password");
+                .hasMessage("Invalid password.");
     }
 
     @Test
@@ -505,7 +505,7 @@ class AuthServiceVerificationFlowUnitTest {
 
         assertThatThrownBy(() -> authService.login(new com.edurite.auth.dto.LoginRequest("bad@example.com", "wrong")))
                 .isInstanceOf(InvalidCredentialsException.class)
-                .hasMessage("Invalid email or password");
+                .hasMessage("Invalid password.");
 
         verify(otpService, never()).sendVerificationOtp(anyString());
         verify(otpService, never()).sendPasswordResetOtp(anyString());

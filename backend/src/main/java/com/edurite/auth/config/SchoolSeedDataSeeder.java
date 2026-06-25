@@ -1,7 +1,10 @@
 package com.edurite.auth.config;
 
 import com.edurite.school.portal.entity.School;
+import com.edurite.school.portal.entity.SchoolRegistrationRequest;
+import com.edurite.school.portal.entity.SchoolStatus;
 import com.edurite.school.portal.entity.SchoolUserProfile;
+import com.edurite.school.portal.repository.SchoolRegistrationRequestRepository;
 import com.edurite.school.portal.repository.SchoolRepository;
 import com.edurite.school.portal.repository.SchoolUserProfileRepository;
 import com.edurite.user.entity.Role;
@@ -9,7 +12,9 @@ import com.edurite.user.entity.User;
 import com.edurite.user.entity.UserStatus;
 import com.edurite.user.repository.RoleRepository;
 import com.edurite.user.repository.UserRepository;
+import java.time.OffsetDateTime;
 import java.util.Locale;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -26,12 +31,13 @@ public class SchoolSeedDataSeeder {
     @ConditionalOnProperty(prefix = "edurite.seed", name = "enabled", havingValue = "true")
     ApplicationRunner schoolSeedRunner(
             SchoolRepository schoolRepository,
+            SchoolRegistrationRequestRepository schoolRegistrationRequestRepository,
             SchoolUserProfileRepository schoolUserProfileRepository,
             UserRepository userRepository,
             RoleRepository roleRepository,
             PasswordEncoder passwordEncoder,
             @Value("${edurite.auth.seed.school-admin.email:schooladmin@edurite.com}") String schoolAdminEmail,
-            @Value("${edurite.auth.seed.school-admin.password:SchoolAdmin@123}") String schoolAdminPassword,
+            @Value("${edurite.auth.seed.school-admin.password:Admin@123}") String schoolAdminPassword,
             @Value("${edurite.auth.seed.teacher.email:teacher@edurite.com}") String teacherEmail,
             @Value("${edurite.auth.seed.teacher.password:Teacher@123}") String teacherPassword,
             @Value("${edurite.auth.seed.school-student.email:schoolstudent@edurite.com}") String learnerEmail,
@@ -42,7 +48,8 @@ public class SchoolSeedDataSeeder {
         return args -> {
             School school = schoolRepository.findAll().stream().findFirst().orElseGet(() -> {
                 School created = new School();
-                created.setSchoolName("EduRite Secondary School");
+                created.setSchoolName("EduRite");
+                created.setRegistrationNumber("050020");
                 created.setSchoolCode("ESS");
                 created.setStatus("ACTIVE");
                 created.setProvince("Gauteng");
@@ -50,6 +57,8 @@ public class SchoolSeedDataSeeder {
                 created.setContactEmail("school@edurite.com");
                 return schoolRepository.save(created);
             });
+            school.setSchoolName("EduRite");
+            school.setRegistrationNumber("050020");
             if (school.getSchoolCode() == null || school.getSchoolCode().isBlank()) {
                 school.setSchoolCode("ESS");
             }
@@ -58,8 +67,9 @@ public class SchoolSeedDataSeeder {
             }
             schoolRepository.save(school);
 
-            ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
+            User schoolAdminUser = ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
                     schoolAdminEmail, schoolAdminPassword, "ROLE_SCHOOL_ADMIN", "School", "Admin");
+            ensureSchoolRegistration(school, schoolRegistrationRequestRepository, schoolAdminUser);
             ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
                     teacherEmail, teacherPassword, "ROLE_TEACHER", "EduRite", "Teacher");
             ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
@@ -69,7 +79,7 @@ public class SchoolSeedDataSeeder {
         };
     }
 
-    private void ensureUserMapped(
+    private User ensureUserMapped(
             School school,
             SchoolUserProfileRepository schoolUserProfileRepository,
             UserRepository userRepository,
@@ -98,20 +108,70 @@ public class SchoolSeedDataSeeder {
             return userRepository.save(created);
         });
 
+        boolean userUpdated = false;
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank() || !passwordEncoder.matches(password, user.getPasswordHash())) {
+            user.setPasswordHash(passwordEncoder.encode(password));
+            userUpdated = true;
+        }
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            user.setStatus(UserStatus.ACTIVE);
+            userUpdated = true;
+        }
+        if (!user.isEmailVerified()) {
+            user.setEmailVerified(true);
+            userUpdated = true;
+        }
+        if (userUpdated) {
+            userRepository.save(user);
+        }
+
         if (user.getRoles().stream().noneMatch(r -> roleName.equalsIgnoreCase(r.getName()))) {
             user.getRoles().add(role);
             userRepository.save(user);
         }
 
-        schoolUserProfileRepository.findByUserIdAndDeletedFalse(user.getId()).orElseGet(() -> {
-            SchoolUserProfile profile = new SchoolUserProfile();
-            profile.setSchoolId(school.getId());
-            profile.setUserId(user.getId());
-            profile.setRoleName(roleName);
-            profile.setActive(true);
-            profile.setDeleted(false);
-            return schoolUserProfileRepository.save(profile);
+        SchoolUserProfile profile = schoolUserProfileRepository.findByUserIdAndDeletedFalse(user.getId()).orElseGet(() -> {
+            SchoolUserProfile created = new SchoolUserProfile();
+            created.setUserId(user.getId());
+            return created;
         });
+        profile.setSchoolId(school.getId());
+        profile.setRoleName(roleName);
+        profile.setActive(true);
+        profile.setDeleted(false);
+        schoolUserProfileRepository.save(profile);
+        return user;
+    }
+
+    private void ensureSchoolRegistration(
+            School school,
+            SchoolRegistrationRequestRepository schoolRegistrationRequestRepository,
+            User schoolAdminUser
+    ) {
+        SchoolRegistrationRequest registration = schoolRegistrationRequestRepository.findByUserId(schoolAdminUser.getId())
+                .or(() -> schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020"))
+                .orElseGet(SchoolRegistrationRequest::new);
+
+        registration.setUserId(schoolAdminUser.getId());
+        registration.setSchoolId(school.getId());
+        registration.setSchoolName("EduRite");
+        registration.setEmisNumber("050020");
+        registration.setProvince(Optional.ofNullable(school.getProvince()).filter(value -> !value.isBlank()).orElse("Gauteng"));
+        registration.setDistrictName(Optional.ofNullable(school.getDistrict()).filter(value -> !value.isBlank()).orElse("Johannesburg"));
+        registration.setSchoolType("Public");
+        registration.setPrincipalName("EduRite Admin");
+        registration.setPrincipalEmail(schoolAdminUser.getEmail());
+        registration.setSchoolEmail(Optional.ofNullable(school.getContactEmail()).filter(value -> !value.isBlank()).orElse("school@edurite.com"));
+        registration.setPhoneNumber(Optional.ofNullable(school.getContactPhone()).filter(value -> !value.isBlank()).orElse("+26770000100"));
+        registration.setPhysicalAddress(Optional.ofNullable(school.getAddress()).filter(value -> !value.isBlank()).orElse("EduRite Campus"));
+        registration.setStatus(SchoolStatus.ACTIVE);
+        if (registration.getSubmittedAt() == null) {
+            registration.setSubmittedAt(OffsetDateTime.now());
+        }
+        if (registration.getApprovedAt() == null) {
+            registration.setApprovedAt(OffsetDateTime.now());
+        }
+        schoolRegistrationRequestRepository.save(registration);
     }
 }
 

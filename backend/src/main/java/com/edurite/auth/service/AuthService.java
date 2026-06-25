@@ -88,11 +88,14 @@ public class AuthService {
 
     private enum LoginAuditReason {
         USER_NOT_FOUND,
+        SCHOOL_NOT_FOUND,
+        SCHOOL_NAME_EMIS_MISMATCH,
         PASSWORD_MISMATCH,
         ACCOUNT_DISABLED,
         EMAIL_NOT_VERIFIED,
         ROLE_MISSING,
-        APPROVAL_PENDING
+        APPROVAL_PENDING,
+        ACCOUNT_NOT_APPROVED
     }
 
     private final UserRepository userRepository;
@@ -634,17 +637,16 @@ public class AuthService {
             if (schoolName == null || emisNumber == null) {
                 throw new InvalidCredentialsException("School name and EMIS number are required.");
             }
-            resolvedUser = resolveSchoolUserForLogin(schoolName, emisNumber);
+            resolvedUser = resolveSchoolUserForLogin(schoolName, emisNumber, request.password());
             identifier = emisNumber;
         } else {
             resolvedUser = resolveUserForLoginIdentifier(identifier);
-        }
-
-        if (request.password() == null
-                || resolvedUser.getPasswordHash() == null
-                || resolvedUser.getPasswordHash().isBlank()
-                || !passwordEncoder.matches(request.password(), resolvedUser.getPasswordHash())) {
-            throw loginFailure(LoginAuditReason.PASSWORD_MISMATCH, identifier);
+            if (request.password() == null
+                    || resolvedUser.getPasswordHash() == null
+                    || resolvedUser.getPasswordHash().isBlank()
+                    || !passwordEncoder.matches(request.password(), resolvedUser.getPasswordHash())) {
+                throw loginFailure(LoginAuditReason.PASSWORD_MISMATCH, identifier);
+            }
         }
 
         validateUserEligibleForLogin(resolvedUser, identifier);
@@ -1153,17 +1155,42 @@ public class AuthService {
         log.warn("[auth] login failed reason={} identifier={}", reason, maskIdentifier(identifier));
         return switch (reason) {
             case ACCOUNT_DISABLED -> new InvalidCredentialsException("Account is inactive or suspended.");
+            case SCHOOL_NOT_FOUND -> new InvalidCredentialsException("School not found.");
+            case SCHOOL_NAME_EMIS_MISMATCH -> new InvalidCredentialsException("EMIS and school name do not match.");
+            case PASSWORD_MISMATCH -> new InvalidCredentialsException("Invalid password.");
+            case ACCOUNT_NOT_APPROVED -> new InvalidCredentialsException("Account is not approved or active.");
             case EMAIL_NOT_VERIFIED -> new InvalidCredentialsException("Account is not verified. Verify your phone number with OTP before signing in.");
             default -> new InvalidCredentialsException();
         };
     }
 
-    private User resolveSchoolUserForLogin(String schoolName, String emisNumber) {
+    private User resolveSchoolUserForLogin(String schoolName, String emisNumber, String password) {
         SchoolRegistrationRequest request = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(emisNumber)
-                .filter(item -> schoolName.equalsIgnoreCase(item.getSchoolName()))
-                .orElseThrow(InvalidCredentialsException::new);
-        return userRepository.findById(request.getUserId())
-                .orElseThrow(InvalidCredentialsException::new);
+                .orElseThrow(() -> loginFailure(LoginAuditReason.SCHOOL_NOT_FOUND, emisNumber));
+
+        if (!schoolName.equalsIgnoreCase(request.getSchoolName())) {
+            throw loginFailure(LoginAuditReason.SCHOOL_NAME_EMIS_MISMATCH, emisNumber);
+        }
+
+        if (request.getStatus() != SchoolStatus.ACTIVE) {
+            throw loginFailure(LoginAuditReason.ACCOUNT_NOT_APPROVED, emisNumber);
+        }
+
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> loginFailure(LoginAuditReason.SCHOOL_NOT_FOUND, emisNumber));
+
+        if (!hasRole(user, "ROLE_SCHOOL_ADMIN")) {
+            throw loginFailure(LoginAuditReason.SCHOOL_NOT_FOUND, emisNumber);
+        }
+
+        if (password == null
+                || user.getPasswordHash() == null
+                || user.getPasswordHash().isBlank()
+                || !passwordEncoder.matches(password, user.getPasswordHash())) {
+            throw loginFailure(LoginAuditReason.PASSWORD_MISMATCH, emisNumber);
+        }
+
+        return user;
     }
 
     private String maskIdentifier(String identifier) {

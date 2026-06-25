@@ -304,8 +304,8 @@ const demoCredentialsByRole: Record<'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'DI
     password: 'Teacher@123',
   },
   SCHOOL_ADMIN: {
-    username: 'schooladmin@edurite.com',
-    password: 'SchoolAdmin@123',
+    username: 'EduRite / 050020',
+    password: 'Admin@123',
   },
   DISTRICT_ADMIN: {
     username: 'districtadmin@edurite.com',

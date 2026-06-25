@@ -19,6 +19,8 @@ import com.edurite.district.repository.DistrictRepository;
 import com.edurite.district.service.LocationService;
 import com.edurite.gamification.service.GamificationService;
 import com.edurite.notification.service.NotificationService;
+import com.edurite.common.exception.InvalidCredentialsException;
+import com.edurite.school.portal.entity.School;
 import com.edurite.school.portal.entity.SchoolRegistrationRequest;
 import com.edurite.school.portal.entity.SchoolStatus;
 import com.edurite.school.portal.repository.SchoolRegistrationRequestRepository;
@@ -46,6 +48,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -167,13 +170,13 @@ class AuthServiceSchoolRegistrationTest {
     }
 
     @Test
-    void schoolLoginVerifiesSchoolNameAndEmisNumber() {
+    void schoolLoginSucceedsForActiveSeededSchool() {
         UUID userId = UUID.randomUUID();
         User user = new User();
         user.setId(userId);
-        user.setEmail("school@example.com");
+        user.setEmail("schooladmin@edurite.com");
         user.setPasswordHash("encoded");
-        user.setFirstName("Kgale Secondary");
+        user.setFirstName("EduRite");
         user.setLastName("School Admin");
         user.setStatus(UserStatus.ACTIVE);
         user.setEmailVerified(true);
@@ -183,13 +186,14 @@ class AuthServiceSchoolRegistrationTest {
 
         SchoolRegistrationRequest registrationRequest = new SchoolRegistrationRequest();
         registrationRequest.setUserId(userId);
-        registrationRequest.setSchoolName("Kgale Secondary");
-        registrationRequest.setEmisNumber("EMIS-001");
-        registrationRequest.setStatus(SchoolStatus.PENDING_DISTRICT_APPROVAL);
+        registrationRequest.setSchoolId(UUID.randomUUID());
+        registrationRequest.setSchoolName("EduRite");
+        registrationRequest.setEmisNumber("050020");
+        registrationRequest.setStatus(SchoolStatus.ACTIVE);
 
-        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("EMIS-001")).thenReturn(Optional.of(registrationRequest));
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020")).thenReturn(Optional.of(registrationRequest));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("Password@123", "encoded")).thenReturn(true);
+        when(passwordEncoder.matches("Admin@123", "encoded")).thenReturn(true);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(companyProfileRepository.findByUserId(userId)).thenReturn(Optional.empty());
         when(schoolRegistrationRequestRepository.findByUserId(userId)).thenReturn(Optional.of(registrationRequest));
@@ -199,9 +203,35 @@ class AuthServiceSchoolRegistrationTest {
         when(jwtService.generateRefreshToken(any(User.class))).thenReturn("refresh-token");
         when(jwtService.accessTokenExpirationSeconds()).thenReturn(3600L);
 
-        AuthResponse response = authService.login(new LoginRequest(null, "Kgale Secondary", "EMIS-001", "Password@123"));
+        AuthResponse response = authService.login(new LoginRequest(null, "EduRite", "050020", "Admin@123"));
 
-        assertThat(response.user().schoolName()).isEqualTo("Kgale Secondary");
-        assertThat(response.user().approvalStatus()).isEqualTo("PENDING_DISTRICT_APPROVAL");
+        assertThat(response.user().schoolName()).isEqualTo("EduRite");
+        assertThat(response.user().approvalStatus()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void schoolLoginRejectsMismatchedSchoolNameAndEmisNumber() {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("schooladmin@edurite.com");
+        user.setPasswordHash("encoded");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(true);
+        Role role = new Role();
+        role.setName("ROLE_SCHOOL_ADMIN");
+        user.setRoles(Set.of(role));
+
+        SchoolRegistrationRequest registrationRequest = new SchoolRegistrationRequest();
+        registrationRequest.setUserId(userId);
+        registrationRequest.setSchoolName("EduRite");
+        registrationRequest.setEmisNumber("050020");
+        registrationRequest.setStatus(SchoolStatus.ACTIVE);
+
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020")).thenReturn(Optional.of(registrationRequest));
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest(null, "Wrong School", "050020", "Admin@123")))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("EMIS and school name do not match.");
     }
 }
