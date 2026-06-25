@@ -46,17 +46,7 @@ public class SchoolSeedDataSeeder {
             @Value("${edurite.auth.seed.demo-learner.password:Student@123}") String demoLearnerPassword
     ) {
         return args -> {
-            School school = schoolRepository.findAll().stream().findFirst().orElseGet(() -> {
-                School created = new School();
-                created.setSchoolName("EduRite");
-                created.setRegistrationNumber("050020");
-                created.setSchoolCode("ESS");
-                created.setStatus("ACTIVE");
-                created.setProvince("Gauteng");
-                created.setDistrict("Johannesburg");
-                created.setContactEmail("school@edurite.com");
-                return schoolRepository.save(created);
-            });
+            School school = schoolRepository.findByRegistrationNumberIgnoreCase("050020").orElseGet(School::new);
             school.setSchoolName("EduRite");
             school.setRegistrationNumber("050020");
             if (school.getSchoolCode() == null || school.getSchoolCode().isBlank()) {
@@ -64,6 +54,15 @@ public class SchoolSeedDataSeeder {
             }
             if (school.getStatus() == null || school.getStatus().isBlank()) {
                 school.setStatus("ACTIVE");
+            }
+            if (school.getProvince() == null || school.getProvince().isBlank()) {
+                school.setProvince("Gauteng");
+            }
+            if (school.getDistrict() == null || school.getDistrict().isBlank()) {
+                school.setDistrict("Johannesburg");
+            }
+            if (school.getContactEmail() == null || school.getContactEmail().isBlank()) {
+                school.setContactEmail("school@edurite.com");
             }
             schoolRepository.save(school);
 
@@ -148,8 +147,15 @@ public class SchoolSeedDataSeeder {
             SchoolRegistrationRequestRepository schoolRegistrationRequestRepository,
             User schoolAdminUser
     ) {
-        SchoolRegistrationRequest registration = schoolRegistrationRequestRepository.findByUserId(schoolAdminUser.getId())
-                .or(() -> schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020"))
+        Optional<SchoolRegistrationRequest> byUserId = schoolRegistrationRequestRepository.findByUserId(schoolAdminUser.getId());
+        Optional<SchoolRegistrationRequest> byEmis = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020");
+
+        if (byUserId.isPresent() && byEmis.isPresent() && !byUserId.get().getId().equals(byEmis.get().getId())) {
+            schoolRegistrationRequestRepository.delete(byUserId.get());
+        }
+
+        SchoolRegistrationRequest registration = byEmis
+                .or(() -> byUserId.filter(existing -> byEmis.isEmpty()))
                 .orElseGet(SchoolRegistrationRequest::new);
 
         registration.setUserId(schoolAdminUser.getId());
