@@ -1,7 +1,42 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "==> Current directory: $(pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+print_failure_diagnostics() {
+  echo "==> Deployment failure diagnostics"
+  echo "pwd: $(pwd)"
+  docker compose ps || true
+  echo "==> Backend logs (last 200 lines)"
+  docker compose logs backend --tail=200 || true
+  echo "==> Frontend logs (last 100 lines)"
+  docker compose logs frontend --tail=100 || true
+}
+
+trap 'print_failure_diagnostics' ERR
+
+cd "$REPO_ROOT" || {
+  echo "ERROR: Failed to enter repository root resolved from script path: $REPO_ROOT"
+  exit 1
+}
+
+echo "==> Deployment diagnostics"
+echo "pwd: $(pwd)"
+ls -la
+echo "whoami: $(whoami)"
+echo "hostname: $(hostname)"
+docker compose ps || true
+
+if [[ ! -d ".git" ]]; then
+  echo "ERROR: Expected a git repository at $REPO_ROOT but .git was not found."
+  exit 1
+fi
+
+if [[ ! -f "docker-compose.yml" ]]; then
+  echo "ERROR: Expected docker-compose.yml at $REPO_ROOT but it was not found."
+  exit 1
+fi
 
 BACKEND_LOCAL_URL="${BACKEND_LOCAL_URL:-http://localhost:${BACKEND_HOST_PORT:-8080}}"
 FRONTEND_LOCAL_URL="${FRONTEND_LOCAL_URL:-http://localhost:${FRONTEND_HOST_PORT:-5173}}"
@@ -23,7 +58,7 @@ echo "==> Container status"
 docker compose ps
 
 echo "==> Backend logs (last 100 lines)"
-docker compose logs backend --tail=100
+docker compose logs backend --tail=200
 
 echo "==> Waiting for backend health"
 for attempt in {1..30}; do
@@ -34,7 +69,7 @@ for attempt in {1..30}; do
 
   if [[ "$attempt" == "30" ]]; then
     echo "FAIL backend health"
-    docker compose logs backend --tail=100
+    docker compose logs backend --tail=200
     exit 1
   fi
 

@@ -10,6 +10,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: GitHub Actions Diagnostics
+        run: |
+          set -euo pipefail
+          echo "==> GitHub Actions diagnostics"
+          echo "pwd: $(pwd)"
+          ls -la
+          echo "whoami: $(whoami)"
+          echo "hostname: $(hostname)"
+          echo "github.workspace: ${GITHUB_WORKSPACE}"
+          echo "repository root:"
+          git rev-parse --show-toplevel
+
       - name: Deploy to Hostinger VPS
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -17,8 +32,86 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /opt/edurite-v2
-            git pull origin main
-            docker compose up -d --build
-            docker compose ps
-            curl -f http://localhost:8080/actuator/health
+            set -euo pipefail
+
+            echo "==> Remote diagnostics"
+            echo "pwd: $(pwd)"
+            ls -la
+            echo "whoami: $(whoami)"
+            echo "hostname: $(hostname)"
+            docker compose ps || true
+
+            REPO_URL="https://github.com/arnold1990-cell/edurite-v2.git"
+            CANDIDATES="
+            /opt/edurite-v2
+            /opt/edurite-ai-career-guidance-clean
+            $HOME/edurite-v2
+            $HOME/edurite-ai-career-guidance-clean
+            $HOME/projects/edurite-v2
+            $HOME/projects/edurite-ai-career-guidance-clean
+            "
+
+            PROJECT_DIR=""
+            for dir in $CANDIDATES; do
+              if [ -d "$dir/.git" ] || [ -f "$dir/docker-compose.yml" ]; then
+                PROJECT_DIR="$dir"
+                break
+              fi
+            done
+
+            if [ -z "$PROJECT_DIR" ]; then
+              echo "==> Searching for repository"
+              FOUND_DIR="$(find /opt "$HOME" -maxdepth 4 -type d -name 'edurite*' 2>/dev/null | head -n 1 || true)"
+              if [ -n "$FOUND_DIR" ]; then
+                PROJECT_DIR="$FOUND_DIR"
+              fi
+            fi
+
+            if [ -z "$PROJECT_DIR" ]; then
+              echo "==> Repository not found. Attempting clone."
+              for dir in /opt/edurite-v2 /opt/edurite-ai-career-guidance-clean "$HOME/projects/edurite-v2" "$HOME/edurite-v2"; do
+                parent_dir="$(dirname "$dir")"
+                if [ -d "$parent_dir" ] && [ -w "$parent_dir" ]; then
+                  PROJECT_DIR="$dir"
+                  break
+                fi
+              done
+
+              if [ -z "$PROJECT_DIR" ]; then
+                echo "ERROR: Could not find a writable target directory for the repository."
+                echo "Checked candidates:"
+                printf '%s\n' $CANDIDATES
+                exit 1
+              fi
+
+              git clone "$REPO_URL" "$PROJECT_DIR"
+              echo "==> Clone completed"
+            fi
+
+            if [ ! -d "$PROJECT_DIR" ]; then
+              echo "ERROR: Resolved project directory does not exist: $PROJECT_DIR"
+              exit 1
+            fi
+
+            if ! cd "$PROJECT_DIR"; then
+              echo "ERROR: Failed to enter project directory: $PROJECT_DIR"
+              ls -la "$(dirname "$PROJECT_DIR")" || true
+              exit 1
+            fi
+
+            echo "==> Using project directory: $PROJECT_DIR"
+            echo "pwd: $(pwd)"
+            ls -la
+
+            if [ ! -f "docker-compose.yml" ]; then
+              echo "ERROR: docker-compose.yml not found in $PROJECT_DIR"
+              exit 1
+            fi
+
+            if [ ! -d ".git" ]; then
+              echo "ERROR: $PROJECT_DIR exists but is not a git repository."
+              exit 1
+            fi
+
+            chmod +x scripts/deploy-aws.sh
+            ./scripts/deploy-aws.sh
