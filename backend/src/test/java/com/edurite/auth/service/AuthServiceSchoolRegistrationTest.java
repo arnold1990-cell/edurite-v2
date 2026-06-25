@@ -188,10 +188,10 @@ class AuthServiceSchoolRegistrationTest {
         registrationRequest.setUserId(userId);
         registrationRequest.setSchoolId(UUID.randomUUID());
         registrationRequest.setSchoolName("EduRite");
-        registrationRequest.setEmisNumber("050020");
+        registrationRequest.setEmisNumber("99999999");
         registrationRequest.setStatus(SchoolStatus.ACTIVE);
 
-        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020")).thenReturn(Optional.of(registrationRequest));
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.of(registrationRequest));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("Admin@123", "encoded")).thenReturn(true);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -203,7 +203,7 @@ class AuthServiceSchoolRegistrationTest {
         when(jwtService.generateRefreshToken(any(User.class))).thenReturn("refresh-token");
         when(jwtService.accessTokenExpirationSeconds()).thenReturn(3600L);
 
-        AuthResponse response = authService.login(new LoginRequest(null, "EduRite", "050020", "Admin@123"));
+        AuthResponse response = authService.login(new LoginRequest(null, "EduRite", "99999999", "Admin@123"));
 
         assertThat(response.user().schoolName()).isEqualTo("EduRite");
         assertThat(response.user().approvalStatus()).isEqualTo("ACTIVE");
@@ -225,12 +225,12 @@ class AuthServiceSchoolRegistrationTest {
         SchoolRegistrationRequest registrationRequest = new SchoolRegistrationRequest();
         registrationRequest.setUserId(userId);
         registrationRequest.setSchoolName("EduRite");
-        registrationRequest.setEmisNumber("050020");
+        registrationRequest.setEmisNumber("99999999");
         registrationRequest.setStatus(SchoolStatus.ACTIVE);
 
-        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020")).thenReturn(Optional.of(registrationRequest));
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.of(registrationRequest));
 
-        assertThatThrownBy(() -> authService.login(new LoginRequest(null, "Wrong School", "050020", "Admin@123")))
+        assertThatThrownBy(() -> authService.login(new LoginRequest(null, "Wrong School", "99999999", "Admin@123")))
                 .isInstanceOf(InvalidCredentialsException.class)
                 .hasMessage("EMIS and school name do not match.");
     }

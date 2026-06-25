@@ -25,6 +25,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 public class SchoolSeedDataSeeder {
+    private static final String SEEDED_SCHOOL_NAME = "EduRite";
+    private static final String SEEDED_EMIS_NUMBER = "99999999";
+    private static final String SEEDED_SCHOOL_STATUS = "ACTIVE";
+    private static final String SEEDED_SCHOOL_ADMIN_ROLE = "ROLE_SCHOOL_ADMIN";
 
     @Bean
     @Order(1)
@@ -46,14 +50,14 @@ public class SchoolSeedDataSeeder {
             @Value("${edurite.auth.seed.demo-learner.password:Student@123}") String demoLearnerPassword
     ) {
         return args -> {
-            School school = schoolRepository.findByRegistrationNumberIgnoreCase("050020").orElseGet(School::new);
-            school.setSchoolName("EduRite");
-            school.setRegistrationNumber("050020");
+            School school = schoolRepository.findByRegistrationNumberIgnoreCase(SEEDED_EMIS_NUMBER).orElseGet(School::new);
+            school.setSchoolName(SEEDED_SCHOOL_NAME);
+            school.setRegistrationNumber(SEEDED_EMIS_NUMBER);
             if (school.getSchoolCode() == null || school.getSchoolCode().isBlank()) {
                 school.setSchoolCode("ESS");
             }
             if (school.getStatus() == null || school.getStatus().isBlank()) {
-                school.setStatus("ACTIVE");
+                school.setStatus(SEEDED_SCHOOL_STATUS);
             }
             if (school.getProvince() == null || school.getProvince().isBlank()) {
                 school.setProvince("Gauteng");
@@ -67,7 +71,7 @@ public class SchoolSeedDataSeeder {
             schoolRepository.save(school);
 
             User schoolAdminUser = ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
-                    schoolAdminEmail, schoolAdminPassword, "ROLE_SCHOOL_ADMIN", "School", "Admin");
+                    schoolAdminEmail, schoolAdminPassword, SEEDED_SCHOOL_ADMIN_ROLE, "School", "Admin");
             ensureSchoolRegistration(school, schoolRegistrationRequestRepository, schoolAdminUser);
             ensureUserMapped(school, schoolUserProfileRepository, userRepository, roleRepository, passwordEncoder,
                     teacherEmail, teacherPassword, "ROLE_TEACHER", "EduRite", "Teacher");
@@ -148,7 +152,7 @@ public class SchoolSeedDataSeeder {
             User schoolAdminUser
     ) {
         Optional<SchoolRegistrationRequest> byUserId = schoolRegistrationRequestRepository.findByUserId(schoolAdminUser.getId());
-        Optional<SchoolRegistrationRequest> byEmis = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020");
+        Optional<SchoolRegistrationRequest> byEmis = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(SEEDED_EMIS_NUMBER);
 
         if (byUserId.isPresent() && byEmis.isPresent() && !byUserId.get().getId().equals(byEmis.get().getId())) {
             schoolRegistrationRequestRepository.delete(byUserId.get());
@@ -160,8 +164,8 @@ public class SchoolSeedDataSeeder {
 
         registration.setUserId(schoolAdminUser.getId());
         registration.setSchoolId(school.getId());
-        registration.setSchoolName("EduRite");
-        registration.setEmisNumber("050020");
+        registration.setSchoolName(SEEDED_SCHOOL_NAME);
+        registration.setEmisNumber(SEEDED_EMIS_NUMBER);
         registration.setProvince(Optional.ofNullable(school.getProvince()).filter(value -> !value.isBlank()).orElse("Gauteng"));
         registration.setDistrictName(Optional.ofNullable(school.getDistrict()).filter(value -> !value.isBlank()).orElse("Johannesburg"));
         registration.setSchoolType("Public");

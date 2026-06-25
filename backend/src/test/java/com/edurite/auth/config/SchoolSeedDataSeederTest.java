@@ -44,7 +44,7 @@ class SchoolSeedDataSeederTest {
         Role schoolAdminRole = new Role();
         schoolAdminRole.setName("ROLE_SCHOOL_ADMIN");
 
-        when(schoolRepository.findByRegistrationNumberIgnoreCase("050020")).thenReturn(Optional.empty());
+        when(schoolRepository.findByRegistrationNumberIgnoreCase("99999999")).thenReturn(Optional.empty());
         when(schoolRepository.save(any(School.class))).thenAnswer(invocation -> {
             School school = invocation.getArgument(0);
             if (school.getId() == null) {
@@ -70,7 +70,7 @@ class SchoolSeedDataSeederTest {
         when(schoolUserProfileRepository.findByUserIdAndDeletedFalse(any())).thenReturn(Optional.empty());
         when(schoolUserProfileRepository.save(any(SchoolUserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(schoolRegistrationRequestRepository.findByUserId(any())).thenReturn(Optional.empty());
-        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020")).thenReturn(Optional.empty());
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.empty());
         when(schoolRegistrationRequestRepository.save(any(SchoolRegistrationRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ApplicationRunner runner = seeder.schoolSeedRunner(
@@ -96,14 +96,14 @@ class SchoolSeedDataSeederTest {
         verify(schoolRepository, org.mockito.Mockito.atLeastOnce()).save(schoolCaptor.capture());
         School savedSchool = schoolCaptor.getAllValues().getLast();
         assertThat(savedSchool.getSchoolName()).isEqualTo("EduRite");
-        assertThat(savedSchool.getRegistrationNumber()).isEqualTo("050020");
+        assertThat(savedSchool.getRegistrationNumber()).isEqualTo("99999999");
         assertThat(savedSchool.getStatus()).isEqualTo("ACTIVE");
 
         ArgumentCaptor<SchoolRegistrationRequest> registrationCaptor = ArgumentCaptor.forClass(SchoolRegistrationRequest.class);
         verify(schoolRegistrationRequestRepository).save(registrationCaptor.capture());
         SchoolRegistrationRequest registration = registrationCaptor.getValue();
         assertThat(registration.getSchoolName()).isEqualTo("EduRite");
-        assertThat(registration.getEmisNumber()).isEqualTo("050020");
+        assertThat(registration.getEmisNumber()).isEqualTo("99999999");
         assertThat(registration.getStatus()).isEqualTo(SchoolStatus.ACTIVE);
         assertThat(registration.getPrincipalEmail()).isEqualTo("schooladmin@edurite.com");
 
@@ -128,10 +128,10 @@ class SchoolSeedDataSeederTest {
         School existingSeededSchool = new School();
         existingSeededSchool.setId(seededSchoolId);
         existingSeededSchool.setSchoolName("Old Name");
-        existingSeededSchool.setRegistrationNumber("050020");
+        existingSeededSchool.setRegistrationNumber("99999999");
         existingSeededSchool.setStatus("ACTIVE");
 
-        when(schoolRepository.findByRegistrationNumberIgnoreCase("050020")).thenReturn(Optional.of(existingSeededSchool));
+        when(schoolRepository.findByRegistrationNumberIgnoreCase("99999999")).thenReturn(Optional.of(existingSeededSchool));
         when(schoolRepository.save(any(School.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleRepository.findByName("ROLE_SCHOOL_ADMIN")).thenReturn(Optional.of(schoolAdminRole));
         when(roleRepository.findByName("ROLE_TEACHER")).thenReturn(Optional.of(role("ROLE_TEACHER")));
@@ -148,7 +148,7 @@ class SchoolSeedDataSeederTest {
         when(schoolUserProfileRepository.findByUserIdAndDeletedFalse(any())).thenReturn(Optional.empty());
         when(schoolUserProfileRepository.save(any(SchoolUserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(schoolRegistrationRequestRepository.findByUserId(any())).thenReturn(Optional.empty());
-        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020")).thenReturn(Optional.empty());
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.empty());
         when(schoolRegistrationRequestRepository.save(any(SchoolRegistrationRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ApplicationRunner runner = seeder.schoolSeedRunner(
@@ -175,7 +175,7 @@ class SchoolSeedDataSeederTest {
         School savedSchool = schoolCaptor.getAllValues().getLast();
         assertThat(savedSchool.getId()).isEqualTo(seededSchoolId);
         assertThat(savedSchool.getSchoolName()).isEqualTo("EduRite");
-        assertThat(savedSchool.getRegistrationNumber()).isEqualTo("050020");
+        assertThat(savedSchool.getRegistrationNumber()).isEqualTo("99999999");
     }
 
     @Test
@@ -186,7 +186,7 @@ class SchoolSeedDataSeederTest {
 
         School school = new School();
         school.setId(schoolId);
-        school.setRegistrationNumber("050020");
+        school.setRegistrationNumber("99999999");
 
         Role schoolAdminRole = role("ROLE_SCHOOL_ADMIN");
         User existingAdmin = new User();
@@ -205,9 +205,9 @@ class SchoolSeedDataSeederTest {
         SchoolRegistrationRequest byEmis = new SchoolRegistrationRequest();
         byEmis.setId(UUID.randomUUID());
         byEmis.setUserId(UUID.randomUUID());
-        byEmis.setEmisNumber("050020");
+        byEmis.setEmisNumber("99999999");
 
-        when(schoolRepository.findByRegistrationNumberIgnoreCase("050020")).thenReturn(Optional.of(school));
+        when(schoolRepository.findByRegistrationNumberIgnoreCase("99999999")).thenReturn(Optional.of(school));
         when(schoolRepository.save(any(School.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleRepository.findByName("ROLE_SCHOOL_ADMIN")).thenReturn(Optional.of(schoolAdminRole));
         when(roleRepository.findByName("ROLE_TEACHER")).thenReturn(Optional.of(role("ROLE_TEACHER")));
@@ -228,7 +228,7 @@ class SchoolSeedDataSeederTest {
         when(schoolUserProfileRepository.findByUserIdAndDeletedFalse(any())).thenReturn(Optional.empty());
         when(schoolUserProfileRepository.save(any(SchoolUserProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(schoolRegistrationRequestRepository.findByUserId(currentUserId)).thenReturn(Optional.of(byUser));
-        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("050020")).thenReturn(Optional.of(byEmis));
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.of(byEmis));
         when(schoolRegistrationRequestRepository.save(any(SchoolRegistrationRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ApplicationRunner runner = seeder.schoolSeedRunner(
@@ -254,7 +254,7 @@ class SchoolSeedDataSeederTest {
         ArgumentCaptor<SchoolRegistrationRequest> registrationCaptor = ArgumentCaptor.forClass(SchoolRegistrationRequest.class);
         verify(schoolRegistrationRequestRepository).save(registrationCaptor.capture());
         assertThat(registrationCaptor.getValue().getUserId()).isEqualTo(currentUserId);
-        assertThat(registrationCaptor.getValue().getEmisNumber()).isEqualTo("050020");
+        assertThat(registrationCaptor.getValue().getEmisNumber()).isEqualTo("99999999");
         assertThat(registrationCaptor.getValue().getStatus()).isEqualTo(SchoolStatus.ACTIVE);
     }
 
