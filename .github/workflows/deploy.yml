@@ -31,6 +31,8 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 30m
+          command_timeout: 30m
           script: |
             set -euo pipefail
 
@@ -113,5 +115,40 @@ jobs:
               exit 1
             fi
 
-            chmod +x scripts/deploy-aws.sh
-            ./scripts/deploy-aws.sh
+            echo "==> Pulling latest code from origin/main"
+            git pull origin main
+            echo "==> Deploying commit $(git rev-parse --short HEAD)"
+
+            echo "==> Stopping existing containers"
+            docker compose down || true
+
+            echo "==> Building images with plain progress"
+            docker compose build --progress=plain
+
+            echo "==> Starting containers"
+            docker compose up -d --build
+
+            echo "==> Container status after startup"
+            docker compose ps || true
+
+            echo "==> Waiting for backend health"
+            for i in $(seq 1 30); do
+              if curl -fsS http://localhost:8080/actuator/health; then
+                echo
+                echo "Backend healthy."
+                exit 0
+              fi
+              echo "Waiting for backend..."
+              sleep 10
+            done
+
+            echo "==> Backend did not become healthy. Collecting diagnostics."
+            docker compose ps || true
+            docker compose logs --tail=300 backend || true
+            docker compose logs --tail=100 postgres || true
+            docker compose logs --tail=100 redis || true
+            docker images || true
+            docker system df || true
+            free -h || true
+            df -h || true
+            exit 1
