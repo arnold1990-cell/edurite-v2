@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.edurite.security.service.CurrentUserService;
 import com.edurite.subscription.entity.SubscriptionRecord;
 import com.edurite.subscription.repository.SubscriptionRepository;
 import com.edurite.subscription.service.StudentPlanAccessService;
@@ -18,9 +17,8 @@ import org.junit.jupiter.api.Test;
 class StudentPlanAccessServiceTest {
 
     private final SubscriptionRepository subscriptionRepository = mock(SubscriptionRepository.class);
-    private final CurrentUserService currentUserService = mock(CurrentUserService.class);
     private final UserRepository userRepository = mock(UserRepository.class);
-    private final StudentPlanAccessService service = new StudentPlanAccessService(subscriptionRepository, currentUserService, userRepository);
+    private final StudentPlanAccessService service = new StudentPlanAccessService(subscriptionRepository, userRepository);
 
     @Test
     void trialUserHasPremiumAccessDuringTrialWindow() {

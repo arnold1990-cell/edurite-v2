@@ -252,7 +252,7 @@ public class SubscriptionService {
                     user.getLastName(),
                     buildSuccessUrl(payment.getReference(), provider.providerCode()),
                     buildCancelUrl(payment.getReference(), provider.providerCode()),
-                    buildNotifyUrl(payment.getReference(), provider.providerCode())
+                    buildNotifyUrl(provider.providerCode())
             ));
         } catch (RuntimeException ex) {
             payment.setStatus(STATUS_FAILED);
@@ -287,7 +287,7 @@ public class SubscriptionService {
                 subscription.getStatus(),
                 payment.getCheckoutUrl(),
                 checkoutMessage(payment),
-                checkoutResult == null || checkoutResult.rawResponse() == null ? Map.of() : checkoutResult.rawResponse()
+                checkoutResult.rawResponse() == null ? Map.of() : checkoutResult.rawResponse()
         );
     }
 
@@ -474,15 +474,16 @@ public class SubscriptionService {
     @Transactional
     public Map<String, Object> handleProviderCallback(String providerCode, Map<String, String> payload) {
         String normalizedProvider = normalizeProviderCode(providerCode);
+        Map<String, String> callbackPayload = payload == null ? Map.of() : payload;
         log.info(
                 "Provider callback received: provider={}, keys={}",
                 normalizedProvider,
-                payload == null ? List.of() : payload.keySet()
+                callbackPayload.keySet()
         );
         PaymentProvider provider = paymentProviderFactory.resolve(normalizedProvider);
-        PaymentSubscriptionContext context = findPaymentByProviderPayload(normalizedProvider, payload);
+        PaymentSubscriptionContext context = findPaymentByProviderPayload(normalizedProvider, callbackPayload);
         if (context == null) {
-            log.warn("Provider callback ignored: no matching payment found. provider={}, payload={}", normalizedProvider, payload);
+            log.warn("Provider callback ignored: no matching payment found. provider={}, payload={}", normalizedProvider, callbackPayload);
             return Map.of(
                     "acknowledged", true,
                     "processed", false,
@@ -503,13 +504,13 @@ public class SubscriptionService {
             );
         }
 
-        String statusHint = normalizePaymentStatus(payload.get("status"));
+        String statusHint = normalizePaymentStatus(callbackPayload.get("status"));
         if (STATUS_CANCELLED.equals(statusHint)) {
             payment.setStatus(STATUS_CANCELLED);
-            payment.setFailureReason(firstNonBlank(payload.get("reason"), "Checkout cancelled."));
+            payment.setFailureReason(firstNonBlank(callbackPayload.get("reason"), "Checkout cancelled."));
             payment.setConfirmedAt(OffsetDateTime.now());
             payment.setCallbackReceivedAt(OffsetDateTime.now());
-            payment.setMetadata(serializeMetadata(Map.of("event", "CALLBACK_CANCELLED", "payload", payload)));
+            payment.setMetadata(serializeMetadata(Map.of("event", "CALLBACK_CANCELLED", "payload", callbackPayload)));
             subscription.setStatus(toSubscriptionStatus(payment.getStatus()));
             subscription.setPaymentReference(payment.getReference());
             paymentRepository.save(payment);
@@ -526,12 +527,12 @@ public class SubscriptionService {
 
         PaymentConfirmationResult confirmationResult = provider.confirmPayment(new PaymentConfirmationContext(
                 payment.getReference(),
-                firstNonBlank(payload.get("orderId"), payload.get("token"), payment.getProviderOrderId()),
-                firstNonBlank(payload.get("session_id"), payload.get("sessionId"), payment.getProviderSessionId()),
+                firstNonBlank(callbackPayload.get("orderId"), callbackPayload.get("token"), payment.getProviderOrderId()),
+                firstNonBlank(callbackPayload.get("session_id"), callbackPayload.get("sessionId"), payment.getProviderSessionId()),
                 payment.getProviderPaymentId(),
-                payload.get("token"),
-                firstNonBlank(payload.get("PayerID"), payload.get("payerId")),
-                payload
+                callbackPayload.get("token"),
+                firstNonBlank(callbackPayload.get("PayerID"), callbackPayload.get("payerId")),
+                callbackPayload
         ));
 
         applyConfirmationResult(subscription, payment, confirmationResult, false);
@@ -563,7 +564,10 @@ public class SubscriptionService {
         String normalizedProvider = normalizeProviderCode(providerCode);
         PaymentProvider provider = paymentProviderFactory.resolve(normalizedProvider);
         PaymentWebhookResult webhookResult = provider.handleWebhook(headers, rawPayload);
-        String eventId = firstNonBlank(webhookResult.eventId(), UUID.randomUUID().toString());
+        String eventId = java.util.Objects.requireNonNullElseGet(
+                firstNonBlank(webhookResult.eventId(), null),
+                () -> UUID.randomUUID().toString()
+        );
 
         if (paymentEventRepository.findByProviderAndEventId(normalizedProvider, eventId).isPresent()) {
             log.info("Duplicate webhook event ignored: provider={}, eventId={}", normalizedProvider, eventId);
@@ -639,11 +643,6 @@ public class SubscriptionService {
                 "eventId", eventId,
                 "verified", webhookVerified
         );
-    }
-
-    public boolean hasPremiumAccess(Principal principal) {
-        SubscriptionRecord subscription = current(principal);
-        return PLAN_PREMIUM.equals(subscription.getPlanCode()) && STATUS_ACTIVE.equals(subscription.getStatus());
     }
 
     public String configuredProvider() {
@@ -1077,7 +1076,7 @@ public class SubscriptionService {
         return base + delimiter + "checkoutResult=cancel&provider=" + providerCode + "&paymentReference=" + paymentReference;
     }
 
-    private String buildNotifyUrl(String paymentReference, String providerCode) {
+    private String buildNotifyUrl(String providerCode) {
         if (PROVIDER_PAYFAST.equals(providerCode)) {
             String configured = payFastConfig.notifyUrl();
             if (configured != null && !configured.isBlank()) {
@@ -1106,7 +1105,7 @@ public class SubscriptionService {
         }
         String merchantId = stringValue(payload.get("merchant_id"));
         String expectedMerchantId = payFastConfig.merchantId() == null ? null : payFastConfig.merchantId().trim();
-        if (expectedMerchantId == null || expectedMerchantId.isBlank() || merchantId == null || !expectedMerchantId.equals(merchantId)) {
+        if (expectedMerchantId == null || expectedMerchantId.isBlank() || !expectedMerchantId.equals(merchantId)) {
             return false;
         }
         String paymentReference = stringValue(payload.get("m_payment_id"));

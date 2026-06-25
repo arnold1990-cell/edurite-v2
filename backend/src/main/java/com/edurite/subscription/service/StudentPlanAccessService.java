@@ -1,11 +1,9 @@
 package com.edurite.subscription.service;
 
-import com.edurite.security.service.CurrentUserService;
 import com.edurite.subscription.entity.SubscriptionRecord;
 import com.edurite.subscription.repository.SubscriptionRepository;
 import com.edurite.user.entity.User;
 import com.edurite.user.repository.UserRepository;
-import java.security.Principal;
 import java.time.OffsetDateTime;
 import java.util.Locale;
 import java.util.UUID;
@@ -27,22 +25,14 @@ public class StudentPlanAccessService {
     static final String OWNER_PREMIUM_OVERRIDE_EMAIL = "arnoldmadaz@gmail.com";
 
     private final SubscriptionRepository subscriptionRepository;
-    private final CurrentUserService currentUserService;
     private final UserRepository userRepository;
 
     public StudentPlanAccessService(
             SubscriptionRepository subscriptionRepository,
-            CurrentUserService currentUserService,
             UserRepository userRepository
     ) {
         this.subscriptionRepository = subscriptionRepository;
-        this.currentUserService = currentUserService;
         this.userRepository = userRepository;
-    }
-
-    public StudentPlanAccess resolve(Principal principal) {
-        User user = currentUserService.requireUser(principal);
-        return resolveByUserId(user.getId());
     }
 
     public StudentPlanAccess resolveByUserId(UUID userId) {

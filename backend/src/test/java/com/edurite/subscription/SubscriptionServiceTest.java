@@ -261,7 +261,7 @@ class SubscriptionServiceTest {
 
         ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
         verify(paymentRepository, atLeast(1)).save(paymentCaptor.capture());
-        PaymentRecord last = paymentCaptor.getAllValues().get(paymentCaptor.getAllValues().size() - 1);
+        PaymentRecord last = paymentCaptor.getAllValues().getLast();
         assertThat(last.getStatus()).isEqualTo("FAILED");
         assertThat(last.getFailureReason()).contains("temporarily unavailable");
         assertThat(existing.getStatus()).isEqualTo("PAYMENT_FAILED");
@@ -276,7 +276,7 @@ class SubscriptionServiceTest {
         var plans = subscriptionService.plans();
 
         assertThat(plans).hasSize(1);
-        assertThat(plans.get(0).amount()).isEqualByComparingTo("49.99");
+        assertThat(plans.getFirst().amount()).isEqualByComparingTo("49.99");
         verify(pricingPlanRepository).save(premium);
     }
 
