@@ -17,6 +17,7 @@ const entryHtml = path.resolve(root, 'index.html');
 const entryStyles = path.resolve(root, 'src', 'styles', 'index.css');
 const outputCssPath = '/assets/index.css';
 const outputScriptPath = '/assets/main.js';
+const outputMainJsPath = path.join(distRoot, 'assets', 'main.js');
 const parseEnvFile = (filePath) => {
   if (!fs.existsSync(filePath)) {
     return {};
@@ -165,7 +166,8 @@ const runEsbuild = () => {
         target: 'es2020',
       },
     },
-    outfile: path.join(distRoot, 'assets', 'main.js'),
+    outfile: outputMainJsPath,
+    publicPath: '/assets',
     assetNames: '[name]-[hash]',
     loader: {
       '.png': 'file',
@@ -182,6 +184,15 @@ const runEsbuild = () => {
   });
 };
 
+const rewriteEmittedAssetUrls = () => {
+  const bundle = fs.readFileSync(outputMainJsPath, 'utf8');
+  const nextBundle = bundle.replace(
+    /(["'])\.\/([^"'`]+\.(?:png|jpe?g|svg|gif|webp))\1/g,
+    (_match, quote, assetPath) => `${quote}/assets/${assetPath}${quote}`,
+  );
+  fs.writeFileSync(outputMainJsPath, nextBundle, 'utf8');
+};
+
 fs.rmSync(distRoot, { recursive: true, force: true });
 fs.rmSync(tempSrcRoot, { recursive: true, force: true });
 fs.mkdirSync(assetsRoot, { recursive: true });
@@ -190,6 +201,7 @@ stageSources(path.resolve(root, 'src'), tempSrcRoot);
 try {
   await buildCss();
   runEsbuild();
+  rewriteEmittedAssetUrls();
   writeIndexHtml();
 } finally {
   fs.rmSync(tempSrcRoot, { recursive: true, force: true });

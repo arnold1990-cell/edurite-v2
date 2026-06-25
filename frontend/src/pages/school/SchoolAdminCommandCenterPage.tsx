@@ -1542,7 +1542,7 @@ export const SchoolAdminPortalPage = () => {
         <aside className="fixed left-3 top-3 z-20 hidden h-[calc(100vh-1.5rem)] max-h-[calc(100vh-1.5rem)] w-[260px] flex-col overflow-hidden rounded-[18px] border border-slate-900/20 bg-[linear-gradient(180deg,#081224_0%,#0d1730_48%,#101b38_100%)] text-white shadow-2xl lg:flex">
           <div className="shrink-0 border-b border-white/10 px-5 py-5">
             <div className="flex items-center gap-3">
-              <DashboardLogo className="block h-20 w-auto shrink-0 object-contain border-4 border-green-500 bg-yellow-100" />
+              <DashboardLogo className="block h-10 w-auto shrink-0 object-contain" />
               <div>
                 <p className="text-[15px] font-semibold leading-6 text-white">{dashboardQuery.data?.schoolName || user?.fullName || 'School Admin Portal'}</p>
               </div>
@@ -1601,7 +1601,7 @@ export const SchoolAdminPortalPage = () => {
             <aside className="fixed inset-y-2 left-0 z-50 flex h-[calc(100vh-1rem)] max-h-[calc(100vh-1rem)] w-[88vw] max-w-[320px] flex-col overflow-hidden rounded-r-[20px] border-r border-slate-200 bg-[linear-gradient(180deg,#081224_0%,#0d1730_48%,#101b38_100%)] p-4 text-white shadow-2xl lg:hidden">
               <div className="shrink-0 flex items-center justify-between rounded-[18px] border border-white/10 bg-white/5 px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <DashboardLogo className="block h-20 w-auto shrink-0 object-contain border-4 border-green-500 bg-yellow-100" />
+                  <DashboardLogo className="block h-10 w-auto shrink-0 object-contain" />
                   <div>
                     <p className="text-[15px] font-semibold">{dashboardQuery.data?.schoolName || 'School Admin Portal'}</p>
                   </div>

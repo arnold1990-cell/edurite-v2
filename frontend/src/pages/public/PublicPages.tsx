@@ -363,9 +363,9 @@ const LiveDataStatusNotice = ({ visible, message }: { visible: boolean; message:
 export const LandingPage = () => (
   <div className="space-y-8">
     <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm lg:grid lg:grid-cols-[1.05fr_1fr] lg:gap-10">
-      <div className="lg:col-span-2 flex min-h-[120px] items-center justify-center border-2 border-red-500">
+      <div className="flex min-h-[120px] items-center justify-center lg:col-span-2">
         <EduRiteLogo
-          className="block h-24 w-auto object-contain border-4 border-red-500 bg-yellow-100"
+          className="block h-24 w-auto object-contain sm:h-28 md:h-32 lg:h-36"
         />
       </div>
       <div className="pt-8 lg:pt-0">
