@@ -27,10 +27,10 @@ export const PublicLayout = () => {
           <Link
             to="/"
             aria-label="EduRite home"
-            className={`flex shrink-0 items-end self-end ${isAuthRoute ? 'mb-0 pb-0 pt-0' : ''}`}
+            className={`flex shrink-0 items-center justify-center border-2 border-red-500 ${isAuthRoute ? 'mb-0 min-h-[120px] pb-0 pt-0' : 'min-h-[120px]'} self-end`}
           >
             <EduRiteLogo
-              className={`${isAuthRoute ? 'block max-h-none max-w-none object-contain align-bottom' : 'block h-12 md:h-14 w-auto object-contain'}`}
+              className={`${isAuthRoute ? 'block h-24 w-auto object-contain border-4 border-red-500 bg-yellow-100 align-bottom' : 'block h-24 w-auto object-contain border-4 border-red-500 bg-yellow-100'}`}
               style={isAuthRoute ? { height: 'clamp(92px, 11vw, 120px)', width: 'auto', objectFit: 'contain' } : undefined}
             />
           </Link>

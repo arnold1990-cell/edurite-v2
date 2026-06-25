@@ -163,7 +163,7 @@ export const DistrictAdminLayout = () => {
         <aside className={`fixed inset-y-0 left-0 z-40 flex ${collapsed ? 'w-[72px]' : 'w-[260px]'} flex-col bg-[#0F172A] text-white shadow-2xl transition-[width,transform] duration-200 lg:static lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
           <div className={`flex items-center justify-between border-b border-white/10 ${collapsed ? 'px-3 py-4' : 'px-4 py-4'}`}>
             <button type="button" className="flex min-w-0 items-center gap-3 text-left" onClick={() => { navigate('/district/dashboard'); setOpen(false); }}>
-              <DashboardLogo className="h-12 shrink-0" />
+              <DashboardLogo className="block h-20 w-auto shrink-0 object-contain border-4 border-green-500 bg-yellow-100" />
               <div className={collapsed ? 'hidden' : 'block'}>
                 <h1 className="mt-1 text-xl font-semibold">District Portal</h1>
               </div>

@@ -292,7 +292,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
       <div className="rounded-2xl border border-slate-200 bg-[radial-gradient(circle_at_top_left,_#e8f1ff,_#ffffff_55%)] p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
-            <DashboardLogo className="h-12 shrink-0" />
+            <DashboardLogo className="block h-20 w-auto shrink-0 object-contain border-4 border-green-500 bg-yellow-100" />
             <div>
             <h1 className="mt-1.5 text-2xl font-semibold text-slate-900">{mode === 'school' ? 'School readiness command centre' : 'Teacher learner readiness workspace'}</h1>
             <p className="mt-2 max-w-3xl text-[13px] leading-6 text-slate-600">
