@@ -1,7 +1,8 @@
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { ArrowRight, BookOpen, BriefcaseBusiness, Building2, Check, ChevronDown, Eye, EyeOff, GraduationCap, Lock, Mail, School, ShieldCheck, Sparkles, User as UserIcon, UserCheck, Users } from 'lucide-react';
+import { ArrowRight, BarChart3, BookOpen, BriefcaseBusiness, Building2, Check, ChevronDown, Cloud, Eye, EyeOff, GraduationCap, Lock, Mail, School, ShieldCheck, Sparkles, User as UserIcon, UserCheck, Users } from 'lucide-react';
+import loginHeroBackground from '@/assets/edurite-classroom-login-bg.png';
 import { EduRiteLogo } from '@/components/common/EduRiteLogo';
 import { PopiaConsentCheckbox } from '@/components/forms/PopiaConsentCheckbox';
 import { Button } from '@/components/ui/Button';
@@ -331,14 +332,14 @@ const GoogleAuthSection = ({
   if (!enabled) return null;
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-1.5">
       <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] text-slate-500">
         <span className="h-px flex-1 bg-slate-200" />
         Or continue with
         <span className="h-px flex-1 bg-slate-200" />
       </div>
-      <div className="mt-4 mb-4 flex w-full justify-center">
-        <div className="w-full max-w-[380px]">
+      <div className="mb-2 mt-2 flex w-full justify-center">
+        <div className="w-full max-w-[360px]">
           {available ? <div ref={buttonRef} className="w-full" /> : (
             <button
               type="button"
@@ -500,10 +501,17 @@ const AuthShell = ({ children, role, mode }: { children: React.ReactNode; role: 
 );
 
 const LoginAuthShell = ({ children, role }: { children: React.ReactNode; role: AuthRole }) => (
-  <section className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.12),_transparent_38%),linear-gradient(180deg,#f8fafc_0%,#eff6ff_100%)] px-4 py-6 md:px-6 lg:px-8">
-    <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-[1500px] overflow-hidden rounded-[32px] border border-white/60 bg-white/70 shadow-[0_32px_120px_-56px_rgba(15,23,42,0.4)] backdrop-blur-sm lg:grid-cols-[minmax(420px,1fr)_minmax(0,1fr)]">
-      <div className="relative hidden overflow-hidden bg-[linear-gradient(145deg,#0f3ca9_0%,#2563eb_55%,#60a5fa_100%)] p-8 text-white lg:flex lg:flex-col lg:justify-between xl:p-12">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.22),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(191,219,254,0.28),_transparent_24%)]" aria-hidden="true" />
+  <section className="flex min-h-0 flex-1 bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.12),_transparent_38%),linear-gradient(180deg,#f8fafc_0%,#eff6ff_100%)] px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-4 lg:px-6 xl:px-8">
+    <div className="mx-auto grid h-full min-h-0 w-full max-w-[1500px] flex-1 overflow-hidden rounded-[28px] border border-white/60 bg-white/70 shadow-[0_32px_120px_-56px_rgba(15,23,42,0.4)] backdrop-blur-sm lg:grid-cols-[minmax(380px,0.92fr)_minmax(0,1fr)] xl:grid-cols-[minmax(410px,0.95fr)_minmax(0,1fr)]">
+      <div
+        className="relative hidden min-h-0 overflow-hidden p-6 text-white lg:flex lg:flex-col lg:justify-between xl:p-8 2xl:p-10"
+        style={{
+          backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.65), rgba(15, 23, 42, 0.65)), url(${loginHeroBackground})`,
+          backgroundPosition: 'center',
+          backgroundSize: 'cover',
+        }}
+      >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.16),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(255,255,255,0.08),_transparent_24%)]" aria-hidden="true" />
         <div className="relative">
           <div className="flex justify-end">
             <span className="rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/90">
@@ -511,47 +519,65 @@ const LoginAuthShell = ({ children, role }: { children: React.ReactNode; role: A
             </span>
           </div>
 
-          <div className="mt-16 max-w-xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-blue-100/90">EduRite Platform</p>
-            <h1 className="mt-4 text-[40px] font-semibold leading-tight tracking-tight xl:text-[52px]">
+          <div className="mt-10 max-w-lg xl:mt-12">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/80">EduRite Platform</p>
+            <h1 className="mt-3 text-[34px] font-semibold leading-tight tracking-tight xl:text-[44px]">
               Everything your education ecosystem needs in one secure place.
             </h1>
-            <p className="mt-5 max-w-lg text-base leading-7 text-blue-50/92">
-              A unified platform for student growth, school operations, district visibility, and company engagement.
+            <p className="mt-4 max-w-[30rem] text-[14px] leading-6 text-white/90 xl:text-[15px]">
+              EduRite brings learners, teachers, schools, districts, and employers together on one intelligent platform, making learning, school management, curriculum delivery, reporting, and career guidance simpler and more connected.
             </p>
           </div>
 
-          <div className="mt-10 grid gap-3">
+
+        </div>
+
+        <div className="relative mt-5 rounded-[22px] border border-white/16 bg-white/12 p-3 backdrop-blur-md xl:mt-6 xl:p-4">
+          <div className="flex items-start gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/14">
+              <Building2 className="h-5 w-5 text-white/90" />
+            </span>
+            <div>
+              <h2 className="text-base font-semibold text-white">Why Choose EduRite</h2>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {[
-              { label: 'AI career guidance and student planning', icon: <Sparkles className="h-4 w-4" /> },
-              { label: 'School, teacher, and learner workflows', icon: <School className="h-4 w-4" /> },
-              { label: 'District reporting and intervention visibility', icon: <Users className="h-4 w-4" /> },
-              { label: 'Company bursaries and talent pipelines', icon: <BriefcaseBusiness className="h-4 w-4" /> },
-            ].map((feature) => (
-              <div key={feature.label} className="flex items-center gap-3 rounded-2xl border border-white/16 bg-white/10 px-4 py-3 text-sm text-white/95 backdrop-blur-md">
-                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/14">
-                  {feature.icon}
+              {
+                title: 'Data-Driven Decisions',
+                description: 'Use real-time analytics to improve learner performance and school outcomes.',
+                icon: <BarChart3 className="h-4 w-4" />,
+              },
+              {
+                title: 'AI-Powered Education',
+                description: 'Smart career guidance, curriculum support, and intelligent recommendations.',
+                icon: <Sparkles className="h-4 w-4" />,
+              },
+              {
+                title: 'Built for Modern Schools',
+                description: 'Designed for learners, teachers, schools, districts, and employers on one platform.',
+                icon: <Building2 className="h-4 w-4" />,
+              },
+              {
+                title: 'Cloud-Based Anywhere Access',
+                description: 'Securely access EduRite from any device, anytime, anywhere.',
+                icon: <Cloud className="h-4 w-4" />,
+              },
+            ].map((item) => (
+              <div key={item.title} className="rounded-2xl border border-white/16 bg-white/10 p-2.5 backdrop-blur-md transition duration-300 hover:-translate-y-1 hover:border-white/28 hover:bg-white/14">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-2xl bg-white/14 text-white">
+                  {item.icon}
                 </span>
-                <span>{feature.label}</span>
+                <p className="mt-2 text-xs font-semibold leading-4 text-white">{item.title}</p>
+                <p className="mt-1 text-[11px] leading-4 text-white/80">{item.description}</p>
               </div>
             ))}
           </div>
         </div>
-
-        <div className="relative rounded-[28px] border border-white/16 bg-white/12 p-5 backdrop-blur-md">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/14">
-              <ShieldCheck className="h-5 w-5 text-emerald-200" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-white">Secure access for every portal</p>
-              <p className="mt-1 text-sm text-blue-100/90">JWT-based sessions, role-aware routing, and protected workspaces.</p>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <div className="flex items-center justify-center bg-transparent p-4 sm:p-8 lg:p-10 xl:p-14">
+      <div className="flex min-h-0 items-center justify-center bg-transparent p-3 sm:p-5 lg:p-6 xl:p-8">
         {children}
       </div>
     </div>
@@ -976,7 +1002,7 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
         }}
       />
 
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <h2 className="text-[20px] font-bold tracking-tight text-slate-950 sm:text-[22px]">Welcome back!</h2>
         <p className="text-[14px] leading-6 text-slate-600">
           Sign in to continue to the {currentPortalLabel}.
@@ -1070,9 +1096,6 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
           </>
         )}
       </p>
-      <div className="border-t border-slate-200 pt-2 text-center text-[11px] text-slate-500">
-        © 2026 EduRite · <Link to="/privacy-policy" className="hover:text-slate-700">Privacy Policy</Link> · <Link to="/terms-and-conditions" className="hover:text-slate-700">Terms of Service</Link> · <Link to="/about" className="hover:text-slate-700">Contact Us</Link>
-      </div>
     </form>
   );
 };
@@ -1330,21 +1353,21 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
             : 'Access AI career guidance, bursaries, learning resources, and your student dashboard.';
 
   return (
-    <form className="w-full max-w-[420px] rounded-[24px] border border-[#e2e8f0] bg-white p-6 shadow-[0_30px_80px_-42px_rgba(15,23,42,0.35)] sm:p-8" onSubmit={handleSubmit}>
-      <div className="space-y-6">
-        <div className="space-y-4 text-center">
-          <div className="mx-auto inline-flex min-h-[120px] items-center justify-center rounded-2xl bg-gradient-to-br from-[#dbeafe] to-[#bfdbfe] px-4 py-3 shadow-inner shadow-white">
-            <EduRiteLogo className="block h-20 w-auto object-contain sm:h-24" />
+    <form className="w-full max-w-[410px] rounded-[22px] border border-[#e2e8f0] bg-white p-5 shadow-[0_30px_80px_-42px_rgba(15,23,42,0.35)] sm:p-6" onSubmit={handleSubmit}>
+      <div className="space-y-4">
+        <div className="space-y-3 text-center">
+          <div className="mx-auto inline-flex min-h-[84px] items-center justify-center rounded-2xl bg-gradient-to-br from-[#dbeafe] to-[#bfdbfe] px-3 py-2 shadow-inner shadow-white sm:min-h-[96px]">
+            <EduRiteLogo className="block h-16 w-auto object-contain sm:h-20" />
           </div>
-          <div className="space-y-2">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#2563eb]">{portalTitle}</p>
-            <h2 className="text-[30px] font-semibold tracking-tight text-[#0f172a]">Welcome back</h2>
-            <p className="text-sm text-[#64748b]">Sign in to continue</p>
-            <p className="text-sm leading-6 text-[#64748b]">{portalHelperText}</p>
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#2563eb]">{portalTitle}</p>
+            <h2 className="text-[26px] font-semibold tracking-tight text-[#0f172a] sm:text-[28px]">Welcome back</h2>
+            <p className="text-[13px] text-[#64748b]">Sign in to continue</p>
+            <p className="text-[13px] leading-5 text-[#64748b]">{portalHelperText}</p>
           </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <label className="block text-sm font-medium text-[#0f172a]">
             Portal
             <select
@@ -1355,7 +1378,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
                   navigate(nextPath);
                 }
               }}
-              className="mt-2 h-[52px] w-full rounded-2xl border border-[#dbe3ef] bg-white px-4 text-sm text-[#0f172a] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#bfdbfe]"
+              className="mt-1.5 h-[46px] w-full rounded-2xl border border-[#dbe3ef] bg-white px-4 text-sm text-[#0f172a] outline-none transition focus:border-[#2563eb] focus:ring-2 focus:ring-[#bfdbfe]"
             >
               {roleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -1365,11 +1388,11 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
             </select>
           </label>
 
-          {mismatchMessage ? <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{mismatchMessage}</div> : null}
-          {registrationMessage ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">{registrationMessage}</div> : null}
-          {sessionExpiredMessage ? <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{sessionExpiredMessage}</div> : null}
+          {mismatchMessage ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[13px] text-amber-800">{mismatchMessage}</div> : null}
+          {registrationMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-[13px] text-emerald-800">{registrationMessage}</div> : null}
+          {sessionExpiredMessage ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[13px] text-amber-800">{sessionExpiredMessage}</div> : null}
           {googleSectionEnabled && !googleClientConfigured ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[13px] text-amber-800">
               Google sign-in is enabled, but this build is missing a valid Google client ID.
             </div>
           ) : null}
@@ -1387,7 +1410,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
                     onChange={(event) => {
                       setForm((current) => ({ ...current, schoolName: event.target.value }));
                     }}
-                    className="h-[52px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-4 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
+                    className="h-[46px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-4 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
                     placeholder="Enter school name"
                     required
                   />
@@ -1403,7 +1426,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
                     onChange={(event) => {
                       setForm((current) => ({ ...current, emisNumber: event.target.value }));
                     }}
-                    className="h-[52px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-4 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
+                    className="h-[46px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-4 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
                     placeholder="Enter EMIS number"
                     required
                   />
@@ -1422,7 +1445,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
                   onChange={(event) => {
                     setForm((current) => ({ ...current, email: event.target.value }));
                   }}
-                  className="h-[52px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-4 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
+                  className="h-[46px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-4 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
                   placeholder="Enter your email or username"
                   required
                 />
@@ -1441,7 +1464,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
                 onChange={(event) => {
                   setForm((current) => ({ ...current, password: event.target.value }));
                 }}
-                className="h-[52px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-12 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
+                className="h-[46px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-12 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
                 placeholder="Enter your password"
                 required
               />
@@ -1457,8 +1480,8 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
           </label>
         </div>
 
-        <div className="flex items-center justify-between gap-3 text-sm text-[#64748b]">
-          <label className="inline-flex items-center gap-3 font-medium text-[#334155]">
+        <div className="flex items-center justify-between gap-3 text-[13px] text-[#64748b]">
+          <label className="inline-flex items-center gap-2.5 font-medium text-[#334155]">
             <input
               type="checkbox"
               checked={form.rememberMe}
@@ -1477,7 +1500,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
         <Button
           disabled={isSubmitting}
           type="submit"
-          className="h-14 w-full rounded-2xl bg-[linear-gradient(135deg,#2563eb_0%,#1d4ed8_100%)] px-5 text-[15px] font-semibold text-white shadow-[0_18px_36px_-18px_rgba(37,99,235,0.65)] hover:bg-[linear-gradient(135deg,#2563eb_0%,#1d4ed8_100%)] sm:w-full"
+          className="h-11 w-full rounded-2xl bg-[linear-gradient(135deg,#2563eb_0%,#1d4ed8_100%)] px-5 text-[15px] font-semibold text-white shadow-[0_18px_36px_-18px_rgba(37,99,235,0.65)] hover:bg-[linear-gradient(135deg,#2563eb_0%,#1d4ed8_100%)] sm:w-full"
         >
           {isSubmitting ? 'Signing in...' : 'Sign In'}
         </Button>
@@ -1502,9 +1525,6 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
               </Link>
             </>
           )}
-        </p>
-        <p className="text-center text-[11px] text-slate-500">
-          © 2026 EduRite · <Link to="/privacy-policy" className="hover:text-slate-700">Privacy Policy</Link> · <Link to="/terms-and-conditions" className="hover:text-slate-700">Terms of Service</Link> · <Link to="/about" className="hover:text-slate-700">Contact Us</Link>
         </p>
       </div>
     </form>
@@ -2259,32 +2279,5 @@ export const ResetPasswordPage = () => {
     </AuthShell>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

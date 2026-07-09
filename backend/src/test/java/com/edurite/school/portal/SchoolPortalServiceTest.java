@@ -23,6 +23,7 @@ import com.edurite.school.portal.repository.TaskSubmissionRepository;
 import com.edurite.school.portal.repository.TeacherAssignmentRepository;
 import com.edurite.school.portal.repository.SchoolUserProfileRepository;
 import com.edurite.school.service.AssignmentService;
+import com.edurite.school.service.SchoolAccessService;
 import com.edurite.notification.service.NotificationService;
 import com.edurite.user.repository.RoleRepository;
 import com.edurite.user.entity.User;
@@ -191,6 +192,91 @@ class SchoolPortalServiceTest {
                 teacherId,
                 new SchoolPortalDtos.SchoolTaskRequest(null, classId, subjectId, null, "ASSIGNMENT", "Task", 2026, "FET", "Grade 10", "", "Assignment", null, OffsetDateTime.now().plusDays(1), "Term 1", new BigDecimal("50"), null, null, null, "Informal")
         )).isInstanceOf(ResourceConflictException.class).hasMessageContaining("not assigned");
+    }
+
+    @Test
+    void schoolAdminDashboardCountsOnlyCurrentSchoolSubmissions() {
+        UUID schoolId = UUID.randomUUID();
+        UUID otherSchoolId = UUID.randomUUID();
+        UUID taskInScopeId = UUID.randomUUID();
+        UUID taskOutOfScopeId = UUID.randomUUID();
+
+        SchoolTask taskInScope = new SchoolTask();
+        taskInScope.setId(taskInScopeId);
+        taskInScope.setSchoolId(schoolId);
+
+        SchoolTask taskOutOfScope = new SchoolTask();
+        taskOutOfScope.setId(taskOutOfScopeId);
+        taskOutOfScope.setSchoolId(otherSchoolId);
+
+        TaskSubmission submissionInScope = new TaskSubmission();
+        submissionInScope.setId(UUID.randomUUID());
+        submissionInScope.setTaskId(taskInScopeId);
+
+        TaskSubmission submissionOutOfScope = new TaskSubmission();
+        submissionOutOfScope.setId(UUID.randomUUID());
+        submissionOutOfScope.setTaskId(taskOutOfScopeId);
+
+        when(schoolClassRepository.findBySchoolIdAndActiveTrue(schoolId)).thenReturn(List.of());
+        when(schoolSubjectRepository.findBySchoolIdAndActiveTrue(schoolId)).thenReturn(List.of());
+        when(learningNoteRepository.findAll()).thenReturn(List.of());
+        when(schoolTaskRepository.findAll()).thenReturn(List.of(taskInScope, taskOutOfScope));
+        when(taskSubmissionRepository.findAll()).thenReturn(List.of(submissionInScope, submissionOutOfScope));
+        when(schoolTaskRepository.findById(taskInScopeId)).thenReturn(Optional.of(taskInScope));
+        when(schoolTaskRepository.findById(taskOutOfScopeId)).thenReturn(Optional.of(taskOutOfScope));
+
+        SchoolPortalDtos.DashboardResponse dashboard = assignmentService.dashboard(
+                SchoolAccessService.ROLE_SCHOOL_ADMIN,
+                schoolId,
+                UUID.randomUUID()
+        );
+
+        assertThat(dashboard.totalTasks()).isEqualTo(1);
+        assertThat(dashboard.totalSubmissions()).isEqualTo(1);
+    }
+
+    @Test
+    void schoolStudentDashboardCountsOnlyOwnSchoolSubmissions() {
+        UUID schoolId = UUID.randomUUID();
+        UUID otherSchoolId = UUID.randomUUID();
+        UUID learnerId = UUID.randomUUID();
+        UUID taskInScopeId = UUID.randomUUID();
+        UUID taskOutOfScopeId = UUID.randomUUID();
+
+        SchoolTask taskInScope = new SchoolTask();
+        taskInScope.setId(taskInScopeId);
+        taskInScope.setSchoolId(schoolId);
+
+        SchoolTask taskOutOfScope = new SchoolTask();
+        taskOutOfScope.setId(taskOutOfScopeId);
+        taskOutOfScope.setSchoolId(otherSchoolId);
+
+        TaskSubmission submissionInScope = new TaskSubmission();
+        submissionInScope.setId(UUID.randomUUID());
+        submissionInScope.setTaskId(taskInScopeId);
+        submissionInScope.setLearnerUserId(learnerId);
+
+        TaskSubmission submissionOutOfScope = new TaskSubmission();
+        submissionOutOfScope.setId(UUID.randomUUID());
+        submissionOutOfScope.setTaskId(taskOutOfScopeId);
+        submissionOutOfScope.setLearnerUserId(learnerId);
+
+        when(schoolClassRepository.findBySchoolIdAndActiveTrue(schoolId)).thenReturn(List.of());
+        when(schoolSubjectRepository.findBySchoolIdAndActiveTrue(schoolId)).thenReturn(List.of());
+        when(learningNoteRepository.findAll()).thenReturn(List.of());
+        when(schoolTaskRepository.findAll()).thenReturn(List.of(taskInScope));
+        when(taskSubmissionRepository.findByLearnerUserId(learnerId)).thenReturn(List.of(submissionInScope, submissionOutOfScope));
+        when(schoolTaskRepository.findById(taskInScopeId)).thenReturn(Optional.of(taskInScope));
+        when(schoolTaskRepository.findById(taskOutOfScopeId)).thenReturn(Optional.of(taskOutOfScope));
+
+        SchoolPortalDtos.DashboardResponse dashboard = assignmentService.dashboard(
+                SchoolAccessService.ROLE_SCHOOL_STUDENT,
+                schoolId,
+                learnerId
+        );
+
+        assertThat(dashboard.totalTasks()).isEqualTo(1);
+        assertThat(dashboard.totalSubmissions()).isEqualTo(1);
     }
 
     @Test

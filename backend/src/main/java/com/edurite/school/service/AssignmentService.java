@@ -136,8 +136,8 @@ public class AssignmentService {
                 ? schoolTaskRepository.findBySchoolIdAndTeacherUserId(schoolId, userId).size()
                 : schoolTaskRepository.findAll().stream().filter(task -> task.getSchoolId().equals(schoolId)).count();
         long submissions = role.equals(SchoolAccessService.ROLE_SCHOOL_STUDENT)
-                ? taskSubmissionRepository.findByLearnerUserId(userId).size()
-                : taskSubmissionRepository.findAll().size();
+                ? submissionsForLearnerInSchool(schoolId, userId).size()
+                : submissionsForSchool(schoolId).size();
         return new SchoolPortalDtos.DashboardResponse(role, schoolId, classes, subjects, tasks, notes, submissions);
     }
 
@@ -754,13 +754,7 @@ public class AssignmentService {
 
     @Transactional(readOnly = true)
     public List<SchoolPortalDtos.SubmissionView> studentSubmissionViews(UUID schoolId, UUID learnerUserId) {
-        List<TaskSubmission> submissions = taskSubmissionRepository.findByLearnerUserId(learnerUserId).stream()
-                .filter(submission -> {
-                    SchoolTask task = schoolTaskRepository.findById(submission.getTaskId()).orElse(null);
-                    return task != null && task.getSchoolId().equals(schoolId);
-                })
-                .toList();
-        return toSubmissionViews(submissions, false);
+        return toSubmissionViews(submissionsForLearnerInSchool(schoolId, learnerUserId), false);
     }
 
     @Transactional(readOnly = true)
@@ -793,7 +787,7 @@ public class AssignmentService {
     @Transactional(readOnly = true)
     public SchoolPortalDtos.ProgressSummaryResponse studentProgress(UUID schoolId, UUID learnerUserId) {
         List<SchoolPortalDtos.StudentTaskView> tasks = studentTasks(schoolId, learnerUserId);
-        List<TaskSubmission> submissions = taskSubmissionRepository.findByLearnerUserId(learnerUserId);
+        List<TaskSubmission> submissions = submissionsForLearnerInSchool(schoolId, learnerUserId);
         Set<UUID> submittedTaskIds = submissions.stream().map(TaskSubmission::getTaskId).collect(java.util.stream.Collectors.toSet());
         long late = submissions.stream().filter(TaskSubmission::isLate).count();
         long submitted = tasks.stream().filter(task -> submittedTaskIds.contains(task.taskId())).count();
@@ -895,7 +889,7 @@ public class AssignmentService {
             );
         }
 
-        Set<UUID> submittedTaskIds = taskSubmissionRepository.findByLearnerUserId(learnerUserId).stream()
+        Set<UUID> submittedTaskIds = submissionsForLearnerInSchool(schoolId, learnerUserId).stream()
                 .map(TaskSubmission::getTaskId)
                 .collect(java.util.stream.Collectors.toSet());
 
@@ -1031,6 +1025,18 @@ public class AssignmentService {
         }).toList();
     }
 
+    private List<TaskSubmission> submissionsForLearnerInSchool(UUID schoolId, UUID learnerUserId) {
+        return taskSubmissionRepository.findByLearnerUserId(learnerUserId).stream()
+                .filter(submission -> belongsToSchool(submission.getTaskId(), schoolId))
+                .toList();
+    }
+
+    private List<TaskSubmission> submissionsForSchool(UUID schoolId) {
+        return taskSubmissionRepository.findAll().stream()
+                .filter(submission -> belongsToSchool(submission.getTaskId(), schoolId))
+                .toList();
+    }
+
     private void runPlagiarismCheck(TaskSubmission saved) {
         if (saved.getSubmissionText() == null || saved.getSubmissionText().isBlank()) {
             return;
@@ -1071,6 +1077,12 @@ public class AssignmentService {
     private void ensureTeacherAssignment(UUID schoolId, UUID teacherUserId, UUID classId, UUID subjectId) {
         teacherAssignmentRepository.findBySchoolIdAndTeacherUserIdAndClassIdAndSubjectIdAndActiveTrue(schoolId, teacherUserId, classId, subjectId)
                 .orElseThrow(() -> new ResourceConflictException("Teacher is not assigned to this class and subject"));
+    }
+
+    private boolean belongsToSchool(UUID taskId, UUID schoolId) {
+        return schoolTaskRepository.findById(taskId)
+                .map(task -> schoolId.equals(task.getSchoolId()))
+                .orElse(false);
     }
 
     private void validateSubjectRequest(String subjectName, String phase, String grade, String gradeRange, String languageLevel, String subjectType) {

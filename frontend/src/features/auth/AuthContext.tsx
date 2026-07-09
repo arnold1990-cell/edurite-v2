@@ -1,11 +1,12 @@
-import { createContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { authStore } from '@/features/auth/authStore';
 import { getNormalizedUserRoles, resolvePrimaryRole } from '@/features/auth/roleUtils';
 import { authService } from '@/services/authService';
 import { companyService } from '@/services/companyService';
 import { studentService } from '@/services/studentService';
-import type { CompanyRegisterPayload, RegistrationResponse, Role, SchoolRegisterPayload, StudentRegisterPayload, User } from '@/types';
+import type { ApiError, CompanyRegisterPayload, RegistrationResponse, Role, SchoolRegisterPayload, StudentRegisterPayload, User } from '@/types';
 
 export interface AuthContextType {
   user: User | null;
@@ -56,10 +57,28 @@ const normalizeStoredUser = (user: User | null, accessToken?: string | null): Us
   };
 };
 
+const isUnauthorizedApiError = (error: unknown): error is ApiError => (
+  typeof error === 'object'
+  && error !== null
+  && 'status' in error
+  && (error as ApiError).status === 401
+);
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const [isStudentProfileStatusSyncing, setIsStudentProfileStatusSyncing] = useState(false);
+  const activeUserIdRef = useRef<string | null>(null);
+
+  const clearSessionScopedClientState = useCallback(() => {
+    setIsStudentProfileStatusSyncing(false);
+    queryClient.clear();
+  }, [queryClient]);
+
+  useEffect(() => {
+    activeUserIdRef.current = user?.id ?? null;
+  }, [user?.id]);
 
   const syncStudentProfileState = (profile: { profileCompleted: boolean; profileCompleteness: number }) => {
     setUser((currentUser) => {
@@ -103,6 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const token = authStore.getAccessToken();
     const storedUser = normalizeStoredUser(authStore.getUser(), token);
     if (!token) {
+      clearSessionScopedClientState();
       authStore.clear();
       setIsHydrated(true);
       return () => {
@@ -117,7 +137,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           if (!active) return;
           setSession(session, { rememberMe: authStore.shouldPersistSession() });
         })
-        .catch(() => undefined);
+        .catch((error: unknown) => {
+          if (!active || !isUnauthorizedApiError(error)) return;
+          clearSessionScopedClientState();
+          authStore.clear();
+          setUser(null);
+        });
       const roles = getNormalizedUserRoles(storedUser);
       if (roles.includes('ROLE_STUDENT')) {
         setIsStudentProfileStatusSyncing(true);
@@ -152,7 +177,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       active = false;
     };
-  }, []);
+  }, [clearSessionScopedClientState]);
 
   useEffect(() => {
     const onStorageSync = (event: StorageEvent) => {
@@ -160,17 +185,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
       if (!authStore.getAccessToken()) {
+        clearSessionScopedClientState();
         setUser(null);
       }
     };
     const onAuthCleared = () => {
       if (!authStore.getAccessToken()) {
+        clearSessionScopedClientState();
         setUser(null);
       }
     };
     const onAuthUpdated = () => {
       const token = authStore.getAccessToken();
       const storedUser = normalizeStoredUser(authStore.getUser(), token);
+      if (storedUser && activeUserIdRef.current && activeUserIdRef.current !== storedUser.id) {
+        clearSessionScopedClientState();
+      }
       setUser(storedUser);
     };
     window.addEventListener('storage', onStorageSync);
@@ -181,13 +211,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       window.removeEventListener('edurite-auth-cleared', onAuthCleared as EventListener);
       window.removeEventListener('edurite-auth-updated', onAuthUpdated as EventListener);
     };
-  }, []);
+  }, [clearSessionScopedClientState]);
 
   const setSession = (payload: { accessToken: string; refreshToken?: string; user: User }, options?: { rememberMe?: boolean }) => {
     const rememberMe = options?.rememberMe ?? true;
     const normalizedUser = normalizeStoredUser(payload.user, payload.accessToken);
     if (!normalizedUser) {
       throw new Error('Authenticated session did not include a supported role.');
+    }
+    const previousStoredUser = normalizeStoredUser(authStore.getUser(), authStore.getAccessToken());
+    if (previousStoredUser?.id && previousStoredUser.id !== normalizedUser.id) {
+      clearSessionScopedClientState();
     }
     authStore.setTokens(payload.accessToken, payload.refreshToken, rememberMe);
     authStore.setUser(normalizedUser, rememberMe);
@@ -231,6 +265,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
           await authService.logout();
         } finally {
+          clearSessionScopedClientState();
           authStore.clear();
           setUser(null);
         }
@@ -238,7 +273,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       hasRole: (role) => getNormalizedUserRoles(user).includes(`ROLE_${role}`),
       getPrimaryRole: () => resolvePrimaryRole(user),
     }),
-    [isHydrated, isStudentProfileStatusSyncing, user],
+    [clearSessionScopedClientState, isHydrated, isStudentProfileStatusSyncing, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

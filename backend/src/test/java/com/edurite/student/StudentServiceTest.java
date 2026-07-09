@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -41,6 +42,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -199,6 +201,39 @@ class StudentServiceTest {
         assertThat(result).containsKey("recommendedImprovementActions");
         assertThat(result).containsKey("communicationGuidance");
         assertThat((List<?>) result.get("recommendedImprovements")).isNotEmpty();
+    }
+
+    @Test
+    void dashboardCreatesIsolatedDefaultProfileForNewUser() {
+        when(profileRepository.findByUserId(user.getId())).thenReturn(Optional.empty());
+        when(profileRepository.save(any(StudentProfile.class))).thenAnswer(invocation -> {
+            StudentProfile saved = invocation.getArgument(0);
+            saved.setId(UUID.randomUUID());
+            return saved;
+        });
+        when(savedCareerRepository.countByStudentId(any(UUID.class))).thenReturn(0L);
+        when(savedBursaryRepository.countByStudentId(any(UUID.class))).thenReturn(0L);
+        when(applicationRepository.countByStudentId(any(UUID.class))).thenReturn(0L);
+        when(applicationRepository.countByStudentIdAndStatus(any(UUID.class), any(String.class))).thenReturn(0L);
+        when(userNotificationRepository.countByUserIdAndIsReadFalse(user.getId())).thenReturn(0L);
+        when(psychometricService.findGrowthAreasByStudentProfileId(any(UUID.class))).thenReturn(List.of());
+        when(psychometricService.hasSubmissionForStudentProfileId(any(UUID.class))).thenReturn(false);
+        when(gamificationService.getSummary(principal)).thenReturn(new GamificationSummaryDto(0, 0, 0, "2026-T2", List.of(), List.of(), List.of()));
+
+        Map<String, Object> result = studentService.dashboard(principal);
+
+        ArgumentCaptor<StudentProfile> captor = ArgumentCaptor.forClass(StudentProfile.class);
+        verify(profileRepository).save(captor.capture());
+        StudentProfile createdProfile = captor.getValue();
+        assertThat(createdProfile.getUserId()).isEqualTo(user.getId());
+        assertThat(createdProfile.getFirstName()).isEqualTo("Test");
+        assertThat(createdProfile.getLastName()).isEqualTo("Student");
+        assertThat(result).containsEntry("profileCompleteness", 0);
+        assertThat(result).containsEntry("savedCareers", 0L);
+        assertThat(result).containsEntry("savedBursaries", 0L);
+        assertThat(result).containsEntry("activeApplications", 0L);
+        assertThat(result).containsEntry("notifications", 0L);
+        assertThat(result).containsEntry("idealCareerObjectiveSet", false);
     }
 
     @Test
