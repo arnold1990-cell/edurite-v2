@@ -1109,7 +1109,7 @@ public class AssignmentService {
         String normalizedGrade = safe(trim(grade) != null ? trim(grade) : trim(gradeRange)).toLowerCase(Locale.ROOT);
         String normalizedLanguageLevel = safe(trim(languageLevel)).toLowerCase(Locale.ROOT);
         boolean duplicate = schoolSubjectRepository.findBySchoolIdOrderByPhaseAscSubjectNameAsc(schoolId).stream()
-                .filter(existing -> currentSubjectId == null || !existing.getId().equals(currentSubjectId))
+                .filter(existing -> !Objects.equals(existing.getId(), currentSubjectId))
                 .anyMatch(existing ->
                         normalizedName.equals(safe(existing.getSubjectName()).toLowerCase(Locale.ROOT))
                                 && normalizedPhase.equals(safe(existing.getPhase()).toLowerCase(Locale.ROOT))
@@ -1235,4 +1235,5 @@ public class AssignmentService {
                 .forEach(userId -> notificationService.createInApp(userId, eventType, title, message));
     }
 }
+
 
