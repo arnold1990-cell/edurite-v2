@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
+@SuppressWarnings("JpaDataSourceORMInspection")
 @Entity
 @Table(name = "roles", schema = "public")
 @Getter
@@ -17,3 +18,4 @@ public class Role extends BaseEntity {
     @Column(name = "name", nullable = false, unique = true)
     private String name;
 }
+

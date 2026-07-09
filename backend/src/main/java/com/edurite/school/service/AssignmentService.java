@@ -167,7 +167,7 @@ public class AssignmentService {
         subject.setSubjectType(trim(request.subjectType()));
         subject.setLanguage(Boolean.TRUE.equals(request.isLanguage()) || catalogue != null && catalogue.isLanguage());
         subject.setCompulsory(Boolean.TRUE.equals(request.isCompulsory()) || catalogue != null && catalogue.isCompulsory());
-        subject.setHodUserId(resolveTeacherReference(schoolId, request.hodUserId(), false));
+        subject.setHodUserId(resolveTeacherReference(schoolId, request.hodUserId()));
         subject.setCapsAligned(resolveCapsAligned(catalogue, request.capsAligned()));
         subject.setSubjectCatalogue(catalogue);
         if (request.active() != null) {
@@ -373,7 +373,7 @@ public class AssignmentService {
         subject.setSubjectType(trim(request.subjectType()));
         subject.setLanguage(Boolean.TRUE.equals(request.isLanguage()) || catalogue != null && catalogue.isLanguage());
         subject.setCompulsory(Boolean.TRUE.equals(request.isCompulsory()) || catalogue != null && catalogue.isCompulsory());
-        subject.setHodUserId(resolveTeacherReference(schoolId, request.hodUserId(), true));
+        subject.setHodUserId(resolveTeacherReference(schoolId, request.hodUserId()));
         subject.setCapsAligned(resolveCapsAligned(catalogue, request.capsAligned()));
         subject.setSubjectCatalogue(catalogue);
         subject.setActive(request.active());
@@ -1113,7 +1113,7 @@ public class AssignmentService {
                 .anyMatch(existing ->
                         normalizedName.equals(safe(existing.getSubjectName()).toLowerCase(Locale.ROOT))
                                 && normalizedPhase.equals(safe(existing.getPhase()).toLowerCase(Locale.ROOT))
-                                && normalizedGrade.equals(safe(trim(existing.getGrade()) != null ? existing.getGrade() : existing.getGradeRange()).toLowerCase(Locale.ROOT))
+                                && normalizedGrade.equals(safe(trim(existing.getGrade()) == null ? existing.getGradeRange() : existing.getGrade()).toLowerCase(Locale.ROOT))
                                 && normalizedLanguageLevel.equals(safe(existing.getLanguageLevel()).toLowerCase(Locale.ROOT)));
         if (duplicate) {
             throw new ResourceConflictException("This subject already exists for the selected phase, grade, and language level.");
@@ -1129,9 +1129,9 @@ public class AssignmentService {
                 .orElseThrow(() -> new ResourceConflictException("Subject catalogue item not found."));
     }
 
-    private UUID resolveTeacherReference(UUID schoolId, UUID teacherUserId, boolean allowNull) {
+    private UUID resolveTeacherReference(UUID schoolId, UUID teacherUserId) {
         if (teacherUserId == null) {
-            return allowNull ? null : null;
+            return null;
         }
         schoolUserProfileRepository.findBySchoolIdAndUserIdAndDeletedFalse(schoolId, teacherUserId)
                 .filter(profile -> SchoolAccessService.ROLE_TEACHER.equals(profile.getRoleName()) && profile.isActive())
@@ -1235,5 +1235,4 @@ public class AssignmentService {
                 .forEach(userId -> notificationService.createInApp(userId, eventType, title, message));
     }
 }
-
 

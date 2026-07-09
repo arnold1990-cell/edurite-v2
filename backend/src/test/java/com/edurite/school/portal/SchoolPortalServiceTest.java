@@ -283,8 +283,6 @@ class SchoolPortalServiceTest {
     void studentCannotSeeAnotherLearnerSubmission() {
         UUID schoolId = UUID.randomUUID();
         UUID learnerA = UUID.randomUUID();
-        UUID taskId = UUID.randomUUID();
-
         when(taskSubmissionRepository.findByLearnerUserId(learnerA)).thenReturn(List.of());
 
         var views = assignmentService.studentSubmissionViews(schoolId, learnerA);
