@@ -12,9 +12,7 @@ import org.springframework.data.repository.query.Param;
 
 /**
  * UserRepository is responsible for database operations related to users.
- *
  * It connects the User entity to the database.
- *
  * Because it extends JpaRepository, Spring automatically gives us methods like:
  * - save()
  * - findById()
@@ -26,20 +24,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /**
      * Finds one user using their email.
-     *
-     * Example:
-     * findByEmail("test@gmail.com")
-     *
-     *
+     * Example: findByEmail("test@gmail.com")
      * This search is case-sensitive depending on the database.
      */
     Optional<User> findByEmail(String email);
 
     /**
      * Finds one user using their email, ignoring capital letters.
-     *
-     * Example:
-     * "Test@gmail.com" and "test@gmail.com" are treated the same.
+     * Example: "Test@gmail.com" and "test@gmail.com" are treated the same.
      */
     Optional<User> findByEmailIgnoreCase(String email);
 
@@ -47,17 +39,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /**
      * Finds one user using their phone number.
-     *
      * Returns Optional because the phone number may not exist.
      */
     Optional<User> findByPhoneNumber(String phoneNumber);
 
     /**
      * Finds all users whose email has the same part before the @ symbol.
-     *
-     * Example:
-     * If email is "arnold@gmail.com", the local part is "arnold".
-     *
+     * Example: if email is "arnold@gmail.com", the local part is "arnold".
      * This query checks:
      * - The email contains @
      * - The part before @ matches the given localPart
@@ -72,21 +60,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /**
      * Finds the latest user where BOTH email and mobile number match.
-     *
-     * This is a native SQL query, meaning it uses real database table names:
-     * - users
-     * - students
-     * - companies
-     *
-     * It checks the user's email from the users table,
-     * then checks the mobile number from either:
-     * - students.phone
-     * - companies.mobile_number
-     *
+     * This is a native SQL query using the users, students, and companies tables.
      * ORDER BY created_at DESC means newest user comes first.
      * LIMIT 1 means return only one result.
      */
-    // noinspection SqlNoDataSourceInspection,SqlResolve
+    //noinspection SqlNoDataSourceInspection,SqlResolve
+    @SuppressWarnings("unused")
     @Query(value = """
             SELECT u.*
             FROM users u
@@ -109,16 +88,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /**
      * Finds the latest user where EITHER email OR mobile number matches.
-     *
-     * This is useful when the system wants to check:
-     * - Does this email already belong to someone?
-     * - Or does this phone number already belong to someone?
-     *
-     * It searches phone numbers in:
-     * - students.phone
-     * - companies.mobile_number
+     * It searches phone numbers in students.phone and companies.mobile_number.
      */
-    // noinspection SqlNoDataSourceInspection,SqlResolve
+    //noinspection SqlNoDataSourceInspection,SqlResolve
+    @SuppressWarnings("unused")
     @Query(value = """
             SELECT u.*
             FROM users u
@@ -142,16 +115,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /**
      * Checks if a user exists with this exact email.
-     *
      * Returns true or false.
      */
     boolean existsByEmail(String email);
 
     /**
      * Checks if a user exists with this email, ignoring capital letters.
-     *
-     * Example:
-     * "Admin@gmail.com" and "admin@gmail.com" are treated the same.
+     * Example: "Admin@gmail.com" and "admin@gmail.com" are treated the same.
      */
     boolean existsByEmailIgnoreCase(String email);
 
@@ -169,26 +139,23 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     /**
      * Gets only the latest 10 users.
-     *
      * Useful for dashboards, admin panels, or recent registrations.
      */
+    @SuppressWarnings("unused")
     List<User> findTop10ByOrderByCreatedAtDesc();
 
     /**
      * Counts users by their account status.
-     *
-     * Example:
-     * countByStatus(UserStatus.ACTIVE)
+     * Example: countByStatus(UserStatus.ACTIVE)
      */
+    @SuppressWarnings("unused")
     long countByStatus(UserStatus status);
+
     List<User> findByStatusAndDeletedAtIsNull(UserStatus status);
 
     /**
      * Counts how many users have a certain role.
-     *
-     * Example:
-     * countDistinctByRoleName("ADMIN")
-     *
+     * Example: countDistinctByRoleName("ADMIN")
      * DISTINCT prevents counting the same user more than once.
      */
     @Query("""
@@ -197,9 +164,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             JOIN u.roles r
             WHERE UPPER(r.name) = UPPER(:roleName)
             """)
+    @SuppressWarnings("unused")
     long countDistinctByRoleName(@Param("roleName") String roleName);
 
-    // noinspection SqlNoDataSourceInspection,SqlResolve
+    //noinspection SqlNoDataSourceInspection,SqlResolve
     @Query(value = """
             SELECT DISTINCT u.id
             FROM users u
@@ -233,7 +201,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             Pageable pageable
     );
 
-    // noinspection SqlNoDataSourceInspection,SqlResolve
+    //noinspection SqlNoDataSourceInspection,SqlResolve
     @Query(value = """
             SELECT COUNT(DISTINCT u.id)
             FROM users u
@@ -265,7 +233,3 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("activeOnly") boolean activeOnly
     );
 }
-
-
-
-

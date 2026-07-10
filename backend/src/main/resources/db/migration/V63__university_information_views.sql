@@ -1,4 +1,4 @@
--- noinspection SqlNoDataSourceInspection
+--noinspection SqlNoDataSourceInspection
 CREATE TABLE IF NOT EXISTS university_programmes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     institution_id UUID NOT NULL REFERENCES institutions(id) ON DELETE CASCADE,

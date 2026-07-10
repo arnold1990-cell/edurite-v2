@@ -12,7 +12,7 @@ import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
-// noinspection JpaDataSourceORMInspection
+//noinspection JpaDataSourceORMInspection
 @Entity
 @Table(name = "university_retrieval_logs")
 @Getter

@@ -9,7 +9,7 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
-// noinspection JpaDataSourceORMInspection
+//noinspection JpaDataSourceORMInspection
 @Entity
 @Table(name = "learning_resources")
 @Getter
