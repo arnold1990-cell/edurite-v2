@@ -12,9 +12,8 @@ import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
-//noinspection JpaDataSourceORMInspection
 @Entity
-@Table(name = "university_programmes")
+@Table(name = "university_programmes", schema = "public")
 @Getter
 @Setter
 public class UniversityProgramme extends BaseEntity {
@@ -23,41 +22,42 @@ public class UniversityProgramme extends BaseEntity {
     @JoinColumn(name = "institution_id", nullable = false)
     private Institution institution;
 
-    @Column(nullable = false, length = 255)
+    @Column(name = "name", nullable = false, length = 255)
     private String name;
 
-    @Column(length = 120)
+    @Column(name = "qualification_type", length = 120)
     private String qualificationType;
 
-    @Column(length = 180)
+    @Column(name = "faculty", length = 180)
     private String faculty;
 
-    @Column(length = 180)
+    @Column(name = "department", length = 180)
     private String department;
 
-    @Column(length = 120)
+    @Column(name = "duration", length = 120)
     private String duration;
 
-    @Column(length = 80)
+    @Column(name = "study_mode", length = 80)
     private String studyMode;
 
-    @Column(length = 180)
+    @Column(name = "campus", length = 180)
     private String campus;
 
-    @Column(length = 1200)
+    @Column(name = "programme_url", length = 1200)
     private String programmeUrl;
 
-    @Column(nullable = false, length = 1200)
+    @Column(name = "source_url", nullable = false, length = 1200)
     private String sourceUrl;
 
-    @Column(length = 120)
+    @Column(name = "source_label", length = 120)
     private String sourceLabel;
-    @Column(nullable = false, length = 40)
+
+    @Column(name = "retrieval_status", nullable = false, length = 40)
     private String retrievalStatus;
 
+    @Column(name = "last_verified_at")
     private OffsetDateTime lastVerifiedAt;
-    @Column(nullable = false)
+
+    @Column(name = "active", nullable = false)
     private boolean active;
 }
-
-

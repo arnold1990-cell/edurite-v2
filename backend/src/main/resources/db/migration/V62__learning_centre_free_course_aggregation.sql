@@ -1,4 +1,3 @@
---noinspection SqlNoDataSourceInspection
 ALTER TABLE learning_resources
     ADD COLUMN IF NOT EXISTS provider VARCHAR(255),
     ADD COLUMN IF NOT EXISTS category VARCHAR(255),
@@ -25,4 +24,3 @@ WHERE TRUE;
 
 CREATE INDEX IF NOT EXISTS idx_learning_resources_free_courses
     ON learning_resources (is_free, resource_type, provider, category, subject);
-

@@ -1,12 +1,21 @@
 package com.edurite.config;
 
+import com.edurite.institution.universityinfo.repository.UniversityAdmissionRequirementRepository;
+import com.edurite.institution.universityinfo.repository.UniversityProgrammeRepository;
+import com.edurite.institution.universityinfo.repository.UniversityRetrievalLogRepository;
+import com.edurite.learning.repository.LearningResourceRepository;
+import com.edurite.user.repository.UserRepository;
 import com.zaxxer.hikari.HikariDataSource;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -46,7 +55,6 @@ class DevProfileDatasourceIntegrationTest {
         registry.add("edurite.auth.seed.admin.password", () -> "AdminPass@123");
     }
 
-    @SuppressWarnings("unused")
     public static boolean canRunWithDatabase() {
         return USE_EXTERNAL_DB || dockerAvailable();
     }
@@ -107,6 +115,21 @@ class DevProfileDatasourceIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private LearningResourceRepository learningResourceRepository;
+
+    @Autowired
+    private UniversityProgrammeRepository universityProgrammeRepository;
+
+    @Autowired
+    private UniversityAdmissionRequirementRepository universityAdmissionRequirementRepository;
+
+    @Autowired
+    private UniversityRetrievalLogRepository universityRetrievalLogRepository;
+
     @Test
     void devProfileUsesSingleDatasourceForFlywayAndJpa() {
         assertThat(dataSourceProperties.getUrl()).isEqualTo(jdbcUrl());
@@ -127,24 +150,136 @@ class DevProfileDatasourceIntegrationTest {
 
     @Test
     void curriculumAssetBinaryColumnsMapToPostgresBytea() {
-        assertColumnIsBytea("pdf_bytes");
-        assertColumnIsBytea("docx_bytes");
-        assertColumnIsBytea("excel_bytes");
+        assertColumnUdtName("curriculum_assets", "pdf_bytes", "bytea");
+        assertColumnUdtName("curriculum_assets", "docx_bytes", "bytea");
+        assertColumnUdtName("curriculum_assets", "excel_bytes", "bytea");
     }
 
-    private void assertColumnIsBytea(String columnName) {
+    @Test
+    void flywayAppliesLearningCentreAndUniversityInformationMigrations() {
+        List<String> appliedVersions = Arrays.stream(flyway.info().applied())
+                .map(info -> info.getVersion().toString())
+                .toList();
+
+        assertThat(appliedVersions).contains("62", "63");
+    }
+
+    @Test
+    void learningCentreAndUniversitySchemaMatchesRepositories() {
+        assertTableExists("learning_resources");
+        assertTableExists("university_programmes");
+        assertTableExists("university_admission_requirements");
+        assertTableExists("university_retrieval_logs");
+        assertTableExists("user_roles");
+
+        assertColumnUdtName("learning_resources", "course_url", "text");
+        assertColumnUdtName("learning_resources", "thumbnail_url", "text");
+        assertColumnUdtName("university_programmes", "institution_id", "uuid");
+        assertColumnUdtName("university_admission_requirements", "institution_id", "uuid");
+        assertColumnUdtName("university_admission_requirements", "programme_id", "uuid");
+        assertColumnUdtName("university_retrieval_logs", "institution_id", "uuid");
+
+        assertThat(learningResourceRepository.count()).isGreaterThanOrEqualTo(0);
+        assertThat(universityProgrammeRepository.count()).isGreaterThanOrEqualTo(0);
+        assertThat(universityAdmissionRequirementRepository.count()).isGreaterThanOrEqualTo(0);
+        assertThat(universityRetrievalLogRepository.count()).isGreaterThanOrEqualTo(0);
+    }
+
+    @Test
+    void notificationFilterSchoolQueryMatchesStudentForeignKeySchema() {
+        UUID userId = UUID.randomUUID();
+        UUID studentId = UUID.randomUUID();
+        UUID schoolId = UUID.randomUUID();
+        String email = "schema-check-" + userId + "@example.com";
+
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.users (id, email, password_hash, first_name, last_name, status, email_verified, must_change_password, plan_type, created_at, updated_at)
+                VALUES (?, ?, 'hash', 'Schema', 'Check', 'ACTIVE', TRUE, FALSE, 'BASIC', now(), now())
+                """,
+                userId,
+                email
+        );
+
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.students (id, user_id, first_name, last_name, selected_grade, created_at, updated_at)
+                VALUES (?, ?, 'Schema', 'Student', 'Grade 12', now(), now())
+                """,
+                studentId,
+                userId
+        );
+
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.school_profiles (id, school_name, created_at, updated_at)
+                VALUES (?, 'Schema School', now(), now())
+                """,
+                schoolId
+        );
+
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.school_students (id, school_id, student_id, created_at, updated_at)
+                VALUES (?, ?, ?, now(), now())
+                """,
+                UUID.randomUUID(),
+                schoolId,
+                studentId
+        );
+
+        List<UUID> matchedUserIds = userRepository.findUserIdsByNotificationFilter(
+                null,
+                null,
+                null,
+                null,
+                schoolId,
+                email,
+                true,
+                PageRequest.of(0, 10)
+        );
+
+        long matchedCount = userRepository.countByNotificationFilter(
+                null,
+                null,
+                null,
+                null,
+                schoolId,
+                email,
+                true
+        );
+
+        assertThat(matchedUserIds).contains(userId);
+        assertThat(matchedCount).isEqualTo(1);
+    }
+
+    private void assertTableExists(String tableName) {
+        Integer count = jdbcTemplate.queryForObject(
+                """
+                select count(*)
+                from information_schema.tables
+                where table_schema = 'public'
+                  and table_name = ?
+                """,
+                Integer.class,
+                tableName
+        );
+        assertThat(count).isEqualTo(1);
+    }
+
+    private void assertColumnUdtName(String tableName, String columnName, String expectedUdtName) {
         String udtName = jdbcTemplate.queryForObject(
                 """
                 select udt_name
                 from information_schema.columns
                 where table_schema = 'public'
-                  and table_name = 'curriculum_assets'
+                  and table_name = ?
                   and column_name = ?
                 """,
                 String.class,
+                tableName,
                 columnName
         );
-        assertThat(udtName).isEqualTo("bytea");
+        assertThat(udtName).isEqualTo(expectedUdtName);
     }
 }
-

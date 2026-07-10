@@ -12,9 +12,8 @@ import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
-//noinspection JpaDataSourceORMInspection
 @Entity
-@Table(name = "university_retrieval_logs")
+@Table(name = "university_retrieval_logs", schema = "public")
 @Getter
 @Setter
 public class UniversityRetrievalLog extends BaseEntity {
@@ -23,19 +22,18 @@ public class UniversityRetrievalLog extends BaseEntity {
     @JoinColumn(name = "institution_id", nullable = false)
     private Institution institution;
 
-    @Column(length = 1200)
+    @Column(name = "source_url", length = 1200)
     private String sourceUrl;
 
-    @Column(nullable = false, length = 40)
+    @Column(name = "status", nullable = false, length = 40)
     private String status;
 
-    @Column(length = 1000)
+    @Column(name = "message", length = 1000)
     private String message;
 
-    @Column(length = 80)
+    @Column(name = "retrieval_type", length = 80)
     private String retrievalType;
-    @Column(nullable = false)
+
+    @Column(name = "retrieved_at", nullable = false)
     private OffsetDateTime retrievedAt;
 }
-
-

@@ -64,13 +64,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * ORDER BY created_at DESC means newest user comes first.
      * LIMIT 1 means return only one result.
      */
-    //noinspection SqlNoDataSourceInspection,SqlResolve
-    @SuppressWarnings("unused")
     @Query(value = """
             SELECT u.*
-            FROM users u
-            LEFT JOIN students s ON s.user_id = u.id
-            LEFT JOIN companies c ON c.user_id = u.id
+            FROM public.users u
+            LEFT JOIN public.students s ON s.user_id = u.id
+            LEFT JOIN public.companies c ON c.user_id = u.id
             WHERE :email IS NOT NULL
               AND :mobileNumber IS NOT NULL
               AND LOWER(u.email) = LOWER(:email)
@@ -90,13 +88,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Finds the latest user where EITHER email OR mobile number matches.
      * It searches phone numbers in students.phone and companies.mobile_number.
      */
-    //noinspection SqlNoDataSourceInspection,SqlResolve
-    @SuppressWarnings("unused")
     @Query(value = """
             SELECT u.*
-            FROM users u
-            LEFT JOIN students s ON s.user_id = u.id
-            LEFT JOIN companies c ON c.user_id = u.id
+            FROM public.users u
+            LEFT JOIN public.students s ON s.user_id = u.id
+            LEFT JOIN public.companies c ON c.user_id = u.id
             WHERE (:email IS NOT NULL AND LOWER(u.email) = LOWER(:email))
                OR (
                     :mobileNumber IS NOT NULL
@@ -141,14 +137,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Gets only the latest 10 users.
      * Useful for dashboards, admin panels, or recent registrations.
      */
-    @SuppressWarnings("unused")
     List<User> findTop10ByOrderByCreatedAtDesc();
 
     /**
      * Counts users by their account status.
      * Example: countByStatus(UserStatus.ACTIVE)
      */
-    @SuppressWarnings("unused")
     long countByStatus(UserStatus status);
 
     List<User> findByStatusAndDeletedAtIsNull(UserStatus status);
@@ -164,17 +158,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             JOIN u.roles r
             WHERE UPPER(r.name) = UPPER(:roleName)
             """)
-    @SuppressWarnings("unused")
     long countDistinctByRoleName(@Param("roleName") String roleName);
 
-    //noinspection SqlNoDataSourceInspection,SqlResolve
     @Query(value = """
             SELECT DISTINCT u.id
-            FROM users u
-            LEFT JOIN user_roles ur ON ur.user_id = u.id
-            LEFT JOIN roles r ON r.id = ur.role_id
-            LEFT JOIN students s ON s.user_id = u.id
-            LEFT JOIN school_students ss ON ss.student_id = u.id
+            FROM public.users u
+            LEFT JOIN public.user_roles ur ON ur.user_id = u.id
+            LEFT JOIN public.roles r ON r.id = ur.role_id
+            LEFT JOIN public.students s ON s.user_id = u.id
+            LEFT JOIN public.school_students ss ON ss.student_id = s.id
             WHERE u.deleted_at IS NULL
               AND (:activeOnly = FALSE OR u.status = 'ACTIVE')
               AND (:roleName IS NULL OR :roleName = '' OR UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))
@@ -201,14 +193,13 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             Pageable pageable
     );
 
-    //noinspection SqlNoDataSourceInspection,SqlResolve
     @Query(value = """
             SELECT COUNT(DISTINCT u.id)
-            FROM users u
-            LEFT JOIN user_roles ur ON ur.user_id = u.id
-            LEFT JOIN roles r ON r.id = ur.role_id
-            LEFT JOIN students s ON s.user_id = u.id
-            LEFT JOIN school_students ss ON ss.student_id = u.id
+            FROM public.users u
+            LEFT JOIN public.user_roles ur ON ur.user_id = u.id
+            LEFT JOIN public.roles r ON r.id = ur.role_id
+            LEFT JOIN public.students s ON s.user_id = u.id
+            LEFT JOIN public.school_students ss ON ss.student_id = s.id
             WHERE u.deleted_at IS NULL
               AND (:activeOnly = FALSE OR u.status = 'ACTIVE')
               AND (:roleName IS NULL OR :roleName = '' OR UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))

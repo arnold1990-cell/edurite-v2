@@ -1,4 +1,3 @@
---noinspection SqlNoDataSourceInspection
 CREATE TABLE IF NOT EXISTS university_programmes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     institution_id UUID NOT NULL REFERENCES institutions(id) ON DELETE CASCADE,
@@ -68,4 +67,3 @@ CREATE TABLE IF NOT EXISTS university_retrieval_logs (
 
 CREATE INDEX IF NOT EXISTS idx_university_retrieval_logs_institution_retrieved
     ON university_retrieval_logs(institution_id, retrieved_at DESC);
-

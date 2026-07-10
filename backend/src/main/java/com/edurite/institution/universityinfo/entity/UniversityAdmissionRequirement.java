@@ -12,9 +12,8 @@ import java.time.OffsetDateTime;
 import lombok.Getter;
 import lombok.Setter;
 
-//noinspection JpaDataSourceORMInspection
 @Entity
-@Table(name = "university_admission_requirements")
+@Table(name = "university_admission_requirements", schema = "public")
 @Getter
 @Setter
 public class UniversityAdmissionRequirement extends BaseEntity {
@@ -27,46 +26,48 @@ public class UniversityAdmissionRequirement extends BaseEntity {
     @JoinColumn(name = "programme_id")
     private UniversityProgramme programme;
 
-    @Column(length = 255)
+    @Column(name = "programme_name", length = 255)
     private String programmeName;
 
-    @Column(length = 255)
+    @Column(name = "requirement_title", length = 255)
     private String requirementTitle;
 
+    @Column(name = "aps_minimum")
     private Integer apsMinimum;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "required_subjects", columnDefinition = "TEXT")
     private String requiredSubjects;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "minimum_marks", columnDefinition = "TEXT")
     private String minimumMarks;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "nsc_requirement", columnDefinition = "TEXT")
     private String nscRequirement;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "language_requirement", columnDefinition = "TEXT")
     private String languageRequirement;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "faculty_specific_requirement", columnDefinition = "TEXT")
     private String facultySpecificRequirement;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "international_requirement", columnDefinition = "TEXT")
     private String internationalRequirement;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "additional_tests", columnDefinition = "TEXT")
     private String additionalTests;
 
-    @Column(nullable = false, length = 1200)
+    @Column(name = "source_url", nullable = false, length = 1200)
     private String sourceUrl;
 
-    @Column(length = 120)
+    @Column(name = "source_label", length = 120)
     private String sourceLabel;
-    @Column(nullable = false, length = 40)
+
+    @Column(name = "retrieval_status", nullable = false, length = 40)
     private String retrievalStatus;
 
+    @Column(name = "last_verified_at")
     private OffsetDateTime lastVerifiedAt;
-    @Column(nullable = false)
+
+    @Column(name = "active", nullable = false)
     private boolean active;
 }
-
-
