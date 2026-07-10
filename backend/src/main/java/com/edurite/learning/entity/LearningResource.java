@@ -10,7 +10,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "learning_resources", schema = "public")
+@Table(name = "learning_resources")
 @Getter
 @Setter
 public class LearningResource extends BaseEntity {

@@ -192,6 +192,7 @@ class DevProfileDatasourceIntegrationTest {
         UUID schoolId = UUID.randomUUID();
         String email = "schema-check-" + userId + "@example.com";
 
+        //noinspection SqlNoDataSourceInspection
         jdbcTemplate.update(
                 """
                 INSERT INTO public.users (id, email, password_hash, first_name, last_name, status, email_verified, must_change_password, plan_type, created_at, updated_at)
@@ -201,6 +202,7 @@ class DevProfileDatasourceIntegrationTest {
                 email
         );
 
+        //noinspection SqlNoDataSourceInspection
         jdbcTemplate.update(
                 """
                 INSERT INTO public.students (id, user_id, first_name, last_name, selected_grade, created_at, updated_at)
@@ -210,6 +212,7 @@ class DevProfileDatasourceIntegrationTest {
                 userId
         );
 
+        //noinspection SqlNoDataSourceInspection
         jdbcTemplate.update(
                 """
                 INSERT INTO public.school_profiles (id, school_name, created_at, updated_at)
@@ -218,6 +221,7 @@ class DevProfileDatasourceIntegrationTest {
                 schoolId
         );
 
+        //noinspection SqlNoDataSourceInspection
         jdbcTemplate.update(
                 """
                 INSERT INTO public.school_students (id, school_id, student_id, created_at, updated_at)
@@ -254,6 +258,7 @@ class DevProfileDatasourceIntegrationTest {
     }
 
     private void assertTableExists(String tableName) {
+        //noinspection SqlNoDataSourceInspection
         Integer count = jdbcTemplate.queryForObject(
                 """
                 select count(*)
@@ -268,6 +273,7 @@ class DevProfileDatasourceIntegrationTest {
     }
 
     private void assertColumnUdtName(String tableName, String columnName, String expectedUdtName) {
+        //noinspection SqlNoDataSourceInspection
         String udtName = jdbcTemplate.queryForObject(
                 """
                 select udt_name

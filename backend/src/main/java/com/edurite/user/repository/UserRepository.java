@@ -66,9 +66,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      */
     @Query(value = """
             SELECT u.*
-            FROM public.users u
-            LEFT JOIN public.students s ON s.user_id = u.id
-            LEFT JOIN public.companies c ON c.user_id = u.id
+            FROM users u
+            LEFT JOIN students s ON s.user_id = u.id
+            LEFT JOIN companies c ON c.user_id = u.id
             WHERE :email IS NOT NULL
               AND :mobileNumber IS NOT NULL
               AND LOWER(u.email) = LOWER(:email)
@@ -90,9 +90,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      */
     @Query(value = """
             SELECT u.*
-            FROM public.users u
-            LEFT JOIN public.students s ON s.user_id = u.id
-            LEFT JOIN public.companies c ON c.user_id = u.id
+            FROM users u
+            LEFT JOIN students s ON s.user_id = u.id
+            LEFT JOIN companies c ON c.user_id = u.id
             WHERE (:email IS NOT NULL AND LOWER(u.email) = LOWER(:email))
                OR (
                     :mobileNumber IS NOT NULL
@@ -162,11 +162,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query(value = """
             SELECT DISTINCT u.id
-            FROM public.users u
-            LEFT JOIN public.user_roles ur ON ur.user_id = u.id
-            LEFT JOIN public.roles r ON r.id = ur.role_id
-            LEFT JOIN public.students s ON s.user_id = u.id
-            LEFT JOIN public.school_students ss ON ss.student_id = s.id
+            FROM users u
+            LEFT JOIN user_roles ur ON ur.user_id = u.id
+            LEFT JOIN roles r ON r.id = ur.role_id
+            LEFT JOIN students s ON s.user_id = u.id
+            LEFT JOIN school_students ss ON ss.student_id = s.id
             WHERE u.deleted_at IS NULL
               AND (:activeOnly = FALSE OR u.status = 'ACTIVE')
               AND (:roleName IS NULL OR :roleName = '' OR UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))
@@ -195,11 +195,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     @Query(value = """
             SELECT COUNT(DISTINCT u.id)
-            FROM public.users u
-            LEFT JOIN public.user_roles ur ON ur.user_id = u.id
-            LEFT JOIN public.roles r ON r.id = ur.role_id
-            LEFT JOIN public.students s ON s.user_id = u.id
-            LEFT JOIN public.school_students ss ON ss.student_id = s.id
+            FROM users u
+            LEFT JOIN user_roles ur ON ur.user_id = u.id
+            LEFT JOIN roles r ON r.id = ur.role_id
+            LEFT JOIN students s ON s.user_id = u.id
+            LEFT JOIN school_students ss ON ss.student_id = s.id
             WHERE u.deleted_at IS NULL
               AND (:activeOnly = FALSE OR u.status = 'ACTIVE')
               AND (:roleName IS NULL OR :roleName = '' OR UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))

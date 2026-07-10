@@ -1,3 +1,4 @@
+-- noinspection SqlNoDataSourceInspection
 ALTER TABLE learning_resources
     ADD COLUMN IF NOT EXISTS provider VARCHAR(255),
     ADD COLUMN IF NOT EXISTS category VARCHAR(255),

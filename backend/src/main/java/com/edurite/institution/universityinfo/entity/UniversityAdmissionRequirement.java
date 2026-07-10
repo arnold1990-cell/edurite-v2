@@ -13,7 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 @Entity
-@Table(name = "university_admission_requirements", schema = "public")
+@Table(name = "university_admission_requirements")
 @Getter
 @Setter
 public class UniversityAdmissionRequirement extends BaseEntity {
