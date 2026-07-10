@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppQuery } from '@/hooks/useAppQuery';
@@ -21,7 +21,7 @@ import { accountService } from '@/services/accountService';
 import { featureModulesService } from '@/services/featureModulesService';
 import { jobsService } from '@/services/jobsService';
 import { schoolService } from '@/services/schoolService';
-import { AlertTriangle, Bell, BookOpen, Brain, BriefcaseBusiness, CheckCheck, CheckCircle2, CircleDollarSign, Clock3, FileText, FileUp, GraduationCap, PlayCircle, Settings, Sparkles, Target, UserCircle2, Video } from 'lucide-react';
+import { AlertTriangle, Bell, BookOpen, Brain, BriefcaseBusiness, CheckCheck, CheckCircle2, CircleDollarSign, Clock3, FileText, FileUp, GraduationCap, PlayCircle, Settings, Sparkles, Target, UserCircle2, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
@@ -1173,7 +1173,7 @@ export const StudentProfilePage = () => {
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">Student profile summary</p>
             <h2 className="text-2xl font-semibold text-slate-900">{`${value('firstName')} ${value('lastName')}`.trim() || 'Your Profile'}</h2>
-            <p className="text-sm text-slate-600">{value('selectedGrade') || 'Grade not selected yet'}{value('qualificationLevel') ? ` • ${value('qualificationLevel')}` : ''}</p>
+            <p className="text-sm text-slate-600">{value('selectedGrade') || 'Grade not selected yet'}{value('qualificationLevel') ? ` â€¢ ${value('qualificationLevel')}` : ''}</p>
           </div>
         </div>
         <div className="rounded-xl border border-primary-100 bg-white/90 p-3 text-sm shadow-sm">
@@ -1396,7 +1396,7 @@ export const StudentProfilePage = () => {
                 <p className="font-medium text-slate-900">{saved.name}</p>
                 <p className="text-xs text-slate-500">Updated {new Date(saved.updatedAt).toLocaleString()}</p>
                 {gradeLabel ? <p className="mt-1 text-xs font-semibold text-primary-700">{gradeLabel}</p> : null}
-                {subjectSummary.length ? <p className="mt-1 text-xs text-slate-600">{subjectSummary.join(' • ')}</p> : null}
+                {subjectSummary.length ? <p className="mt-1 text-xs text-slate-600">{subjectSummary.join(' â€¢ ')}</p> : null}
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => applySavedProfile.mutate(saved.id)} disabled={applySavedProfile.isPending || deleteSavedProfile.isPending}>
@@ -1644,7 +1644,7 @@ export const StudentCareerRecommendationsPage = () => {
       </div>}
       {sourceCoverage && <div className="rounded border p-3 bg-white text-sm">
         <h3 className="font-semibold mb-1">Source coverage</h3>
-        <p>Successful: {sourceCoverage.successfulSourcesCount} · Failed: {sourceCoverage.failedSourcesCount} · Partial: {sourceCoverage.partialSourcesCount}</p>
+        <p>Successful: {sourceCoverage.successfulSourcesCount} Â· Failed: {sourceCoverage.failedSourcesCount} Â· Partial: {sourceCoverage.partialSourcesCount}</p>
         {!!sourceCoverage.universitiesWithUsableProgrammeData?.length && <p className="mt-1">Universities with usable programme data: {sourceCoverage.universitiesWithUsableProgrammeData.join(', ')}</p>}
       </div>}
     </>}
@@ -1726,6 +1726,29 @@ export const StudentSavedPage = () => {
   });
   const items = opportunities.data ?? [];
   const badgeColor = (type: UnifiedOpportunity['type']): 'blue' | 'emerald' | 'amber' => type === 'CAREER' ? 'blue' : type === 'JOB' ? 'emerald' : 'amber';
+  const normalize = (value?: string | null) => value?.trim().toLowerCase() ?? '';
+  const jobLike = (job: JobOpportunity) => job as JobOpportunity & { logoUrl?: string; companyLogoUrl?: string; posted?: string; jobType?: string; workMode?: string };
+  const companyLogoUrl = (job: JobOpportunity) => jobLike(job).logoUrl ?? jobLike(job).companyLogoUrl;
+  const companyInitials = (company: string) => company.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('').slice(0, 2) || 'J';
+  const jobTypeLabel = (job: JobOpportunity) => job.contractType?.trim() || jobLike(job).jobType?.trim() || (normalize(job.category).includes('intern') ? 'Internship' : normalize(job.category).includes('graduate') ? 'Graduate' : 'Full Time');
+  const workModeLabel = (job: JobOpportunity) => {
+    const blob = `${job.location} ${job.description} ${job.category} ${job.contractType}`.toLowerCase();
+    if (blob.includes('remote') || blob.includes('work from home') || blob.includes('virtual')) return 'Remote';
+    if (blob.includes('hybrid')) return 'Hybrid';
+    if (blob.includes('intern')) return 'Internship';
+    if (blob.includes('graduate')) return 'Graduate';
+    return 'In Office';
+  };
+  const postedLabel = (value?: string) => {
+    if (!value) return 'Recently';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+    const now = new Date();
+    const diffDays = Math.max(0, Math.floor((now.getTime() - parsed.getTime()) / 86400000));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    return `${diffDays} days ago`;
+  };
   return <Section title="Explore Careers & Jobs">
     <p className="text-sm text-slate-500">Explore careers and jobs tailored to your skills, interests, and academic background.</p>
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -1742,23 +1765,23 @@ export const StudentSavedPage = () => {
       </select>
     </div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-      {items.map((item) => <article key={`${item.type}-${item.id}`} className="rounded border p-4 space-y-3 bg-white">
+      {items.map((item) => <article key={`${item.type}-${item.id}`} className="rounded border border-slate-200 bg-white p-4 shadow-sm space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold">{item.title}</h3>
+              <h3 className="text-base font-semibold text-slate-900">{item.title}</h3>
               <Badge color={badgeColor(item.type)}>{item.type}</Badge>
               {item.recommended ? <span className="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">Recommended</span> : null}
             </div>
             <p className="text-sm text-slate-600">{item.industry ?? item.field ?? 'General opportunities'}{item.location ? ` • ${item.location}` : ''}</p>
           </div>
-          <Button onClick={() => toggle.mutate({ item })} disabled={toggle.isPending}>{item.saved ? 'Saved ?' : 'Save'}</Button>
+          <Button onClick={() => toggle.mutate({ item })} disabled={toggle.isPending}>{item.saved ? 'Saved' : 'Save'}</Button>
         </div>
         <div className="grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
-          <p><span className="font-medium text-slate-800">Field:</span> {item.field ?? '—'}</p>
-          <p><span className="font-medium text-slate-800">Industry:</span> {item.industry ?? '—'}</p>
-          <p><span className="font-medium text-slate-800">Qualification:</span> {item.qualification ?? '—'}</p>
-          <p><span className="font-medium text-slate-800">Demand:</span> {item.demand ?? '—'}</p>
+          <p><span className="font-medium text-slate-800">Field:</span> {item.field ?? '-'}</p>
+          <p><span className="font-medium text-slate-800">Industry:</span> {item.industry ?? '-'}</p>
+          <p><span className="font-medium text-slate-800">Qualification:</span> {item.qualification ?? '-'}</p>
+          <p><span className="font-medium text-slate-800">Demand:</span> {item.demand ?? '-'}</p>
         </div>
         <div>
           <Button
@@ -1789,21 +1812,60 @@ export const StudentSavedPage = () => {
       {liveJobs.isLoading || liveJobs.isFetching ? <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">Loading job opportunities...</div> : null}
       {liveJobs.isError ? <div className="rounded-lg border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900">Job opportunities are temporarily unavailable. Please try again.</div> : null}
       {!liveJobs.isLoading && !liveJobs.isError && !(liveJobs.data ?? []).length ? <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">No jobs found for this search.</div> : null}
-      {!liveJobs.isError && (liveJobs.data ?? []).length > 0 ? <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {(liveJobs.data ?? []).slice(0, 9).map((job) => <article key={job.id} className="rounded-2xl border border-slate-200 bg-gradient-to-br from-[#0b1f4a] to-[#143a8c] p-4 text-white">
-          <h4 className="text-sm font-semibold">{job.title}</h4>
-          <p className="mt-1 text-xs text-blue-100">{job.company}</p>
-          <p className="text-xs text-blue-100">{job.location}</p>
-          {(job.salaryMin || job.salaryMax) ? <p className="mt-2 text-xs text-emerald-200">Salary: {job.salaryMin ?? '-'} - {job.salaryMax ?? '-'}</p> : null}
-          <p className="mt-2 line-clamp-3 text-xs text-blue-50">{job.description}</p>
-          <a href={job.redirectUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex rounded-xl bg-white px-3 py-1.5 text-xs font-semibold text-slate-900 hover:bg-slate-100">View Job</a>
+      {!liveJobs.isError && (liveJobs.data ?? []).length > 0 ? <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 items-stretch">
+        {(liveJobs.data ?? []).slice(0, 9).map((job) => <article key={job.id} className="h-full rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-lg">
+          <div className="flex h-full flex-col">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h4 className="line-clamp-2 text-sm font-bold text-[#1E293B]">{job.title}</h4>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 ring-1 ring-slate-200">
+                    {companyLogoUrl(job) ? <img src={companyLogoUrl(job)} alt={`${job.company} logo`} className="h-full w-full object-cover" /> : <span className="text-[11px] font-bold text-[#2563EB]">{companyInitials(job.company)}</span>}
+                  </div>
+                  <p className="text-sm font-semibold text-[#2563EB]">{job.company}</p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Badge color="blue">{jobTypeLabel(job)}</Badge>
+                <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">{workModeLabel(job)}</span>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-medium">
+              {job.category ? <span className="rounded-full bg-blue-50 px-2.5 py-1 text-blue-700">{job.category}</span> : null}
+              {normalize(job.location).includes('remote') ? <span className="rounded-full bg-cyan-50 px-2.5 py-1 text-cyan-700">Remote</span> : null}
+              {normalize(job.location).includes('hybrid') ? <span className="rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">Hybrid</span> : null}
+              {job.contractType ? <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">{job.contractType}</span> : null}
+            </div>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#475569]">{job.description}</p>
+            <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-[#F8FAFF] p-3 text-sm text-[#64748B]">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Location</p>
+                <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-700">{job.location}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Company</p>
+                <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-700">{job.company}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Job Type</p>
+                <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-700">{jobTypeLabel(job)}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Posted</p>
+                <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-700">{postedLabel(job.created)}</p>
+              </div>
+            </div>
+            {(job.salaryMin || job.salaryMax) ? <p className="mt-3 text-sm text-[#64748B]"><span className="font-medium text-slate-700">Salary:</span> {job.salaryMin ?? '-'} - {job.salaryMax ?? '-'}</p> : null}
+            <div className="mt-auto pt-4">
+              <a href={job.redirectUrl} target="_blank" rel="noopener noreferrer" className="inline-flex w-full items-center justify-center rounded-[10px] bg-[#2563EB] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1D4ED8]">View Job</a>
+            </div>
+          </div>
         </article>)}
       </div> : null}
     </div>
     {!items.length && !opportunities.isLoading ? <EmptyState title="No opportunities found" message="Try broadening your filters to explore more careers and jobs." /> : null}
   </Section>;
 };
-
 export const StudentCareerDetailsPage = () => {
   const { id = '' } = useParams();
   const location = useLocation();
@@ -1910,7 +1972,7 @@ export const StudentApplicationsPage = () => {
   return <Section title="Bursary Finder">
     <div className="rounded border p-3">
       <h3 className="font-semibold mb-2">AI Recommended Bursaries</h3>
-      {(recommendations.data ?? []).slice(0, 3).map((item) => <p key={item.externalId}>• {item.title} ({item.relevanceScore}%)</p>)}
+      {(recommendations.data ?? []).slice(0, 3).map((item) => <p key={item.externalId}>â€¢ {item.title} ({item.relevanceScore}%)</p>)}
       {!((recommendations.data ?? []).length) && <p className="text-sm text-slate-500">No AI bursary suggestions yet. Complete your profile for better matches.</p>}
     </div>
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2">
@@ -2144,6 +2206,8 @@ export const StudentLearningCentrePage = () => {
     progress: number;
     instructor: string;
     lessons: string[];
+    provider: string;
+    isFree: boolean;
     sourceUrl?: string;
   };
   type YouTubeVideo = {
@@ -2159,14 +2223,21 @@ export const StudentLearningCentrePage = () => {
     topic: string;
   };
 
+  const qc = useQueryClient();
+  const { user } = useAuth();
   const recommended = useAppQuery<LearningResource[]>({ queryKey: ['learning', 'recommended'], queryFn: () => learningService.recommended() });
   const catalogue = useAppQuery<LearningResource[]>({ queryKey: ['learning', 'catalogue'], queryFn: learningService.catalogue });
   const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All Categories');
   const [subject, setSubject] = useState('All Subjects');
+  const [providerFilter, setProviderFilter] = useState('All Providers');
   const [grade, setGrade] = useState('All Grades');
   const [skillLevel, setSkillLevel] = useState('All Levels');
   const [resourceType, setResourceType] = useState('All Resource Types');
+  const [freeOnly, setFreeOnly] = useState(true);
   const [selectedResource, setSelectedResource] = useState<LearningCentreResource | null>(null);
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
+  const resourceModalTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [activeTab, setActiveTab] = useState<LearningTab>('Study Materials');
   const [youtubeKeyword, setYoutubeKeyword] = useState('');
   const [youtubePhase, setYoutubePhase] = useState('All Phases');
@@ -2178,7 +2249,7 @@ export const StudentLearningCentrePage = () => {
   const [youtubeVideos, setYoutubeVideos] = useState<YouTubeVideo[]>([]);
   const [youtubeLoading, setYoutubeLoading] = useState(false);
   const [youtubeError, setYoutubeError] = useState<string | null>(null);
-  const externalQuery = search.trim() || (subject !== 'All Subjects' ? subject : 'study materials');
+  const externalQuery = search.trim() || (subject !== 'All Subjects' ? subject : categoryFilter !== 'All Categories' ? categoryFilter : 'study materials');
   const booksQuery = useAppQuery<LearningResource[]>({
     queryKey: ['learning', 'books', externalQuery],
     enabled: activeTab === 'Books' || activeTab === 'Study Materials',
@@ -2203,36 +2274,12 @@ export const StudentLearningCentrePage = () => {
     queryFn: () => learningService.quizzes(10),
     retry: false,
   });
+  const isAdmin = user?.roles?.includes('ROLE_ADMIN') ?? false;
+  const refreshCourses = useMutation({
+    mutationFn: learningService.refreshCourses,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['learning'] }),
+  });
 
-  const mockResources: LearningCentreResource[] = [
-    { id: 'math-1', title: 'Algebra Mastery', description: 'Core algebra methods and exam techniques.', category: 'Mathematics', subject: 'Mathematics', grade: 'Grade 10', level: 'Intermediate', resourceType: 'Course', duration: '1h 50m', progress: 48, instructor: 'Ms. Nkosi', lessons: ['Linear equations', 'Quadratic patterns', 'Exam drills'] },
-    { id: 'math-2', title: 'Calculus Past Paper Pack', description: 'Timed practice papers with worked solutions.', category: 'Mathematics', subject: 'Mathematics', grade: 'Grade 12', level: 'Advanced', resourceType: 'Past Paper', duration: '1h 10m', progress: 22, instructor: 'EduRite Exam Team', lessons: ['Paper 1', 'Paper 2', 'Marking strategy'] },
-    { id: 'math-3', title: 'Geometry Revision Notes', description: 'Theorems, proofs, and visual recap notes.', category: 'Mathematics', subject: 'Mathematics', grade: 'Grade 11', level: 'Beginner', resourceType: 'Revision Guide', duration: '45m', progress: 75, instructor: 'Mr. Dlamini', lessons: ['Angle rules', 'Proof structure', 'Common mistakes'] },
-    { id: 'science-1', title: 'Physical Science Concepts', description: 'Mechanics and electricity foundations.', category: 'Science', subject: 'Science', grade: 'Grade 11', level: 'Intermediate', resourceType: 'Course', duration: '1h 35m', progress: 41, instructor: 'Dr. Molefe', lessons: ['Forces', 'Energy', 'Electric circuits'] },
-    { id: 'science-2', title: 'Chemistry Past Papers', description: 'Acids, bases, and reaction questions.', category: 'Science', subject: 'Science', grade: 'Grade 12', level: 'Advanced', resourceType: 'Past Paper', duration: '1h 00m', progress: 31, instructor: 'EduRite Exam Team', lessons: ['Stoichiometry', 'Acid-base', 'Organic basics'] },
-    { id: 'science-3', title: 'Biology Video Lessons', description: 'Cell biology and genetics visual guides.', category: 'Science', subject: 'Science', grade: 'Grade 10', level: 'Beginner', resourceType: 'Video Tutorial', duration: '1h 20m', progress: 67, instructor: 'Ms. Khumalo', lessons: ['Cells', 'DNA', 'Inheritance'] },
-    { id: 'coding-1', title: 'Java Programming Fundamentals', description: 'Java syntax, OOP, and practical coding.', category: 'Coding', subject: 'Coding', grade: 'Grade 11', level: 'Beginner', resourceType: 'Course', duration: '2h 20m', progress: 29, instructor: 'Coach Peters', lessons: ['Variables', 'Classes', 'Methods'] },
-    { id: 'coding-2', title: 'Web Development with React', description: 'Build responsive modern UI components.', category: 'Coding', subject: 'Coding', grade: 'Grade 12', level: 'Intermediate', resourceType: 'Course', duration: '2h 45m', progress: 53, instructor: 'Coach Zanele', lessons: ['JSX', 'State', 'Routing'] },
-    { id: 'coding-3', title: 'Coding Worksheet Challenge', description: 'Algorithms and debugging worksheet pack.', category: 'Coding', subject: 'Coding', grade: 'Grade 12', level: 'Advanced', resourceType: 'Worksheet', duration: '1h 00m', progress: 18, instructor: 'EduRite Dev Lab', lessons: ['Arrays', 'Loops', 'Debugging'] },
-    { id: 'business-1', title: 'Business Fundamentals', description: 'Strategy, operations, and value creation.', category: 'Business', subject: 'Business', grade: 'Grade 10', level: 'Beginner', resourceType: 'Course', duration: '1h 30m', progress: 39, instructor: 'Ms. Hart', lessons: ['Business models', 'Market research', 'Operations'] },
-    { id: 'business-2', title: 'Entrepreneurship Notes', description: 'Startup planning and growth playbook.', category: 'Business', subject: 'Business', grade: 'Grade 11', level: 'Intermediate', resourceType: 'PDF Notes', duration: '50m', progress: 80, instructor: 'EduRite Enterprise', lessons: ['Idea validation', 'Pitching', 'Cash flow'] },
-    { id: 'business-3', title: 'Business Case Revision', description: 'Case study drills and marking rubric.', category: 'Business', subject: 'Business', grade: 'Grade 12', level: 'Advanced', resourceType: 'Revision Guide', duration: '1h 15m', progress: 35, instructor: 'Mr. Naidoo', lessons: ['Case reading', 'Analysis', 'Recommendations'] },
-    { id: 'eng-1', title: 'Engineering Design Essentials', description: 'Technical drawing and design thinking.', category: 'Engineering', subject: 'Engineering', grade: 'Grade 11', level: 'Intermediate', resourceType: 'Course', duration: '1h 40m', progress: 46, instructor: 'Eng. Mokoena', lessons: ['Drawing tools', 'Projection', 'Design checks'] },
-    { id: 'eng-2', title: 'Mechanical Papers', description: 'Mechanics paper sets with model answers.', category: 'Engineering', subject: 'Engineering', grade: 'Grade 12', level: 'Advanced', resourceType: 'Past Paper', duration: '55m', progress: 20, instructor: 'EduRite Exam Team', lessons: ['Statics', 'Dynamics', 'Review'] },
-    { id: 'eng-3', title: 'Civil Revision Guide', description: 'Materials and structures recap.', category: 'Engineering', subject: 'Engineering', grade: 'Grade 10', level: 'Beginner', resourceType: 'Revision Guide', duration: '1h 05m', progress: 62, instructor: 'Eng. Jacobs', lessons: ['Concrete', 'Loads', 'Foundations'] },
-    { id: 'ai-1', title: 'AI Career Guidance Essentials', description: 'Use AI tools for learning and careers.', category: 'AI & Technology', subject: 'AI & Technology', grade: 'Grade 10', level: 'Beginner', resourceType: 'Course', duration: '1h 25m', progress: 57, instructor: 'EduRite AI Team', lessons: ['AI basics', 'Prompts', 'Career mapping'] },
-    { id: 'ai-2', title: 'ML Video Lessons', description: 'Supervised learning concepts simplified.', category: 'AI & Technology', subject: 'AI & Technology', grade: 'Grade 12', level: 'Intermediate', resourceType: 'Video Tutorial', duration: '2h 00m', progress: 28, instructor: 'Dr. Singh', lessons: ['Datasets', 'Models', 'Evaluation'] },
-    { id: 'ai-3', title: 'Technology Practice Sheets', description: 'Systems, databases, and networks worksheets.', category: 'AI & Technology', subject: 'AI & Technology', grade: 'Grade 11', level: 'Advanced', resourceType: 'Worksheet', duration: '1h 10m', progress: 44, instructor: 'Tech Coach Luthuli', lessons: ['DB basics', 'Networking', 'Security'] },
-    { id: 'acc-1', title: 'Accounting Principles', description: 'Journals, ledgers, and trial balances.', category: 'Accounting', subject: 'Accounting', grade: 'Grade 10', level: 'Beginner', resourceType: 'Course', duration: '1h 35m', progress: 61, instructor: 'Ms. Govender', lessons: ['Double entry', 'Ledger posting', 'Balancing'] },
-    { id: 'acc-2', title: 'Financial Statement Papers', description: 'Balance sheet and cash-flow exams.', category: 'Accounting', subject: 'Accounting', grade: 'Grade 12', level: 'Advanced', resourceType: 'Past Paper', duration: '1h 00m', progress: 26, instructor: 'EduRite Exam Team', lessons: ['Income statement', 'Cash flow', 'Ratios'] },
-    { id: 'acc-3', title: 'Costing Notes', description: 'Budgeting and costing quick revision.', category: 'Accounting', subject: 'Accounting', grade: 'Grade 11', level: 'Intermediate', resourceType: 'PDF Notes', duration: '50m', progress: 73, instructor: 'Mr. Sibiya', lessons: ['Cost units', 'Budgeting', 'Variance'] },
-    { id: 'lang-1', title: 'Academic English Essentials', description: 'Grammar and essay writing mastery.', category: 'Languages', subject: 'Languages', grade: 'Grade 9', level: 'Beginner', resourceType: 'Course', duration: '1h 25m', progress: 66, instructor: 'Ms. Daniels', lessons: ['Grammar', 'Paragraphs', 'Essays'] },
-    { id: 'lang-2', title: 'Language Revision Notes', description: 'Exam writing structures and frameworks.', category: 'Languages', subject: 'Languages', grade: 'Grade 11', level: 'Intermediate', resourceType: 'Revision Guide', duration: '40m', progress: 82, instructor: 'EduRite Language Team', lessons: ['Paper format', 'Comprehension', 'Argumentative writing'] },
-    { id: 'lang-3', title: 'Comprehension Past Papers', description: 'Timed comprehension paper packs.', category: 'Languages', subject: 'Languages', grade: 'Grade 12', level: 'Advanced', resourceType: 'Past Paper', duration: '55m', progress: 37, instructor: 'EduRite Exam Team', lessons: ['Passage analysis', 'Inference', 'Summary writing'] },
-    { id: 'exam-1', title: 'Exam Strategy Masterclass', description: 'Time management and exam tactics.', category: 'Exam Preparation', subject: 'Exam Preparation', grade: 'Grade 10', level: 'Beginner', resourceType: 'Course', duration: '1h 10m', progress: 52, instructor: 'Coach Mthembu', lessons: ['Planning', 'Timing', 'Review method'] },
-    { id: 'exam-2', title: 'Revision Planner Toolkit', description: 'Weekly and daily revision worksheet system.', category: 'Exam Preparation', subject: 'Exam Preparation', grade: 'Grade 11', level: 'Intermediate', resourceType: 'Worksheet', duration: '35m', progress: 88, instructor: 'EduRite Study Lab', lessons: ['Study blocks', 'Priority matrix', 'Reflection'] },
-    { id: 'exam-3', title: 'Final Exam Bundle', description: 'Comprehensive multi-subject papers.', category: 'Exam Preparation', subject: 'Exam Preparation', grade: 'Grade 12', level: 'Advanced', resourceType: 'Past Paper', duration: '1h 30m', progress: 33, instructor: 'EduRite Exam Team', lessons: ['Paper sequencing', 'Mark allocation', 'Final checks'] },
-  ];
 
   const normalize = (v: string) => v.trim().toLowerCase();
   const mapApiType = (value?: string) => {
@@ -2259,17 +2306,20 @@ export const StudentLearningCentrePage = () => {
     id: resource.id || `api-${index}`,
     title: resource.title,
     description: resource.description ?? resource.summary ?? 'Learning resource',
-    category: resource.category ?? 'Exam Preparation',
-    subject: resource.subject ?? resource.category ?? 'Exam Preparation',
-    grade: resource.grade ?? resource.tags?.find((t) => t.toLowerCase().includes('grade')) ?? 'Grade 11',
+    category: resource.category ?? 'Career Guidance',
+    subject: resource.subject ?? resource.category ?? 'Career Guidance',
+    grade: resource.grade ?? 'All Grades',
     level: mapApiLevel(resource.level ?? resource.difficulty),
     resourceType: mapApiType(resource.resourceType),
     duration: resource.duration ?? `${resource.estimatedMinutes ?? 60}m`,
-    progress: resource.progress ?? Math.max(10, ((resource.estimatedMinutes ?? 60) % 90)),
-    instructor: resource.instructor ?? 'EduRite Learning Team',
+    progress: resource.progress ?? 0,
+    instructor: resource.instructor ?? resource.provider ?? 'EduRite Learning Team',
     lessons: resource.lessons?.length ? resource.lessons : ['Overview', 'Core concepts', 'Practice set'],
+    provider: resource.provider ?? 'EduRite',
+    isFree: resource.isFree ?? true,
     sourceUrl: resource.externalUrl ?? resource.url,
   }));
+  const recommendedIds = new Set((recommended.data ?? []).map((resource) => resource.id));
   const externalResourcesRaw = [
     ...(booksQuery.data ?? []),
     ...(googleBooksQuery.data ?? []),
@@ -2289,6 +2339,8 @@ export const StudentLearningCentrePage = () => {
     progress: resource.progress ?? 0,
     instructor: resource.instructor ?? resource.provider ?? 'External Provider',
     lessons: resource.lessons?.length ? resource.lessons : ['Open resource', 'Study key topics', 'Practice'],
+    provider: resource.provider ?? 'External Provider',
+    isFree: resource.isFree ?? true,
     sourceUrl: resource.externalUrl ?? resource.url,
   }));
 
@@ -2304,31 +2356,19 @@ export const StudentLearningCentrePage = () => {
   const studyMaterialsFallback: LearningCentreResource[] = [
     {
       id: 'fallback-study-1',
-      title: 'Study Skills Starter Guide',
-      description: 'Practical methods for revision planning, recall, and exam readiness.',
+      title: 'No courses found yet',
+      description: 'Try another category or refresh courses.',
       category: 'Study Materials',
       subject: 'Exam Preparation',
       grade: 'All Grades',
       level: 'Beginner',
       resourceType: 'Study Guide',
-      duration: '30m',
+      duration: '10m',
       progress: 0,
       instructor: 'EduRite Learning Team',
-      lessons: ['Planning', 'Active recall', 'Past paper strategy'],
-    },
-    {
-      id: 'fallback-study-2',
-      title: 'Mathematics Revision Notes Pack',
-      description: 'Core formulas, worked examples, and quick revision checkpoints.',
-      category: 'Study Materials',
-      subject: 'Mathematics',
-      grade: 'Grade 10',
-      level: 'Intermediate',
-      resourceType: 'PDF Notes',
-      duration: '45m',
-      progress: 0,
-      instructor: 'EduRite Learning Team',
-      lessons: ['Core formulas', 'Worked examples', 'Self-check'],
+      lessons: ['Refresh courses', 'Switch category', 'Try a broader search'],
+      provider: 'EduRite',
+      isFree: true,
     },
   ];
 
@@ -2345,25 +2385,33 @@ export const StudentLearningCentrePage = () => {
   const preferExternalTab = activeTab !== 'Past Papers';
   const resources = preferExternalTab && tabFilteredExternal.length > 0
     ? [...fromApi, ...tabFilteredExternal]
-    : preferExternalTab && activeTab === 'Study Materials'
-      ? [...fromApi, ...studyMaterialsFallback]
-    : [...mockResources, ...fromApi];
+    : preferExternalTab && activeTab === 'Study Materials' && fromApi.length === 0
+      ? [...studyMaterialsFallback]
+      : [...fromApi];
 
   const filteredResources = resources.filter((resource) => {
     const query = search.trim().toLowerCase();
     const matchesSearch = !query
       || resource.title.toLowerCase().includes(query)
       || resource.description.toLowerCase().includes(query)
-      || resource.category.toLowerCase().includes(query);
+      || resource.category.toLowerCase().includes(query)
+      || resource.provider.toLowerCase().includes(query)
+      || resource.subject.toLowerCase().includes(query);
+    const matchesCategory = categoryFilter === 'All Categories' || resource.category === categoryFilter;
     const matchesSubject = subject === 'All Subjects' || resource.subject === subject;
     const matchesGrade = grade === 'All Grades' || resource.grade === grade;
     const matchesLevel = skillLevel === 'All Levels' || resource.level === skillLevel;
+    const matchesProvider = providerFilter === 'All Providers' || resource.provider === providerFilter;
     const matchesType = resourceType === 'All Resource Types' || resource.resourceType === resourceType;
-    return matchesSearch && matchesSubject && matchesGrade && matchesLevel && matchesType;
+    const matchesFree = !freeOnly || resource.isFree;
+    return matchesSearch && matchesCategory && matchesSubject && matchesGrade && matchesLevel && matchesProvider && matchesType && matchesFree;
   });
 
-  const featuredCourses = filteredResources.filter((r) => r.resourceType === 'Course').slice(0, 8);
-  const continueLearning = filteredResources.slice(0, 8);
+  const featuredCourses = filteredResources
+    .filter((resource) => resource.resourceType === 'Course')
+    .sort((left, right) => Number(recommendedIds.has(right.id)) - Number(recommendedIds.has(left.id)))
+    .slice(0, 8);
+  const continueLearning = featuredCourses.slice(0, 8);
   const featuredResources = filteredResources.slice(0, 12);
 
   const categoryDefinitions = [
@@ -2376,20 +2424,18 @@ export const StudentLearningCentrePage = () => {
     { label: 'Accounting', helper: 'Financial statements, costing, and exam drills.' },
     { label: 'Languages', helper: 'Comprehension, writing, and communication practice.' },
     { label: 'Exam Preparation', helper: 'Study plans, past papers, and revision strategy.' },
+    { label: 'Career Guidance', helper: 'Career planning, pathways, and learner support.' },
   ] as const;
-  const fallbackCategoryCounts = mockResources.reduce<Record<string, number>>((acc, resource) => {
+  const liveCategoryCounts = fromApi.filter((resource) => resource.resourceType === 'Course').reduce<Record<string, number>>((acc, resource) => {
     acc[resource.category] = (acc[resource.category] ?? 0) + 1;
     return acc;
   }, {});
-  const liveCategoryCounts = [...mockResources, ...fromApi, ...externalResources].reduce<Record<string, number>>((acc, resource) => {
-    acc[resource.category] = (acc[resource.category] ?? 0) + 1;
-    return acc;
-  }, {});
-  const categoryCards = categoryDefinitions.map(({ label, helper }) => ({
+  const categoryOptions = categoryDefinitions.map(({ label, helper }) => ({
     label,
     helper,
-    count: Math.max(liveCategoryCounts[label] ?? 0, fallbackCategoryCounts[label] ?? 0),
+    count: liveCategoryCounts[label] ?? 0,
   }));
+  const selectedCategoryCount = categoryFilter === 'All Categories' ? fromApi.length : (liveCategoryCounts[categoryFilter] ?? 0);
   const aiTools = [
     { title: 'AI Tutor', description: 'Get instant support for study questions.', to: '/student/ai-tutor', icon: Sparkles },
     { title: 'Career Path Coach', description: 'Map learning to career outcomes.', to: '/student/recommendations/careers', icon: Target },
@@ -2405,31 +2451,69 @@ export const StudentLearningCentrePage = () => {
 
   const clearFilters = () => {
     setSearch('');
+    setCategoryFilter('All Categories');
     setSubject('All Subjects');
+    setProviderFilter('All Providers');
     setGrade('All Grades');
     setSkillLevel('All Levels');
     setResourceType('All Resource Types');
+    setFreeOnly(true);
   };
 
-  const openDetails = (resource: LearningCentreResource) => setSelectedResource(resource);
+  const closeResourceModal = () => {
+    setIsResourceModalOpen(false);
+    setSelectedResource(null);
+    window.requestAnimationFrame(() => resourceModalTriggerRef.current?.focus());
+  };
+  const openDetails = (resource: LearningCentreResource, trigger?: HTMLButtonElement | null) => {
+    resourceModalTriggerRef.current = trigger ?? null;
+    setSelectedResource(resource);
+    setIsResourceModalOpen(true);
+  };
   const applyQuickFilter = (type?: LearningCentreResource['resourceType'], category?: string) => {
     setSearch('');
-    setSubject(category ?? 'All Subjects');
+    setCategoryFilter(category ?? 'All Categories');
+    setSubject('All Subjects');
+    setProviderFilter('All Providers');
     setGrade('All Grades');
     setSkillLevel('All Levels');
     setResourceType(type ?? 'All Resource Types');
+    setFreeOnly(true);
   };
   const activeFilters = [
+    categoryFilter !== 'All Categories' ? `Category: ${categoryFilter}` : null,
     subject !== 'All Subjects' ? `Subject: ${subject}` : null,
+    providerFilter !== 'All Providers' ? `Provider: ${providerFilter}` : null,
     grade !== 'All Grades' ? `Grade: ${grade}` : null,
     skillLevel !== 'All Levels' ? `Level: ${skillLevel}` : null,
     resourceType !== 'All Resource Types' ? `Type: ${resourceType}` : null,
+    freeOnly ? 'Free only' : null,
     search.trim() ? `Search: "${search.trim()}"` : null,
   ].filter(Boolean) as string[];
   const youtubeApiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
   const learnerYoutubeMessage = 'Video lessons are currently being updated. Please check back soon.';
   const youtubeRestrictedMessage = 'YouTube access is currently restricted. Please contact support.';
   const youtubeConfigurationMessage = 'YouTube is not configured correctly right now. Please contact support.';
+
+  useEffect(() => {
+    if (!isResourceModalOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsResourceModalOpen(false);
+        setSelectedResource(null);
+        window.requestAnimationFrame(() => resourceModalTriggerRef.current?.focus());
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isResourceModalOpen]);
   const youtubeNoResultsMessage = 'No videos found for these filters. Try changing the subject, grade, or topic.';
   const capsSeniorSubjects = [
     'Home Language',
@@ -2785,23 +2869,33 @@ export const StudentLearningCentrePage = () => {
         </div>
       ) : null}
     </div>
-
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-slate-900">Learning Categories</h2>
-        <Button className="cursor-pointer rounded-xl bg-slate-700 hover:bg-slate-600" onClick={clearFilters}>Clear Filters</Button>
-      </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {categoryCards.map((category) => (
-          <button key={category.label} type="button" onClick={() => applyQuickFilter(undefined, category.label)} className={`group cursor-pointer rounded-2xl border p-4 text-left shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-lg ${subject === category.label ? 'border-primary-300 bg-primary-50' : 'border-slate-200 bg-white'}`}>
-            <div className="mb-3 inline-flex rounded-xl bg-gradient-to-r from-[#0d2a63] to-[#1E8BFF] p-2.5 text-white">
-              <BookOpen size={18} />
-            </div>
-            <h3 className="font-semibold text-slate-900">{category.label}</h3>
-            <p className="mt-1 text-sm text-slate-500">{category.count} courses</p>
-            <p className="mt-2 text-xs text-slate-500">{category.helper}</p>
-          </button>
-        ))}
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-slate-900">Learning Category</h2>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{selectedCategoryCount} courses</span>
+          </div>
+          <p className="text-sm text-slate-500">Select a category to narrow the recommended free courses.</p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="flex min-w-[240px] flex-col gap-1 text-sm font-medium text-slate-700">
+            <span className="sr-only">Learning Category</span>
+            <select
+              value={categoryFilter}
+              onChange={(event) => applyQuickFilter(undefined, event.target.value)}
+              className="h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 shadow-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-100 sm:min-w-[260px]"
+            >
+              <option value="All Categories">All Categories ({fromApi.length})</option>
+              {categoryOptions.map((category) => (
+                <option key={category.label} value={category.label}>
+                  {category.label} ({category.count})
+                </option>
+              ))}
+            </select>
+          </label>
+          <Button className="cursor-pointer rounded-xl bg-slate-700 hover:bg-slate-600" onClick={clearFilters}>Clear Filters</Button>
+        </div>
       </div>
     </div>
 
@@ -2809,31 +2903,31 @@ export const StudentLearningCentrePage = () => {
       <h2 className="text-lg font-semibold text-slate-900">Recommended Courses</h2>
       {!featuredCourses.length ? (
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center">
-          <h3 className="text-base font-semibold text-slate-900">No courses match these filters</h3>
-          <p className="mt-2 text-sm text-slate-500">Adjust your filters to continue learning.</p>
+          <h3 className="text-base font-semibold text-slate-900">No courses found yet</h3>
+          <p className="mt-2 text-sm text-slate-500">Try another category or refresh courses.</p>
           {activeFilters.length ? <p className="mt-2 text-xs text-slate-600">Active filters: {activeFilters.join(' | ')}</p> : null}
-          <div className="mt-4 flex justify-center">
+          <div className="mt-4 flex justify-center gap-2">
             <Button className="cursor-pointer rounded-xl" onClick={clearFilters}>Clear Filters</Button>
+            {isAdmin ? <Button className="cursor-pointer rounded-xl bg-slate-700 hover:bg-slate-600" disabled={refreshCourses.isPending} onClick={() => refreshCourses.mutate()}>{refreshCourses.isPending ? 'Refreshing...' : 'Refresh Courses'}</Button> : null}
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {featuredCourses.map((course) => {
-          const completion = Math.min(100, Math.max(0, course.progress));
-          return <article key={course.id} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:shadow-md">
-            <div className="h-28 rounded-xl bg-gradient-to-r from-[#0d2a63] to-[#1E8BFF]" />
+          {featuredCourses.map((course) => <article key={course.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <Badge color="blue">{course.category}</Badge>
+              <Badge color="emerald">{course.level}</Badge>
+            </div>
             <h3 className="mt-3 line-clamp-2 text-sm font-semibold text-slate-900">{course.title}</h3>
-            <p className="mt-1 text-xs text-slate-500">Instructor: {course.instructor}</p>
-            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full rounded-full bg-gradient-to-r from-[#0B5BFF] to-[#1E8BFF]" style={{ width: `${completion}%` }} />
+            <p className="mt-1 text-xs font-medium uppercase tracking-wide text-slate-500">{course.provider}</p>
+            <p className="mt-2 line-clamp-4 text-sm text-slate-600">{course.description}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-500">
+              <span className="rounded-lg bg-slate-100 px-2 py-1">{course.subject}</span>
+              <span className="rounded-lg bg-slate-100 px-2 py-1">{course.duration}</span>
+              <span className="rounded-lg bg-slate-100 px-2 py-1">Free</span>
             </div>
-            <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-              <span>{course.duration}</span>
-              <Badge color="blue">{course.level}</Badge>
-            </div>
-            <Button className="mt-3 w-full cursor-pointer rounded-xl" onClick={() => openDetails(course)}>Continue Learning</Button>
-          </article>;
-        })}
+            <a className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-500" href={course.sourceUrl} target="_blank" rel="noopener noreferrer">Open Course</a>
+          </article>)}
         </div>
       )}
     </div>
@@ -2841,12 +2935,12 @@ export const StudentLearningCentrePage = () => {
     <div className="space-y-3">
       <h2 className="text-lg font-semibold text-slate-900">Continue Learning</h2>
       <div className="flex gap-3 overflow-x-auto pb-1">
-        {continueLearning.map((item, index) => (
+        {continueLearning.map((item) => (
           <article key={item.id} className="min-w-[250px] rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <h3 className="line-clamp-2 text-sm font-semibold">{item.title}</h3>
-            <p className="mt-2 text-xs text-slate-500">Last opened: {index + 1} day(s) ago</p>
+            <p className="mt-2 text-xs text-slate-500">Provider: {item.provider}</p>
             <div className="mt-3 h-2 rounded-full bg-slate-200"><div className="h-full rounded-full bg-primary-600" style={{ width: `${Math.max(0, Math.min(100, item.progress))}%` }} /></div>
-            <Button className="mt-3 w-full cursor-pointer rounded-xl" onClick={() => openDetails(item)}>Resume</Button>
+            <a className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-500" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Open Course</a>
           </article>
         ))}
       </div>
@@ -2921,21 +3015,41 @@ export const StudentLearningCentrePage = () => {
                 {resource.resourceType ? <Badge color="slate">{resource.resourceType}</Badge> : null}
                 {resource.category ? <Badge color="blue">{resource.category}</Badge> : null}
               </div>
-              <button type="button" className="mt-3 inline-flex cursor-pointer text-sm font-semibold text-primary-600 hover:text-primary-500" onClick={() => openDetails(resource)}>View Resource</button>
+              <button type="button" className="mt-3 inline-flex cursor-pointer text-sm font-semibold text-primary-600 hover:text-primary-500" onClick={(event) => openDetails(resource, event.currentTarget)}>View Resource</button>
             </article>
           ))}
         </div>
       )}
     </div>
-    {selectedResource ? (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4">
-        <div className="responsive-modal-panel w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+    {isResourceModalOpen && selectedResource ? (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            closeResourceModal();
+          }
+        }}
+      >
+        <div
+          className="responsive-modal-panel w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="learning-centre-resource-modal-title"
+          onMouseDown={(event) => event.stopPropagation()}
+        >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-xl font-bold text-slate-900">{selectedResource.title}</h3>
+              <h3 id="learning-centre-resource-modal-title" className="text-xl font-bold text-slate-900">{selectedResource.title}</h3>
               <p className="mt-1 text-sm text-slate-600">{selectedResource.description}</p>
             </div>
-            <button type="button" onClick={() => setSelectedResource(null)} className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100">Close</button>
+            <button
+              type="button"
+              onClick={closeResourceModal}
+              className="rounded-xl border border-slate-200 p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+              aria-label="Close resource modal"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <p className="text-sm"><span className="font-semibold">Instructor:</span> {selectedResource.instructor}</p>
@@ -2951,11 +3065,12 @@ export const StudentLearningCentrePage = () => {
               {selectedResource.lessons.map((lesson) => <li key={lesson}>- {lesson}</li>)}
             </ul>
           </div>
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button className="w-full cursor-pointer rounded-xl sm:w-auto" onClick={() => setSelectedResource((prev) => prev ? { ...prev, progress: Math.min(100, prev.progress + 10) } : prev)}>
               {selectedResource.progress > 0 ? 'Resume' : 'Start'}
             </Button>
             {selectedResource.sourceUrl ? <a className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-primary-700 hover:bg-slate-50" href={selectedResource.sourceUrl} target="_blank" rel="noopener noreferrer">Open External Resource</a> : null}
+            <button type="button" onClick={closeResourceModal} className="inline-flex items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100">Close</button>
           </div>
         </div>
       </div>
@@ -2995,12 +3110,12 @@ export const StudentRewardsPage = () => {
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
       <div className="rounded border p-4">
         <h3 className="font-semibold">Recent activity</h3>
-        {(summary.data.recentEvents ?? []).map((event, index) => <p key={`${event.awardedAt}-${index}`} className="text-sm">• {event.eventType} (+{event.points})</p>)}
+        {(summary.data.recentEvents ?? []).map((event, index) => <p key={`${event.awardedAt}-${index}`} className="text-sm">â€¢ {event.eventType} (+{event.points})</p>)}
         {!summary.data.recentEvents?.length ? <p className="text-sm text-slate-500">No activity recorded yet.</p> : null}
       </div>
       <div className="rounded border p-4">
         <h3 className="font-semibold">Recent claims</h3>
-        {(summary.data.recentClaims ?? []).map((item, index) => <p key={`${item.claimedAt}-${index}`} className="text-sm">• {item.rewardName} ({item.status})</p>)}
+        {(summary.data.recentClaims ?? []).map((item, index) => <p key={`${item.claimedAt}-${index}`} className="text-sm">â€¢ {item.rewardName} ({item.status})</p>)}
         {!summary.data.recentClaims?.length ? <p className="text-sm text-slate-500">No claims submitted yet.</p> : null}
       </div>
     </div>
@@ -3461,35 +3576,39 @@ export const StudentSubscriptionPage = () => {
         const isCurrent = plan.code === currentPlanCode;
         return <article
           key={plan.code}
-          className={`flex h-full flex-col gap-5 rounded-3xl border p-5 shadow-sm ${plan.premium ? 'border-blue-500/40 bg-gradient-to-br from-[#081739] via-[#0d2a63] to-[#13408f] text-white shadow-blue-950/30' : 'border-slate-200 bg-white text-slate-900'}`}
+          className={`relative flex h-full flex-col gap-5 overflow-hidden rounded-[20px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(37,99,235,0.12)] ${plan.premium ? 'lg:scale-[1.02] ring-1 ring-blue-100' : ''}`}
         >
+          {plan.premium ? <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2563EB] via-[#60A5FA] to-[#93C5FD]" /> : null}
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className={`text-xl font-bold ${plan.premium ? 'text-white' : 'text-slate-950'}`}>{plan.name}</h3>
-                {plan.recommended || plan.premium ? <Badge color="blue">{plan.premium ? 'Premium' : 'Recommended'}</Badge> : null}
+                <h3 className="text-xl font-bold text-[#1E293B]">{plan.name}</h3>
+                {plan.premium ? <Badge color="blue">Most Popular</Badge> : plan.recommended ? <Badge color="blue">Recommended</Badge> : null}
                 {isCurrent ? <Badge color="emerald">Current</Badge> : null}
               </div>
-              {plan.description ? <p className={`mt-2 text-sm leading-6 ${plan.premium ? 'text-blue-100' : 'text-slate-600'}`}>{plan.description}</p> : null}
+              {plan.description ? <p className="mt-2 text-sm leading-6 text-[#64748B]">{plan.description}</p> : null}
             </div>
-            <div className={`rounded-2xl px-4 py-3 text-right ${plan.premium ? 'bg-white/10' : 'bg-slate-50'}`}>
-              <p className={`text-2xl font-bold ${plan.premium ? 'text-white' : 'text-slate-950'}`}>{plan.premium ? 'R49.99 / month' : formatPlanPrice(Number(plan.amount), plan.currency, plan.billingPeriod ?? plan.billingInterval)}</p>
-              <p className={`text-xs font-medium uppercase ${plan.premium ? 'text-blue-100' : 'text-slate-500'}`}>{plan.billingPeriod ?? plan.billingInterval}</p>
+            <div className="rounded-2xl bg-[#F8FAFF] px-4 py-3 text-right">
+              <p className="text-2xl font-bold text-[#2563EB]">{plan.premium ? 'R49.99 / month' : formatPlanPrice(Number(plan.amount), plan.currency, plan.billingPeriod ?? plan.billingInterval)}</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{plan.billingPeriod ?? plan.billingInterval}</p>
             </div>
           </div>
           {!!plan.features?.length && (
-            <ul className={`grid gap-2 text-sm sm:grid-cols-2 ${plan.premium ? 'text-blue-50' : 'text-slate-700'}`}>
-              {plan.features.map((feature) => <li key={feature} className="flex gap-2"><CheckCircle2 size={16} className={`mt-0.5 shrink-0 ${plan.premium ? 'text-blue-200' : 'text-emerald-600'}`} /><span>{feature}</span></li>)}
+            <ul className="grid gap-3 text-sm text-[#334155] sm:grid-cols-2">
+              {plan.features.map((feature) => <li key={feature} className="flex items-start gap-3 rounded-xl bg-[#F8FAFF] px-3 py-2">
+                <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-500" />
+                <span>{feature}</span>
+              </li>)}
             </ul>
           )}
           <div className="mt-auto">
             {isPaid ? <div className="space-y-2">
-              <Button onClick={() => payFastInitiate.mutate({ planCode: plan.code })} disabled={actionInProgress} className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl ${plan.premium ? 'bg-white text-[#0B2A6F] hover:bg-blue-50' : 'bg-slate-900 text-white hover:bg-slate-800'}`}>
+              <Button onClick={() => payFastInitiate.mutate({ planCode: plan.code })} disabled={actionInProgress} className="inline-flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#2563EB] text-white hover:bg-[#1D4ED8]">
                 <CircleDollarSign size={16} />
                 Pay with PayFast
               </Button>
-              <p className={`text-xs ${plan.premium ? 'text-blue-100' : 'text-slate-500'}`}>Secure payment powered by PayFast.</p>
-            </div> : <Button onClick={() => chooseBasic(plan.code)} disabled={actionInProgress} className="rounded-2xl">Choose Basic</Button>}
+              <p className="text-xs text-slate-500">Secure payment powered by PayFast.</p>
+            </div> : <Button onClick={() => chooseBasic(plan.code)} disabled={actionInProgress} className="rounded-[12px] bg-slate-900 text-white hover:bg-slate-800">Choose Basic</Button>}
           </div>
         </article>;
       })}
@@ -3551,6 +3670,28 @@ export const StudentSettingsPage = () => {
 };
 export { StudentUniversitiesPage } from './StudentUniversitiesPage';
 export { StudentCollegesTvetsPage } from './StudentCollegesTvetsPage';
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

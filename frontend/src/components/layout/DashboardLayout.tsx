@@ -486,18 +486,18 @@ export const DashboardLayout = () => {
           </nav>
         </div>
         <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className={`fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 flex-col bg-[#081739] px-4 py-5 text-white shadow-2xl transition-transform duration-200 md:static md:z-auto md:w-[84px] md:min-w-[84px] md:px-2 lg:w-[230px] lg:min-w-[230px] lg:px-4 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+          <aside className={`fixed inset-y-0 left-0 z-40 flex w-72 shrink-0 flex-col border-r border-[#E2E8F0] bg-white px-4 py-5 text-slate-700 shadow-[2px_0_10px_rgba(15,23,42,0.04)] transition-transform duration-200 md:static md:z-auto md:w-[84px] md:min-w-[84px] md:px-2 lg:w-[230px] lg:min-w-[230px] lg:px-4 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
             <div className="mb-4 flex items-center justify-between md:hidden">
-              <p className="text-sm font-semibold">Menu</p>
-              <button type="button" aria-label="Close menu" className="rounded-lg border border-white/20 p-1.5 text-white" onClick={() => setOpen(false)}><X size={16} /></button>
+              <p className="text-sm font-semibold text-slate-700">Menu</p>
+              <button type="button" aria-label="Close menu" className="rounded-lg border border-slate-200 p-1.5 text-slate-600 transition hover:bg-slate-50 hover:text-slate-900" onClick={() => setOpen(false)}><X size={16} /></button>
             </div>
             <div className="sidebar-nav min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
               <div className="space-y-2">
-                <p className="hidden px-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/50 lg:block">Personal</p>
+                <p className="hidden px-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#94A3B8] lg:block">Personal</p>
                 {studentPersonalNav.map((item) => (
                   <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)} className={({ isActive }) => [
                     'flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition md:justify-center md:px-2 lg:justify-start lg:px-3',
-                    isActive ? 'bg-gradient-to-r from-[#0B5BFF] to-[#1E8BFF] text-white shadow-lg shadow-blue-950/30' : 'text-white/85 hover:bg-white/10',
+                    isActive ? 'bg-[#EFF6FF] text-[#2563EB]' : 'text-[#334155] hover:bg-[#F8FAFC] hover:text-[#1E293B]',
                   ].join(' ')}>
                     {item.icon ? <item.icon size={18} className="shrink-0" /> : null}
                     <span className="truncate md:hidden lg:inline">{item.label}</span>
@@ -505,11 +505,11 @@ export const DashboardLayout = () => {
                 ))}
               </div>
               <div className="space-y-2">
-                <p className="hidden px-2 text-xs font-semibold uppercase tracking-[0.12em] text-white/50 lg:block">Account / More</p>
+                <p className="hidden px-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#94A3B8] lg:block">Account / More</p>
                 {studentAccountNav.map((item) => (
                   <NavLink key={item.to} to={item.to} onClick={() => setOpen(false)} className={({ isActive }) => [
                     'flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition md:justify-center md:px-2 lg:justify-start lg:px-3',
-                    isActive ? 'bg-gradient-to-r from-[#0B5BFF] to-[#1E8BFF] text-white shadow-lg shadow-blue-950/30' : 'text-white/85 hover:bg-white/10',
+                    isActive ? 'bg-[#EFF6FF] text-[#2563EB]' : 'text-[#334155] hover:bg-[#F8FAFC] hover:text-[#1E293B]',
                   ].join(' ')}>
                     {item.icon ? <item.icon size={18} className="shrink-0" /> : null}
                     <span className="truncate md:hidden lg:inline">{item.label}</span>
@@ -517,8 +517,8 @@ export const DashboardLayout = () => {
                 ))}
               </div>
             </div>
-            <div className="mt-4 flex-shrink-0 border-t border-white/15 pt-4">
-              <button type="button" onClick={() => logout()} className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-white/90 transition hover:bg-white/10 md:justify-center md:px-2 lg:justify-start lg:px-3">
+            <div className="mt-4 flex-shrink-0 border-t border-[#E2E8F0] pt-4">
+              <button type="button" onClick={() => logout()} className="flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-[#334155] transition hover:bg-[#FEF2F2] hover:text-[#DC2626] md:justify-center md:px-2 lg:justify-start lg:px-3">
                 <LogOut size={18} />
                 <span className="md:hidden lg:inline">Logout</span>
               </button>
@@ -572,7 +572,7 @@ export const DashboardLayout = () => {
             </NavLink>
           ))}
         </nav>
-        <div className="mt-4 flex-shrink-0 border-t border-white/15 pt-4">
+        <div className="mt-4 flex-shrink-0 border-t border-[#E2E8F0] pt-4">
           <button
             type="button"
             onClick={() => logout()}
@@ -629,3 +629,4 @@ export const DashboardLayout = () => {
     </div>
   );
 };
+

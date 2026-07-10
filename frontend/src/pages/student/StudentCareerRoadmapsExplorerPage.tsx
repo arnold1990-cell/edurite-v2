@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback/States';
 import { Input } from '@/components/ui/Input';
+import { InstitutionLogo } from '@/components/institutions/InstitutionLogo';
+import { resolveInstitutionDisplay } from '@/lib/institutionRegistry';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { featureModulesService } from '@/services/featureModulesService';
 import { studentService } from '@/services/studentService';
@@ -249,7 +251,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
             {(savedRoadmaps.data ?? []).map((item) => (
               <button key={item.id} type="button" className="block w-full rounded-2xl border border-slate-200 px-3 py-3 text-left hover:border-primary-300 hover:bg-primary-50" onClick={() => selectSaved(item)}>
                 <p className="text-sm font-medium text-slate-900">{item.careerName}</p>
-                <p className="text-xs text-slate-500">APS {item.learnerAps} • Score {item.readinessScore}%</p>
+                <p className="text-xs text-slate-500">APS {item.learnerAps} â€¢ Score {item.readinessScore}%</p>
               </button>
             ))}
             {!(savedRoadmaps.data ?? []).length ? <p className="text-sm text-slate-500">No saved roadmaps yet.</p> : null}
@@ -378,13 +380,13 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Daily responsibilities</p>
                     <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                      {current.overview.dailyResponsibilities.map((item) => <li key={item}>• {item}</li>)}
+                      {current.overview.dailyResponsibilities.map((item) => <li key={item}>â€¢ {item}</li>)}
                     </ul>
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Skills needed</p>
                     <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                      {current.overview.skillsNeeded.map((item) => <li key={item}>• {item}</li>)}
+                      {current.overview.skillsNeeded.map((item) => <li key={item}>â€¢ {item}</li>)}
                     </ul>
                   </div>
                 </div>
@@ -413,12 +415,17 @@ export const StudentCareerRoadmapsExplorerPage = () => {
 
             {current && activeTab === 'University Requirements' ? <div className="space-y-4">
               <div className="grid gap-3 lg:grid-cols-2">
-                {current.universityRequirements.map((item) => (
+                {current.universityRequirements.map((item) => {
+                  const institution = resolveInstitutionDisplay({ name: item.institutionName, province: item.province, applicationUrl: item.applicationUrl, institutionType: item.institutionType });
+                  return (
                   <article key={`${item.institutionName}-${item.qualificationName}`} className="rounded-2xl border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <h3 className="text-sm font-semibold text-slate-900">{item.institutionName}</h3>
-                        <p className="text-sm text-slate-600">{item.qualificationName}</p>
+                      <div className="flex items-start gap-3">
+                        <InstitutionLogo src={institution.logoUrl} institutionName={institution.displayName} abbreviation={institution.abbreviation} size={56} className="rounded-2xl" />
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-900">{item.institutionName}</h3>
+                          <p className="text-sm text-slate-600">{item.qualificationName}</p>
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Badge color={item.verified ? 'emerald' : 'amber'}>{item.verificationBadge}</Badge>
@@ -426,7 +433,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                       </div>
                     </div>
                     <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
-                      <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">APS</p><p>{item.apsRequired ?? 'Verify'}{item.apsGap ? ` • Gap ${item.apsGap}` : ''}</p></div>
+                      <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">APS</p><p>{item.apsRequired ?? 'Verify'}{item.apsGap ? ` · Gap ${item.apsGap}` : ''}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Province</p><p>{item.province || 'South Africa'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Mathematics</p><p>{item.mathematicsRequirement || 'Not stated'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">English</p><p>{item.englishRequirement || 'Not stated'}</p></div>
@@ -436,7 +443,8 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                     <p className="mt-3 text-sm text-slate-600">{item.notes || item.source || 'Verify the full admission requirement directly with the institution.'}</p>
                     {item.applicationUrl ? <a className="mt-3 inline-block text-sm font-medium text-primary-600 hover:text-primary-500" href={item.applicationUrl} target="_blank" rel="noreferrer">Application link</a> : null}
                   </article>
-                ))}
+                );
+                })}
               </div>
             </div> : null}
 
@@ -454,7 +462,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Improvement suggestions</h3>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {current.gapAnalysis.improvementSuggestions.map((item) => <li key={item}>• {item}</li>)}
+                    {current.gapAnalysis.improvementSuggestions.map((item) => <li key={item}>â€¢ {item}</li>)}
                   </ul>
                 </div>
               </div>
@@ -468,7 +476,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Subjects needing improvement</h3>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {current.gapAnalysis.subjectsNeedingImprovement.length ? current.gapAnalysis.subjectsNeedingImprovement.map((item) => <li key={item}>• {item}</li>) : <li className="text-slate-500">No urgent subject improvements flagged.</li>}
+                    {current.gapAnalysis.subjectsNeedingImprovement.length ? current.gapAnalysis.subjectsNeedingImprovement.map((item) => <li key={item}>â€¢ {item}</li>) : <li className="text-slate-500">No urgent subject improvements flagged.</li>}
                   </ul>
                 </div>
               </div>
@@ -485,13 +493,13 @@ export const StudentCareerRoadmapsExplorerPage = () => {
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <h3 className="text-sm font-semibold text-slate-900">Alternative pathways</h3>
                 <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                  {current.alternativePathways.map((item) => <li key={item}>• {item}</li>)}
+                  {current.alternativePathways.map((item) => <li key={item}>â€¢ {item}</li>)}
                 </ul>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold text-slate-900">Best-fit universities</h3>
                 <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                  {current.gapAnalysis.bestFitUniversities.map((item) => <li key={item}>• {item}</li>)}
+                  {current.gapAnalysis.bestFitUniversities.map((item) => <li key={item}>â€¢ {item}</li>)}
                 </ul>
               </div>
             </div> : null}
@@ -502,7 +510,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                   <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
                   <p className="mt-1 text-sm text-slate-600">{item.focus}</p>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {item.actions.map((action) => <li key={action}>• {action}</li>)}
+                    {item.actions.map((action) => <li key={action}>â€¢ {action}</li>)}
                   </ul>
                 </article>
               ))}
@@ -536,17 +544,23 @@ export const StudentCareerRoadmapsExplorerPage = () => {
         <div className="rounded-3xl border border-slate-200 bg-white p-4">
           <h2 className="text-sm font-semibold text-slate-900">University match snapshot</h2>
           <div className="mt-3 space-y-2">
-            {(current?.universityRequirements ?? []).slice(0, 5).map((item) => (
+            {(current?.universityRequirements ?? []).slice(0, 5).map((item) => {
+              const institution = resolveInstitutionDisplay({ name: item.institutionName, province: item.province, institutionType: item.institutionType });
+              return (
               <div key={`${item.institutionName}-${item.qualificationName}`} className="rounded-2xl border border-slate-200 p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{item.institutionName}</p>
-                    <p className="text-xs text-slate-500">{item.qualificationName}</p>
+                  <div className="flex items-start gap-3">
+                    <InstitutionLogo src={institution.logoUrl} institutionName={institution.displayName} abbreviation={institution.abbreviation} size={44} className="rounded-xl" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-900">{item.institutionName}</p>
+                      <p className="text-xs text-slate-500">{item.qualificationName}</p>
+                    </div>
                   </div>
                   <Badge color={roadmapStatusColor(item.requirementStatus)}>{item.requirementStatus}</Badge>
                 </div>
               </div>
-            ))}
+            );
+            })}
             {!current?.universityRequirements?.length ? <p className="text-sm text-slate-500">No institution matches yet.</p> : null}
           </div>
         </div>
@@ -554,3 +568,4 @@ export const StudentCareerRoadmapsExplorerPage = () => {
     </div>
   </Section>;
 };
+

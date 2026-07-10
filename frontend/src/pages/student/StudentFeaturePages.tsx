@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback/States';
 import { Input } from '@/components/ui/Input';
+import { InstitutionLogo } from '@/components/institutions/InstitutionLogo';
+import { resolveInstitutionDisplay } from '@/lib/institutionRegistry';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { StudentCareerRoadmapsExplorerPage } from '@/pages/student/StudentCareerRoadmapsExplorerPage';
 import { featureModulesService } from '@/services/featureModulesService';
@@ -201,7 +203,7 @@ export const StudentScholarshipAssistantPage = () => {
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
       {(applications.data ?? []).map((item) => <article key={item.id} className="rounded border bg-white p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
-          <div><h3 className="font-semibold">{item.scholarshipTitle}</h3><p className="text-sm text-slate-500">{item.provider || 'Provider not set'} · {formatDate(item.applicationDeadline)}</p></div>
+          <div><h3 className="font-semibold">{item.scholarshipTitle}</h3><p className="text-sm text-slate-500">{item.provider || 'Provider not set'} Â· {formatDate(item.applicationDeadline)}</p></div>
           <Badge color={statusColor(item.status)}>{item.status}</Badge>
         </div>
         <p className="mt-3 whitespace-pre-wrap text-sm text-slate-600">{item.requiredDocuments || 'No documents listed yet.'}</p>
@@ -310,11 +312,14 @@ export const StudentUniversityApplicationsPage = () => {
       <Button className="w-full sm:w-fit" disabled={save.isPending}>{editingId ? 'Update application' : 'Add application'}</Button>
     </form>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-      {(apps.data ?? []).map((app) => <article key={app.id} className="rounded border bg-white p-4">
-        <div className="flex flex-wrap justify-between gap-2"><div><h3 className="font-semibold">{app.universityName}</h3><p className="text-sm text-slate-500">{app.programmeName} · {app.country || 'Country not set'}</p></div><Badge color={statusColor(app.applicationStatus)}>{app.applicationStatus}</Badge></div>
-        <p className="mt-2 text-sm text-slate-600">Deadline: {formatDate(app.applicationDeadline)}</p>
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row"><Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => { setEditingId(app.id ?? null); setForm({ ...universityDefaults, ...app }); }}>Edit</Button><Button type="button" className="bg-red-700 hover:bg-red-600" onClick={() => app.id && remove.mutate(app.id)}>Delete</Button></div>
-      </article>)}
+      {(apps.data ?? []).map((app) => {
+        const institution = resolveInstitutionDisplay({ name: app.universityName, country: app.country });
+        return <article key={app.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><InstitutionLogo src={institution.logoUrl} institutionName={institution.displayName} abbreviation={institution.abbreviation} size={56} className="rounded-2xl" /><div><h3 className="font-semibold text-slate-900">{app.universityName}</h3><p className="text-sm text-slate-500">{app.programmeName} · {app.country || institution.country || 'Country not set'}</p></div></div><Badge color={statusColor(app.applicationStatus)}>{app.applicationStatus}</Badge></div>
+          <p className="mt-3 text-sm text-slate-600">Deadline: {formatDate(app.applicationDeadline)}</p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row"><Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => { setEditingId(app.id ?? null); setForm({ ...universityDefaults, ...app }); }}>Edit</Button><Button type="button" className="bg-red-700 hover:bg-red-600" onClick={() => app.id && remove.mutate(app.id)}>Delete</Button></div>
+        </article>;
+      })}
     </div>
   </Section>;
 };
@@ -374,12 +379,13 @@ export const AdminSchoolPortalPage = () => {
             <div className="rounded border p-3"><p className="text-xs text-slate-500">Complete profiles</p><p className="text-2xl font-semibold">{summary.data.completeProfiles}</p></div>
             <div className="rounded border p-3"><p className="text-xs text-slate-500">Tracked apps</p><p className="text-2xl font-semibold">{summary.data.trackedApplications}</p></div>
           </div> : null}
-          <div className="mt-3 space-y-2">{summary.data?.students.map((student) => <p key={student.studentId} className="rounded border bg-slate-50 p-2 text-sm">{student.name || student.studentId} · {student.profileCompleteness}% profile</p>)}</div>
+          <div className="mt-3 space-y-2">{summary.data?.students.map((student) => <p key={student.studentId} className="rounded border bg-slate-50 p-2 text-sm">{student.name || student.studentId} Â· {student.profileCompleteness}% profile</p>)}</div>
         </div> : null}
       </div>
     </div>
   </Section>;
 };
+
 
 
 

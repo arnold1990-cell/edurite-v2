@@ -1,4 +1,4 @@
-export type Role =
+﻿export type Role =
   | 'STUDENT'
   | 'COMPANY'
   | 'ADMIN'
@@ -192,7 +192,34 @@ export interface JobOpportunity {
 }
 
 export interface Course { id: string; name: string; institutionName: string; duration: string; level?: string; matchScore?: number; }
-export interface Institution { id: string; name: string; location?: string; city?: string; province?: string; country?: string; website?: string; logoUrl?: string; category?: string; featured?: boolean; active?: boolean; }
+export interface Institution {
+  id: string;
+  name: string;
+  abbreviation?: string;
+  institutionType?: string;
+  location?: string;
+  city?: string;
+  province?: string;
+  country?: string;
+  officialWebsite?: string;
+  website?: string;
+  applicationUrl?: string;
+  logoPath?: string;
+  logoUrl?: string;
+  category?: string;
+  description?: string;
+  faculties?: string[] | string;
+  programmeCount?: number | null;
+  facultyCount?: number | null;
+  applicationStatus?: 'OPEN' | 'OPENING_SOON' | 'CLOSED' | string | null;
+  applicationOpeningDate?: string | null;
+  applicationClosingDate?: string | null;
+  qsRanking?: string | null;
+  theRanking?: string | null;
+  acceptanceIndicator?: string | null;
+  featured?: boolean;
+  active?: boolean;
+}
 
 export interface Application { id: string; status: string; createdAt: string; bursaryId: string; }
 export interface RecommendationItem { id: string; title: string; score: number; rationale: string; }
@@ -640,6 +667,10 @@ export interface LearningResource {
   estimatedMinutes?: number;
   tags?: string[];
   mappedOutcomes?: string[];
+  language?: string;
+  isFree?: boolean;
+  sourceType?: string;
+  lastFetchedAt?: string;
 }
 export interface GamificationSummary {
   totalPoints: number;
@@ -652,3 +683,6 @@ export interface GamificationSummary {
 }
 export interface PaginatedResponse<T> { content: T[]; totalElements: number; totalPages: number; number: number; size: number; }
 export interface ApiError { message: string; status?: number; details?: Record<string, string[]>; code?: string; }
+
+
+

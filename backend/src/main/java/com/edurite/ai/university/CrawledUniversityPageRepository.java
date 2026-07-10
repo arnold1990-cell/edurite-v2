@@ -10,6 +10,7 @@ public interface CrawledUniversityPageRepository extends JpaRepository<CrawledUn
 
     List<CrawledUniversityPage> findByActiveTrueAndCrawlStatus(CrawlStatus crawlStatus);
 
+    List<CrawledUniversityPage> findTop10ByUniversityNameIgnoreCaseAndActiveTrueOrderByLastSuccessfulCrawledAtDesc(String universityName);
+
     long countByCrawlStatus(CrawlStatus crawlStatus);
 }
-

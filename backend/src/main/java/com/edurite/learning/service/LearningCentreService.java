@@ -11,6 +11,7 @@ import com.edurite.psychometric.service.PsychometricService;
 import com.edurite.security.service.CurrentUserService;
 import com.edurite.student.entity.StudentProfile;
 import com.edurite.student.repository.StudentProfileRepository;
+import com.edurite.user.entity.Role;
 import com.edurite.user.entity.User;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,6 +52,7 @@ public class LearningCentreService {
     private final CurrentUserService currentUserService;
     private final StudentProfileRepository studentProfileRepository;
     private final PsychometricService psychometricService;
+    private final LearningCourseAggregationService learningCourseAggregationService;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
     private final String youtubeApiKey;
@@ -62,6 +65,7 @@ public class LearningCentreService {
             CurrentUserService currentUserService,
             StudentProfileRepository studentProfileRepository,
             PsychometricService psychometricService,
+            LearningCourseAggregationService learningCourseAggregationService,
             ObjectMapper objectMapper,
             @Value("${YOUTUBE_API_KEY:}") String youtubeApiKey
     ) {
@@ -71,6 +75,7 @@ public class LearningCentreService {
         this.currentUserService = currentUserService;
         this.studentProfileRepository = studentProfileRepository;
         this.psychometricService = psychometricService;
+        this.learningCourseAggregationService = learningCourseAggregationService;
         this.objectMapper = objectMapper;
         this.youtubeApiKey = youtubeApiKey == null ? "" : youtubeApiKey.trim();
         this.httpClient = HttpClient.newBuilder().connectTimeout(EXTERNAL_TIMEOUT).build();
@@ -78,14 +83,46 @@ public class LearningCentreService {
 
     @Transactional(readOnly = true)
     public List<LearningResourceDto> listCatalogue() {
+        learningCourseAggregationService.ensureCoursesAvailable();
         return toDtoList(
-                learningResourceRepository.findByActiveTrueOrderByCreatedAtDesc(),
+                learningResourceRepository.findByActiveTrueAndIsFreeTrueOrderByLastFetchedAtDescCreatedAtDesc(),
                 List.of()
         );
     }
 
     @Transactional(readOnly = true)
+    public List<LearningResourceDto> listCourses(
+            String search,
+            String category,
+            String provider,
+            String level,
+            String subject,
+            boolean freeOnly
+    ) {
+        learningCourseAggregationService.ensureCoursesAvailable();
+        return toDtoList(
+                learningResourceRepository.findByActiveTrueAndIsFreeTrueOrderByLastFetchedAtDescCreatedAtDesc(),
+                List.of()
+        ).stream()
+                .filter(item -> "Course".equalsIgnoreCase(item.resourceType()))
+                .filter(item -> !freeOnly || Boolean.TRUE.equals(item.isFree()))
+                .filter(item -> matchesSearch(item, search))
+                .filter(item -> matchesFilter(item.category(), category))
+                .filter(item -> matchesFilter(item.provider(), provider))
+                .filter(item -> matchesFilter(item.level(), level))
+                .filter(item -> matchesFilter(item.subject(), subject))
+                .toList();
+    }
+
+    @Transactional
+    public LearningCourseAggregationService.RefreshSummary refreshCourses(Principal principal) {
+        requireAdmin(principal);
+        return learningCourseAggregationService.refreshApprovedCourses();
+    }
+
+    @Transactional(readOnly = true)
     public List<LearningResourceDto> recommendedForStudent(Principal principal, List<String> requestedOutcomes) {
+        learningCourseAggregationService.ensureCoursesAvailable();
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElse(null);
         List<String> outcomeKeys = new ArrayList<>();
@@ -96,16 +133,20 @@ public class LearningCentreService {
         }
 
         if (outcomeKeys.isEmpty()) {
-            return listCatalogue();
+            return listCourses("", "", "", "", "", true);
         }
 
         List<LearningOutcomeMapping> mappings = learningOutcomeMappingRepository.findByOutcomeKeyInOrderByPriorityAsc(outcomeKeys);
         LinkedHashSet<UUID> resourceIds = mappings.stream().map(LearningOutcomeMapping::getResourceId).collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
         if (resourceIds.isEmpty()) {
-            return List.of();
+            return listCourses("", "", "", "", "", true);
         }
         List<LearningResource> resources = learningResourceRepository.findByIdInAndActiveTrue(resourceIds);
-        return toDtoList(resources, mappings);
+        List<LearningResourceDto> recommended = toDtoList(resources, mappings).stream()
+                .filter(item -> Boolean.TRUE.equals(item.isFree()))
+                .filter(item -> "Course".equalsIgnoreCase(item.resourceType()))
+                .toList();
+        return recommended.isEmpty() ? listCourses("", "", "", "", "", true) : recommended;
     }
 
     public List<LearningResourceDto> searchOpenLibrary(String query) {
@@ -136,6 +177,18 @@ public class LearningCentreService {
         String encoded = URLEncoder.encode(cleanQuery, StandardCharsets.UTF_8);
         String url = "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=" + encoded + "&key=" + youtubeApiKey;
         return fetchCached("youtube:" + cleanQuery, () -> parseYouTube(fetchJson(url)));
+    }
+
+    private void requireAdmin(Principal principal) {
+        User user = currentUserService.requireUser(principal);
+        boolean isAdmin = user.getRoles().stream()
+                .map(Role::getName)
+                .filter(role -> role != null && !role.isBlank())
+                .map(role -> role.trim().toUpperCase(Locale.ROOT))
+                .anyMatch(role -> role.equals("ADMIN") || role.equals("ROLE_ADMIN"));
+        if (!isAdmin) {
+            throw new LearningIntegrationException("Only administrators can refresh courses.");
+        }
     }
 
     private List<LearningResourceDto> fetchCached(String key, CacheSupplier supplier) {
@@ -203,7 +256,11 @@ public class LearningCentreService {
                     external,
                     0,
                     author,
-                    List.of("Read overview", "Review key topics", "Take notes")
+                    List.of("Read overview", "Review key topics", "Take notes"),
+                    "English",
+                    true,
+                    "PUBLIC_API",
+                    null
             ));
         }
         return out;
@@ -238,7 +295,11 @@ public class LearningCentreService {
                     external,
                     0,
                     instructor,
-                    List.of("Read chapter summary", "Highlight formulas", "Practice questions")
+                    List.of("Read chapter summary", "Highlight formulas", "Practice questions"),
+                    "English",
+                    true,
+                    "PUBLIC_API",
+                    null
             ));
         }
         return out;
@@ -267,7 +328,11 @@ public class LearningCentreService {
                     "https://opentdb.com/",
                     0,
                     "Open Trivia DB",
-                    List.of("Attempt question", "Check answer", "Review explanation")
+                    List.of("Attempt question", "Check answer", "Review explanation"),
+                    "English",
+                    true,
+                    "PUBLIC_API",
+                    null
             ));
         }
         return out;
@@ -299,7 +364,11 @@ public class LearningCentreService {
                     "https://www.youtube.com/watch?v=" + videoId,
                     0,
                     channel,
-                    List.of("Watch lesson", "Summarize key points", "Apply in practice")
+                    List.of("Watch lesson", "Summarize key points", "Apply in practice"),
+                    "English",
+                    true,
+                    "PUBLIC_API",
+                    null
             ));
         }
         return out;
@@ -315,26 +384,59 @@ public class LearningCentreService {
         return resources.stream()
                 .map(resource -> {
                     List<String> outcomes = mappedOutcomes.getOrDefault(resource.getId(), List.of());
-                    String category = categories.getOrDefault(resource.getCategoryId(), "Study Materials");
+                    String category = firstNonBlank(resource.getCategory(), categories.get(resource.getCategoryId()), "Study Materials");
+                    String description = firstNonBlank(resource.getDescription(), resource.getSummary(), "Learning resource");
+                    String provider = firstNonBlank(resource.getProvider(), "EduRite");
+                    String subject = firstNonBlank(resource.getSubject(), category);
+                    String level = firstNonBlank(resource.getLevel(), toLevel(resource.getDifficulty()));
+                    String externalUrl = firstNonBlank(resource.getCourseUrl(), resource.getUrl());
                     return new LearningResourceDto(
                             resource.getId().toString(),
                             resource.getTitle(),
-                            resource.getSummary(),
-                            "EduRite",
+                            description,
+                            provider,
                             category,
-                            category,
+                            subject,
                             "All Grades",
-                            toLevel(resource.getDifficulty()),
+                            level,
                             normalizeResourceType(resource.getResourceType()),
                             (resource.getEstimatedMinutes() == null ? 60 : resource.getEstimatedMinutes()) + "m",
-                            null,
-                            resource.getUrl(),
+                            resource.getThumbnailUrl(),
+                            externalUrl,
                             0,
-                            "EduRite Learning Team",
-                            outcomes.isEmpty() ? List.of("Overview", "Practice", "Recap") : outcomes
+                            provider,
+                            outcomes.isEmpty() ? List.of("Overview", "Practice", "Recap") : outcomes,
+                            firstNonBlank(resource.getLanguage(), "English"),
+                            resource.isFree(),
+                            firstNonBlank(resource.getSourceType(), "DATABASE"),
+                            resource.getLastFetchedAt()
                     );
                 })
                 .toList();
+    }
+
+    private boolean matchesSearch(LearningResourceDto item, String search) {
+        String query = normalize(search);
+        if (query.isBlank()) {
+            return true;
+        }
+        return contains(item.title(), query)
+                || contains(item.description(), query)
+                || contains(item.provider(), query)
+                || contains(item.category(), query)
+                || contains(item.subject(), query);
+    }
+
+    private boolean matchesFilter(String value, String filter) {
+        String normalizedFilter = normalize(filter);
+        if (normalizedFilter.isBlank() || normalizedFilter.equals("all") || normalizedFilter.startsWith("all ")) {
+            return true;
+        }
+        return normalize(value).equals(normalizedFilter);
+    }
+
+    private boolean contains(String value, String query) {
+        return normalize(value).contains(query);
     }
 
     private String normalizeQuery(String query, String fallback) {
@@ -344,18 +446,21 @@ public class LearningCentreService {
 
     private String normalizeResourceType(String type) {
         if (type == null || type.isBlank()) return "Study Guide";
-        return switch (type.trim().toLowerCase()) {
+        return switch (type.trim().toLowerCase(Locale.ROOT)) {
             case "video", "video tutorial", "tutorial" -> "Video Tutorial";
             case "past paper", "paper" -> "Past Paper";
             case "worksheet" -> "Worksheet";
             case "pdf", "notes" -> "PDF Notes";
+            case "book" -> "Book";
+            case "study guide", "study", "guide" -> "Study Guide";
+            case "quiz" -> "Quiz";
             default -> "Course";
         };
     }
 
     private String toLevel(String value) {
         if (value == null) return "Intermediate";
-        String clean = value.trim().toLowerCase();
+        String clean = value.trim().toLowerCase(Locale.ROOT);
         if (clean.contains("hard") || clean.contains("advanced")) return "Advanced";
         if (clean.contains("easy") || clean.contains("beginner")) return "Beginner";
         return "Intermediate";
@@ -368,6 +473,19 @@ public class LearningCentreService {
                 .replace("&amp;", "&")
                 .replace("&lt;", "<")
                 .replace("&gt;", ">");
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return "";
     }
 
     private record CacheEntry(List<LearningResourceDto> value, Instant expiresAt) {
@@ -387,4 +505,3 @@ public class LearningCentreService {
         }
     }
 }
-

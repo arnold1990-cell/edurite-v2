@@ -30,6 +30,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Example:
      * findByEmail("test@gmail.com")
      *
+     *
      * This search is case-sensitive depending on the database.
      */
     Optional<User> findByEmail(String email);
@@ -85,6 +86,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * ORDER BY created_at DESC means newest user comes first.
      * LIMIT 1 means return only one result.
      */
+    // noinspection SqlNoDataSourceInspection,SqlResolve
     @Query(value = """
             SELECT u.*
             FROM users u
@@ -116,6 +118,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * - students.phone
      * - companies.mobile_number
      */
+    // noinspection SqlNoDataSourceInspection,SqlResolve
     @Query(value = """
             SELECT u.*
             FROM users u
@@ -196,6 +199,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             """)
     long countDistinctByRoleName(@Param("roleName") String roleName);
 
+    // noinspection SqlNoDataSourceInspection,SqlResolve
     @Query(value = """
             SELECT DISTINCT u.id
             FROM users u
@@ -229,6 +233,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             Pageable pageable
     );
 
+    // noinspection SqlNoDataSourceInspection,SqlResolve
     @Query(value = """
             SELECT COUNT(DISTINCT u.id)
             FROM users u
@@ -260,4 +265,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("activeOnly") boolean activeOnly
     );
 }
+
+
+
 

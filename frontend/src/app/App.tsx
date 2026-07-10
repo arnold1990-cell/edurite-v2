@@ -12,6 +12,7 @@ import { AboutPage, BursariesPage, BursaryDetailsPage, CareerDetailsPage, Career
 import { PrivacyPolicyPage, TermsAndConditionsPage } from '@/pages/public/PolicyPages';
 import { ForgotPasswordPage, LoginPage, RegisterCompanyPage, RegisterSchoolPage, RegisterStudentPage, ResetPasswordPage, VerifyEmailNoticePage, VerifyEmailPage } from '@/pages/public/AuthPages';
 import { StudentAcademicProfilePage, StudentApplicationsPage, StudentBursaryRecommendationsPage, StudentCareerDetailsPage, StudentCareerRecommendationsPage, StudentCollegesTvetsPage, StudentDashboardPage, StudentDocumentsPage, StudentExperiencePage, StudentLearningCentrePage, StudentMySchoolPage, StudentNotificationsPage, StudentProfilePage, StudentPsychometricPage, StudentQualificationsPage, StudentRewardsPage, StudentSavedPage, StudentSettingsPage, StudentSubscriptionPage, StudentUniversitiesPage } from '@/pages/student/StudentPages';
+import { StudentUniversityAdmissionRequirementsPage, StudentUniversityProgrammesPage } from '@/pages/student/StudentUniversityInfoPages';
 import { AdminSchoolPortalPage, StudentAiTutorPage, StudentCareerRoadmapsPage, StudentCvBuilderPage, StudentScholarshipAssistantPage, StudentUniversityApplicationsPage } from '@/pages/student/StudentFeaturePages';
 import { CompanyApplicantsPage, CompanyBursariesPage, CompanyCreateBursaryPage, CompanyDashboardPage, CompanyEditBursaryPage, CompanyNotificationsPage, CompanyPendingApprovalPage, CompanyProfilePage, CompanySettingsPage, CompanyShortlistedPage, CompanyTalentSearchPage, CompanyVerificationDocsPage } from '@/pages/company/CompanyPages';
 import { AdminAnalyticsPage, AdminAuditLogsPage, AdminBursaryModerationPage, AdminCompanyReviewPage, AdminDashboardPage, AdminDistrictManagementPage, AdminNotificationTemplatesPage, AdminNotificationsPage, AdminPaymentsPage, AdminPendingApprovalsPage, AdminRolesPage, AdminSettingsPage, AdminSubscriptionsPage, AdminUsersPage } from '@/pages/admin/AdminPages';
@@ -151,6 +152,8 @@ export const App = () => (
           <Route path="/student/applications" element={<StudentApplicationsPage />} />
           <Route path="/student/scholarships" element={<StudentScholarshipAssistantPage />} />
           <Route path="/student/universities" element={<StudentUniversitiesPage />} />
+          <Route path="/student/universities/:slug/programmes" element={<StudentUniversityProgrammesPage />} />
+          <Route path="/student/universities/:slug/admission-requirements" element={<StudentUniversityAdmissionRequirementsPage />} />
           <Route path="/student/colleges-tvets" element={<StudentCollegesTvetsPage />} />
           <Route path="/student/university-applications" element={<StudentUniversityApplicationsPage />} />
           <Route path="/student/notifications" element={<StudentNotificationsPage />} />
@@ -286,3 +289,4 @@ export const App = () => (
     </Routes>
   </>
 );
+

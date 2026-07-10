@@ -1,0 +1,848 @@
+[
+    {
+        "name":  "University of Cape Town",
+        "sourceUrl":  "frontend/src/assets/capetown.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-cape-town-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Stellenbosch University",
+        "sourceUrl":  "frontend/src/assets/stellenbosh.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/stellenbosch-university-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of the Witwatersrand",
+        "sourceUrl":  "frontend/src/assets/vets.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-the-witwatersrand-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of Pretoria",
+        "sourceUrl":  "frontend/src/assets/pretoria.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-pretoria-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of Johannesburg",
+        "sourceUrl":  "frontend/src/assets/uj.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-johannesburg-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "North-West University",
+        "sourceUrl":  "frontend/src/assets/northwest.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/north-west-university-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of KwaZulu-Natal",
+        "sourceUrl":  "frontend/src/assets/kwazulu.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-kwazulu-natal-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Rhodes University",
+        "sourceUrl":  "frontend/src/assets/rhodes.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/rhodes-university-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of the Free State",
+        "sourceUrl":  "frontend/src/assets/freestate.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-the-free-state-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Nelson Mandela University",
+        "sourceUrl":  "frontend/src/assets/neslsonmandela.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/nelson-mandela-university-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of South Africa",
+        "sourceUrl":  "frontend/src/assets/unisa.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-south-africa-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of the Western Cape",
+        "sourceUrl":  "frontend/src/assets/western cappe.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-the-western-cape-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of Limpopo",
+        "sourceUrl":  "frontend/src/assets/limpopo.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-limpopo-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of Venda",
+        "sourceUrl":  "frontend/src/assets/venda.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-venda-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of Fort Hare",
+        "sourceUrl":  "provided-image",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-fort-hare-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided Fort Hare logo image stored locally."
+    },
+    {
+        "name":  "Walter Sisulu University",
+        "sourceUrl":  "frontend/src/assets/sisulu.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/walter-sisulu-university-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of Zululand",
+        "sourceUrl":  "frontend/src/assets/zululannd.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-zululand-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Mangosuthu University of Technology",
+        "sourceUrl":  "frontend/src/assets/mangosuthu.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/mangosuthu-university-of-technology-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Cape Peninsula University of Technology",
+        "sourceUrl":  "frontend/src/assets/penisula.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/cape-peninsula-university-of-technology-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Central University of Technology",
+        "sourceUrl":  "frontend/src/assets/cut.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/central-university-of-technology-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Durban University of Technology",
+        "sourceUrl":  "frontend/src/assets/duburn.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/durban-university-of-technology-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Tshwane University of Technology",
+        "sourceUrl":  "frontend/src/assets/tswane.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/tshwane-university-of-technology-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Vaal University of Technology",
+        "sourceUrl":  "frontend/src/assets/vaal.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/vaal-university-of-technology-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Sefako Makgatho Health Sciences University",
+        "sourceUrl":  "frontend/src/assets/sefako.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/sefako-makgatho-health-sciences-university-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Sol Plaatje University",
+        "sourceUrl":  "frontend/src/assets/sol.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/sol-plaatje-university-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "University of Mpumalanga",
+        "sourceUrl":  "frontend/src/assets/mpumalanga.jpeg",
+        "localFilePath":  "frontend/src/assets/institutions/universities/university-of-mpumalanga-logo.jpeg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  "User-provided local university logo image stored locally."
+    },
+    {
+        "name":  "Alison",
+        "sourceUrl":  "https://cdn01.alison-static.net/public/html/site/img/header/en.svg",
+        "localFilePath":  "frontend/src/assets/institutions/online/alison-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Coursera",
+        "sourceUrl":  "https://d3njjcbhbojbot.cloudfront.net/api/utilities/v1/imageproxy/https://images.ctfassets.net/00atxywtfxvd/2qT888LE5BPxxD8d4pfXmJ/89b8eb03eaebe5ff116f509333f24fb5/Anthropic-logo.png?auto=format%2Ccompress\u0026amp;dpr=1\u0026amp;w=24\u0026amp;h=24",
+        "localFilePath":  "frontend/src/assets/institutions/online/coursera-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "edX",
+        "sourceUrl":  "https://www.edx.org/trademark-logos/edx-by-2u-white.svg",
+        "localFilePath":  "frontend/src/assets/institutions/online/edx-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "FutureLearn",
+        "sourceUrl":  "https://www.futurelearn.com",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Khan Academy",
+        "sourceUrl":  "https://www.khanacademy.org/_fs-ch-1T1wmsGaOgGaSxcX/assets/errorIcon.svg",
+        "localFilePath":  "frontend/src/assets/institutions/online/khan-academy-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "freeCodeCamp",
+        "sourceUrl":  "https://www.freecodecamp.org",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Microsoft Learn",
+        "sourceUrl":  "https://learn.microsoft.com/media/logos/logo_azure.svg",
+        "localFilePath":  "frontend/src/assets/institutions/online/microsoft-learn-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Cisco Networking Academy",
+        "sourceUrl":  "https://www.netacad.com",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "OpenLearn",
+        "sourceUrl":  "https://www.open.edu/openlearn",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "MIT OpenCourseWare",
+        "sourceUrl":  "https://ocw.mit.edu/images/sponsor_logos/mellon-foundation-logo.svg",
+        "localFilePath":  "frontend/src/assets/institutions/online/mit-opencourseware-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "W3Schools",
+        "sourceUrl":  "https://www.w3schools.com/signup/lynxlogo.svg",
+        "localFilePath":  "frontend/src/assets/institutions/online/w3schools-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "AWS Skill Builder",
+        "sourceUrl":  "https://skillbuilder.aws",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Oracle University",
+        "sourceUrl":  "https://education.oracle.com",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "IBM SkillsBuild",
+        "sourceUrl":  "https://skillsbuild.org/_next/image?url=https%3A%2F%2Fskillsbuild.wpengine.com%2Fwp-content%2Fuploads%2F2023%2F05%2Frebrand-leadspace-4_webp.webp\u0026amp;w=3840\u0026amp;q=100",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "Logo download failed."
+    },
+    {
+        "name":  "Google Cloud Skills Boost",
+        "sourceUrl":  "https://www.cloudskillsboost.google",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Salesforce Trailhead",
+        "sourceUrl":  "https://trailhead.salesforce.com/assets/trailhead-logo-no-text-a2df2574a49d32f9c6633a09d7bfabec743f88d43a76258cc185e709d3b917c4.svg",
+        "localFilePath":  "frontend/src/assets/institutions/online/salesforce-trailhead-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Siyavula",
+        "sourceUrl":  "https://www.siyavula.com/static_cache/18253827260587577394/themes/emas/fonts/sv-brand-icon/svg/footer-facebook.svg",
+        "localFilePath":  "frontend/src/assets/institutions/online/siyavula-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "DBE Cloud",
+        "sourceUrl":  "https://www.dbecloud.org",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "WCED ePortal",
+        "sourceUrl":  "https://wcedeportal.co.za/sites/eresources/themes/ecatalogue/img/wcg-logo-footer.png",
+        "localFilePath":  "frontend/src/assets/institutions/online/wced-eportal-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Mindset Learn",
+        "sourceUrl":  "https://learn.mindset.africa",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Buffalo City TVET College",
+        "sourceUrl":  "https://bccollege.co.za/wp-content/uploads/2026/03/bcc-logo-e1772658171904.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/buffalo-city-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Eastcape Midlands TVET College",
+        "sourceUrl":  "https://www.emcol.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Ikhala TVET College",
+        "sourceUrl":  "https://www.ikhalacollege.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Ingwe TVET College",
+        "sourceUrl":  "https://www.ingwecollege.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "King Hintsa TVET College",
+        "sourceUrl":  "https://www.khc.edu.za/wp-content/uploads/2022/05/DHEAT_logo.svg",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/king-hintsa-tvet-college-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Lovedale TVET College",
+        "sourceUrl":  "https://www.lovedalecollege.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Port Elizabeth TVET College",
+        "sourceUrl":  "https://www.pecollege.edu.za/wp-content/uploads/2026/01/spam-mail.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/port-elizabeth-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Flavius Mareka TVET College",
+        "sourceUrl":  "https://flaviusmareka.net/wp-content/uploads/2018/12/flavius-slider-logo-1.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/flavius-mareka-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Goldfields TVET College",
+        "sourceUrl":  "https://www.goldfieldsfet.edu.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Maluti TVET College",
+        "sourceUrl":  "https://www.malutifet.org.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Motheo TVET College",
+        "sourceUrl":  "https://www.motheofet.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Central Johannesburg TVET College",
+        "sourceUrl":  "https://www.cjc.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Ekurhuleni East TVET College",
+        "sourceUrl":  "https://eec.edu.za/wp-content/uploads/2021/06/eec-LOGO.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/ekurhuleni-east-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Ekurhuleni West TVET College",
+        "sourceUrl":  "https://www.ewc.edu.za/images/ewc-logo.JPG",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/ekurhuleni-west-tvet-college-logo.jpg",
+        "fileType":  "image/jpeg",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Sedibeng TVET College",
+        "sourceUrl":  "https://www.sedcol.co.za/images/Logo-edited.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/sedibeng-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "South West Gauteng TVET College",
+        "sourceUrl":  "https://www.swgc.co.za/wp-content/uploads/2022/08/google-play-badge.svg",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/south-west-gauteng-tvet-college-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Tshwane North TVET College",
+        "sourceUrl":  "https://tnc.edu.za/images/tnc-logo.webp",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/tshwane-north-tvet-college-logo.webp",
+        "fileType":  "image/webp",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Tshwane South TVET College",
+        "sourceUrl":  "https://www.tsc.edu.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Western TVET College",
+        "sourceUrl":  "https://westcol.co.za/wp-content/uploads/2025/10/Department-Logo.svg",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/western-tvet-college-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Coastal TVET College",
+        "sourceUrl":  "https://www.coastalkzn.co.za/images/dhet_logo.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/coastal-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Elangeni TVET College",
+        "sourceUrl":  "https://www.efet.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Esayidi TVET College",
+        "sourceUrl":  "https://esayiditvet.co.za/2025/wp-content/uploads/2023/02/footerlogo-300x171.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/esayidi-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Majuba TVET College",
+        "sourceUrl":  "https://www.majuba.edu.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Mthashana TVET College",
+        "sourceUrl":  "https://www.mthashanafet.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Thekwini TVET College",
+        "sourceUrl":  "https://www.thekwinicollege.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Umfolozi TVET College",
+        "sourceUrl":  "https://www.umfolozicollege.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Umgungundlovu TVET College",
+        "sourceUrl":  "https://www.ufetc.edu.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Capricorn TVET College",
+        "sourceUrl":  "https://capricorncollege.edu.za/wp-content/uploads/2023/05/capricorn_logo_footer.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/capricorn-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Lephalale TVET College",
+        "sourceUrl":  "https://www.lephalalefetcollege.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Letaba TVET College",
+        "sourceUrl":  "https://www.letabafet.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Mopani South East TVET College",
+        "sourceUrl":  "https://mopanicollege.edu.za/wp-content/plugins/under-construction-page/themes/research/research.png",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "Logo download failed."
+    },
+    {
+        "name":  "Sekhukhune TVET College",
+        "sourceUrl":  "https://www.sekfetcol.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Vhembe TVET College",
+        "sourceUrl":  "https://www.vhembefet.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Waterberg TVET College",
+        "sourceUrl":  "https://www.waterbergcollege.co.za/admin/images/Logo.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/waterberg-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Ehlanzeni TVET College",
+        "sourceUrl":  "https://www.ehlanzenicollege.co.za/wp-content/uploads/2024/09/Frame-25.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/ehlanzeni-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Gert Sibande TVET College",
+        "sourceUrl":  "https://www.gscollege.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Nkangala TVET College",
+        "sourceUrl":  "https://www.nkangalafet.edu.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Northern Cape Rural TVET College",
+        "sourceUrl":  "https://www.ncrfet.edu.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Northern Cape Urban TVET College",
+        "sourceUrl":  "https://www.ncufetcollege.edu.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Orbit TVET College",
+        "sourceUrl":  "https://www.orbitcollege.co.za/wpimages/wpd92a06d6_06.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/orbit-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Taletso TVET College",
+        "sourceUrl":  "https://www.taletsofetcollege.co.za",
+        "localFilePath":  "",
+        "fileType":  "",
+        "retrievedAt":  "2026-07-10",
+        "success":  false,
+        "notes":  "No logo candidate found on official site."
+    },
+    {
+        "name":  "Vuselela TVET College",
+        "sourceUrl":  "https://vuselelacollege.co.za/wp-content/uploads/elementor/thumbs/Vuselela-TVET-College-Logo-T-q3fwtvtcwr64xwnlznahiqh78dkasbgsnq5v8v09og.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/vuselela-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Boland TVET College",
+        "sourceUrl":  "https://bolandcollege.com/wp-content/uploads/2022/11/Boland-Logo.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/boland-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "College of Cape Town",
+        "sourceUrl":  "https://www.cct.edu.za/cctblk_logo.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/college-of-cape-town-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "False Bay TVET College",
+        "sourceUrl":  "https://falsebaycollege.co.za/wp-content/uploads/2021/01/fbc-logo.svg",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/false-bay-tvet-college-logo.svg",
+        "fileType":  "image/svg+xml",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "Northlink TVET College",
+        "sourceUrl":  "https://www.northlink.co.za/wp-content/uploads/2020/05/rsz_dhet-logo_1.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/northlink-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "South Cape TVET College",
+        "sourceUrl":  "https://sccollege.co.za/wp-content/uploads/2017/05/fm-logo-300x81.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/south-cape-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    },
+    {
+        "name":  "West Coast TVET College",
+        "sourceUrl":  "https://www.westcoastcollege.co.za/wcc2/wp-content/uploads/2025/05/logo-32-1024x146.png",
+        "localFilePath":  "frontend/src/assets/institutions/tvet/west-coast-tvet-college-logo.png",
+        "fileType":  "image/png",
+        "retrievedAt":  "2026-07-10",
+        "success":  true,
+        "notes":  ""
+    }
+]

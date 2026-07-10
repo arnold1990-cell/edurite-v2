@@ -1,7 +1,10 @@
-import { useMemo } from 'react';
-import { useAppQuery } from '@/hooks/useAppQuery';
-import { institutionService } from '@/services/institutionService';
+﻿import { useMemo, useState } from 'react';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback/States';
+import { InstitutionCard } from '@/components/institutions/InstitutionCard';
+import { Input } from '@/components/ui/Input';
+import { useAppQuery } from '@/hooks/useAppQuery';
+import { resolveInstitutionDisplay } from '@/lib/institutionRegistry';
+import { institutionService } from '@/services/institutionService';
 import type { Institution } from '@/types';
 
 const featuredUniversities = new Set([
@@ -15,104 +18,42 @@ const featuredUniversities = new Set([
   'Stellenbosch University',
 ]);
 
-const getInstitutionLocation = (university: Institution) => university.country ?? university.city ?? university.location ?? 'South Africa';
-
-const getInstitutionInitials = (name: string) => name
-  .split(/\s+/)
-  .filter(Boolean)
-  .slice(0, 2)
-  .map((part) => part[0]?.toUpperCase() ?? '')
-  .join('');
-
-const UniversityCard = ({ university, compact = false }: { university: Institution; compact?: boolean }) => {
-  const website = university.website?.trim();
-  const location = getInstitutionLocation(university);
-  const logoUrl = university.logoUrl?.trim();
-  const cardBody = (
-    <article
-      className={[
-        'group flex h-full flex-col rounded-xl border border-slate-200 bg-white transition duration-200',
-        compact
-          ? 'gap-3 p-3 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-sm'
-          : 'gap-4 p-4 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md',
-      ].join(' ')}
-    >
-      <div className={['flex items-center', compact ? 'gap-3' : 'gap-4'].join(' ')}>
-        <div
-          className={[
-            'group/logo flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-slate-500',
-            compact ? 'h-14 w-14' : 'h-16 w-16',
-          ].join(' ')}
-        >
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={`${university.name} logo`}
-              className="h-full w-full object-contain p-2 group-[.has-logo-error]/logo:hidden"
-              loading="lazy"
-              onError={(event) => {
-                event.currentTarget.parentElement?.classList.add('has-logo-error');
-              }}
-            />
-          ) : null}
-          <span
-            className={[
-              'font-semibold tracking-wide text-slate-600',
-              compact ? 'text-sm' : 'text-base',
-              logoUrl ? 'hidden group-[.has-logo-error]/logo:block' : 'block',
-            ].join(' ')}
-          >
-            {getInstitutionInitials(university.name)}
-          </span>
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">{university.category ?? 'University'}</p>
-          <h3 className={['mt-1 font-semibold text-slate-900', compact ? 'line-clamp-2 text-sm sm:text-base' : 'text-base'].join(' ')}>{university.name}</h3>
-          <p className="mt-1 text-xs text-slate-600">{location}</p>
-        </div>
-      </div>
-
-      <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-        <span className="text-xs font-medium text-slate-500">{website ? 'Official website' : 'Website unavailable'}</span>
-        <span
-          className={[
-            'inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold',
-            website
-              ? 'border-blue-200 bg-blue-50 text-blue-700'
-              : 'border-slate-200 bg-slate-100 text-slate-500',
-          ].join(' ')}
-        >
-          {website ? 'Visit Website' : 'Unavailable'}
-        </span>
-      </div>
-    </article>
-  );
-
-  if (!website) {
-    return <div className="h-full cursor-not-allowed opacity-80">{cardBody}</div>;
-  }
-
-  return (
-    <a
-      href={website}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block h-full cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      aria-label={`Visit ${university.name} official website`}
-    >
-      {cardBody}
-    </a>
-  );
-};
-
 export const StudentUniversitiesPage = () => {
+  const [search, setSearch] = useState('');
+  const [provinceFilter, setProvinceFilter] = useState('ALL');
+  const [typeFilter, setTypeFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [facultyFilter, setFacultyFilter] = useState('ALL');
+
   const institutions = useAppQuery<Institution[]>({ queryKey: ['student', 'institutions'], queryFn: () => institutionService.list() });
 
-  const allUniversities = useMemo(() => (institutions.data ?? []).filter((item) => item.active !== false), [institutions.data]);
+  const allUniversities = useMemo(() => (institutions.data ?? [])
+    .filter((item) => item.active !== false)
+    .map((item) => resolveInstitutionDisplay(item)), [institutions.data]);
+
+  const provinceOptions = useMemo(() => Array.from(new Set(allUniversities.map((item) => item.province).filter(Boolean))).sort(), [allUniversities]);
+  const typeOptions = useMemo(() => Array.from(new Set(allUniversities.map((item) => item.institutionType).filter(Boolean))).sort(), [allUniversities]);
+  const facultyOptions = useMemo(() => Array.from(new Set(allUniversities.flatMap((item) => item.faculties ?? []))).sort(), [allUniversities]);
+
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return allUniversities.filter((item) => {
+      const matchesQuery = !query
+        || item.displayName.toLowerCase().includes(query)
+        || (item.abbreviation ?? '').toLowerCase().includes(query)
+        || (item.city ?? '').toLowerCase().includes(query)
+        || (item.province ?? '').toLowerCase().includes(query);
+      const matchesProvince = provinceFilter === 'ALL' || item.province === provinceFilter;
+      const matchesType = typeFilter === 'ALL' || item.institutionType === typeFilter;
+      const matchesStatus = statusFilter === 'ALL' || item.applicationStatus === statusFilter;
+      const matchesFaculty = facultyFilter === 'ALL' || (item.faculties ?? []).includes(facultyFilter);
+      return matchesQuery && matchesProvince && matchesType && matchesStatus && matchesFaculty;
+    });
+  }, [allUniversities, facultyFilter, provinceFilter, search, statusFilter, typeFilter]);
+
   const featured = useMemo(
-    () => allUniversities.filter((item) => item.featured || featuredUniversities.has(item.name)).slice(0, 10),
-    [allUniversities],
+    () => filtered.filter((item) => item.isFeatured || featuredUniversities.has(item.displayName)).slice(0, 8),
+    [filtered],
   );
 
   if (institutions.isLoading) return <LoadingState />;
@@ -123,30 +64,63 @@ export const StudentUniversitiesPage = () => {
     <section className="student-page-section">
       <header>
         <h1 className="student-page-title">Universities</h1>
-        <p className="student-page-subtitle">Browse South African public universities and open their official sites for programmes, admissions, and fees.</p>
+        <p className="student-page-subtitle">Compare South African universities with official logos, location details, verified institution facts, and direct official links.</p>
       </header>
 
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
-        <div className="mb-4">
-          <h2 className="text-base font-semibold">Featured Institutions</h2>
-          <p className="mt-1 text-sm text-slate-600">Explore highlighted universities in a compact, easy-to-scan layout.</p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {featured.map((university) => (
-            <UniversityCard key={`featured-${university.id}`} university={university} compact />
-          ))}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <Input placeholder="Search by university or abbreviation" value={search} onChange={(event) => setSearch(event.target.value)} />
+          <select value={provinceFilter} onChange={(event) => setProvinceFilter(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-primary-300 focus:ring-4 focus:ring-primary-100">
+            <option value="ALL">All provinces</option>
+            {provinceOptions.map((province) => <option key={province} value={province}>{province}</option>)}
+          </select>
+          <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-primary-300 focus:ring-4 focus:ring-primary-100">
+            <option value="ALL">All institution types</option>
+            {typeOptions.map((type) => <option key={type} value={type}>{type}</option>)}
+          </select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-primary-300 focus:ring-4 focus:ring-primary-100">
+            <option value="ALL">All application statuses</option>
+            <option value="OPEN">Applications Open</option>
+            <option value="OPENING_SOON">Opening Soon</option>
+            <option value="CLOSED">Applications Closed</option>
+          </select>
+          <select value={facultyFilter} onChange={(event) => setFacultyFilter(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-primary-300 focus:ring-4 focus:ring-primary-100">
+            <option value="ALL">All faculties</option>
+            {facultyOptions.map((faculty) => <option key={faculty} value={faculty}>{faculty}</option>)}
+          </select>
         </div>
       </div>
 
-      <div>
-        <h2 className="mb-3 text-base font-semibold">All universities ({allUniversities.length})</h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {allUniversities.map((university) => (
-            <UniversityCard key={university.id} university={university} />
-          ))}
-        </div>
+      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+        Institution names and logos are used for identification purposes. EduRite is not affiliated with or endorsed by these institutions unless stated otherwise.
       </div>
+
+      {featured.length > 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <div className="mb-4">
+            <h2 className="text-base font-semibold">Featured Institutions</h2>
+            <p className="mt-1 text-sm text-slate-600">A curated set of major public universities with richer metadata and official branding.</p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {featured.map((university) => (
+              <InstitutionCard key={`featured-${university.id ?? university.displayName}`} institution={university as Institution} compact />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {filtered.length === 0 ? (
+        <EmptyState title="No universities found" message="Try broadening your search or clearing one of the filters." />
+      ) : (
+        <div>
+          <h2 className="mb-3 text-base font-semibold">All universities ({filtered.length})</h2>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {filtered.map((university) => (
+              <InstitutionCard key={university.id ?? university.displayName} institution={university as Institution} />
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   );
 };

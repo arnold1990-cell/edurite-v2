@@ -1,5 +1,6 @@
 package com.edurite.learning.dto;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 
 public record LearningResourceDto(
@@ -17,7 +18,10 @@ public record LearningResourceDto(
         String externalUrl,
         Integer progress,
         String instructor,
-        List<String> lessons
+        List<String> lessons,
+        String language,
+        Boolean isFree,
+        String sourceType,
+        OffsetDateTime lastFetchedAt
 ) {
 }
-
