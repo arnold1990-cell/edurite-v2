@@ -161,7 +161,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     long countDistinctByRoleName(@Param("roleName") String roleName);
 
     @Query(value = """
-            SELECT DISTINCT u.id
+            SELECT u.id
             FROM users u
             LEFT JOIN user_roles ur ON ur.user_id = u.id
             LEFT JOIN roles r ON r.id = ur.role_id
@@ -180,7 +180,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                     LOWER(u.first_name) LIKE CONCAT('%', LOWER(:search), '%') OR
                     LOWER(u.last_name) LIKE CONCAT('%', LOWER(:search), '%')
               )
-            ORDER BY u.created_at DESC
+            GROUP BY u.id
+            ORDER BY MAX(u.created_at) DESC
             """, nativeQuery = true)
     List<UUID> findUserIdsByNotificationFilter(
             @Param("roleName") String roleName,
