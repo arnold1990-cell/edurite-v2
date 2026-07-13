@@ -6,9 +6,11 @@ import com.edurite.institution.universityinfo.repository.UniversityRetrievalLogR
 import com.edurite.learning.repository.LearningResourceRepository;
 import com.edurite.user.repository.UserRepository;
 import com.zaxxer.hikari.HikariDataSource;
+import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import javax.sql.DataSource;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,8 +26,6 @@ import org.springframework.test.context.junit.jupiter.EnabledIf;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
-
-import javax.sql.DataSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -192,45 +192,10 @@ class DevProfileDatasourceIntegrationTest {
         UUID schoolId = UUID.randomUUID();
         String email = "schema-check-" + userId + "@example.com";
 
-        //noinspection SqlNoDataSourceInspection
-        jdbcTemplate.update(
-                """
-                INSERT INTO public.users (id, email, password_hash, first_name, last_name, status, email_verified, must_change_password, plan_type, created_at, updated_at)
-                VALUES (?, ?, 'hash', 'Schema', 'Check', 'ACTIVE', TRUE, FALSE, 'BASIC', now(), now())
-                """,
-                userId,
-                email
-        );
-
-        //noinspection SqlNoDataSourceInspection
-        jdbcTemplate.update(
-                """
-                INSERT INTO public.students (id, user_id, first_name, last_name, selected_grade, created_at, updated_at)
-                VALUES (?, ?, 'Schema', 'Student', 'Grade 12', now(), now())
-                """,
-                studentId,
-                userId
-        );
-
-        //noinspection SqlNoDataSourceInspection
-        jdbcTemplate.update(
-                """
-                INSERT INTO public.school_profiles (id, school_name, created_at, updated_at)
-                VALUES (?, 'Schema School', now(), now())
-                """,
-                schoolId
-        );
-
-        //noinspection SqlNoDataSourceInspection
-        jdbcTemplate.update(
-                """
-                INSERT INTO public.school_students (id, school_id, student_id, created_at, updated_at)
-                VALUES (?, ?, ?, now(), now())
-                """,
-                UUID.randomUUID(),
-                schoolId,
-                studentId
-        );
+        insertUser(userId, email, "Schema", "Check", OffsetDateTime.parse("2026-01-10T09:00:00Z"));
+        insertStudent(studentId, userId, "Schema", "Student", "Grade 12");
+        insertSchool(schoolId, "Schema School");
+        linkStudentToSchool(schoolId, studentId);
 
         List<UUID> matchedUserIds = userRepository.findUserIdsByNotificationFilter(
                 null,
@@ -253,8 +218,165 @@ class DevProfileDatasourceIntegrationTest {
                 true
         );
 
-        assertThat(matchedUserIds).contains(userId);
+        assertThat(matchedUserIds).containsExactly(userId);
         assertThat(matchedCount).isEqualTo(1);
+    }
+
+    @Test
+    void notificationFilterDeduplicatesJoinedRowsAndKeepsNewestFirstOrderingWithPagination() {
+        UUID schoolId = UUID.randomUUID();
+        String searchToken = "notif-filter-" + UUID.randomUUID();
+
+        UUID oldestUserId = UUID.randomUUID();
+        UUID middleUserId = UUID.randomUUID();
+        UUID newestUserId = UUID.randomUUID();
+
+        UUID oldestStudentId = UUID.randomUUID();
+        UUID middleStudentId = UUID.randomUUID();
+        UUID newestStudentId = UUID.randomUUID();
+
+        UUID roleA = UUID.randomUUID();
+        UUID roleB = UUID.randomUUID();
+        UUID roleC = UUID.randomUUID();
+
+        insertSchool(schoolId, "Ordering School");
+
+        insertUser(oldestUserId, searchToken + "-old@example.com", "Order", "Old", OffsetDateTime.parse("2026-01-03T08:00:00Z"));
+        insertUser(middleUserId, searchToken + "-mid@example.com", "Order", "Middle", OffsetDateTime.parse("2026-01-03T09:00:00Z"));
+        insertUser(newestUserId, searchToken + "-new@example.com", "Order", "Newest", OffsetDateTime.parse("2026-01-03T10:00:00Z"));
+
+        insertStudent(oldestStudentId, oldestUserId, "Order", "Old", "Grade 12");
+        insertStudent(middleStudentId, middleUserId, "Order", "Middle", "Grade 12");
+        insertStudent(newestStudentId, newestUserId, "Order", "Newest", "Grade 12");
+
+        linkStudentToSchool(schoolId, oldestStudentId);
+        linkStudentToSchool(schoolId, middleStudentId);
+        linkStudentToSchool(schoolId, newestStudentId);
+
+        insertRole(roleA, "ROLE_NOTIF_A_" + UUID.randomUUID());
+        insertRole(roleB, "ROLE_NOTIF_B_" + UUID.randomUUID());
+        insertRole(roleC, "ROLE_NOTIF_C_" + UUID.randomUUID());
+
+        assignRole(oldestUserId, roleA);
+        assignRole(middleUserId, roleB);
+        assignRole(newestUserId, roleA);
+        assignRole(newestUserId, roleC);
+
+        List<UUID> firstPage = userRepository.findUserIdsByNotificationFilter(
+                null,
+                null,
+                null,
+                "Grade 12",
+                schoolId,
+                searchToken,
+                true,
+                PageRequest.of(0, 2)
+        );
+        List<UUID> secondPage = userRepository.findUserIdsByNotificationFilter(
+                null,
+                null,
+                null,
+                "Grade 12",
+                schoolId,
+                searchToken,
+                true,
+                PageRequest.of(1, 2)
+        );
+        long matchedCount = userRepository.countByNotificationFilter(
+                null,
+                null,
+                null,
+                "Grade 12",
+                schoolId,
+                searchToken,
+                true
+        );
+
+        assertThat(firstPage).containsExactly(newestUserId, middleUserId);
+        assertThat(firstPage).doesNotHaveDuplicates();
+        assertThat(secondPage).containsExactly(oldestUserId);
+        assertThat(secondPage).doesNotHaveDuplicates();
+        assertThat(matchedCount).isEqualTo(3);
+    }
+
+    private void insertUser(UUID userId, String email, String firstName, String lastName, OffsetDateTime createdAt) {
+        //noinspection SqlNoDataSourceInspection
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.users (id, email, password_hash, first_name, last_name, status, email_verified, must_change_password, plan_type, created_at, updated_at)
+                VALUES (?, ?, 'hash', ?, ?, 'ACTIVE', TRUE, FALSE, 'BASIC', ?, ?)
+                """,
+                userId,
+                email,
+                firstName,
+                lastName,
+                createdAt,
+                createdAt
+        );
+    }
+
+    private void insertStudent(UUID studentId, UUID userId, String firstName, String lastName, String selectedGrade) {
+        //noinspection SqlNoDataSourceInspection
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.students (id, user_id, first_name, last_name, selected_grade, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, now(), now())
+                """,
+                studentId,
+                userId,
+                firstName,
+                lastName,
+                selectedGrade
+        );
+    }
+
+    private void insertSchool(UUID schoolId, String schoolName) {
+        //noinspection SqlNoDataSourceInspection
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.school_profiles (id, school_name, created_at, updated_at)
+                VALUES (?, ?, now(), now())
+                """,
+                schoolId,
+                schoolName
+        );
+    }
+
+    private void linkStudentToSchool(UUID schoolId, UUID studentId) {
+        //noinspection SqlNoDataSourceInspection
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.school_students (id, school_id, student_id, created_at, updated_at)
+                VALUES (?, ?, ?, now(), now())
+                """,
+                UUID.randomUUID(),
+                schoolId,
+                studentId
+        );
+    }
+
+    private void insertRole(UUID roleId, String roleName) {
+        //noinspection SqlNoDataSourceInspection
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.roles (id, name, created_at, updated_at)
+                VALUES (?, ?, now(), now())
+                """,
+                roleId,
+                roleName
+        );
+    }
+
+    private void assignRole(UUID userId, UUID roleId) {
+        //noinspection SqlNoDataSourceInspection
+        jdbcTemplate.update(
+                """
+                INSERT INTO public.user_roles (user_id, role_id)
+                VALUES (?, ?)
+                """,
+                userId,
+                roleId
+        );
     }
 
     private void assertTableExists(String tableName) {

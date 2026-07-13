@@ -163,25 +163,37 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query(value = """
             SELECT u.id
             FROM users u
-            LEFT JOIN user_roles ur ON ur.user_id = u.id
-            LEFT JOIN roles r ON r.id = ur.role_id
-            LEFT JOIN students s ON s.user_id = u.id
-            LEFT JOIN school_students ss ON ss.student_id = s.id
             WHERE u.deleted_at IS NULL
               AND (:activeOnly = FALSE OR u.status = 'ACTIVE')
-              AND (:roleName IS NULL OR :roleName = '' OR UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))
+              AND (
+                    :roleName IS NULL OR :roleName = '' OR EXISTS (
+                        SELECT 1
+                        FROM user_roles ur
+                        JOIN roles r ON r.id = ur.role_id
+                        WHERE ur.user_id = u.id
+                          AND (UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))
+                    )
+              )
               AND (:status IS NULL OR :status = '' OR UPPER(u.status) = UPPER(:status))
               AND (:planType IS NULL OR :planType = '' OR UPPER(u.plan_type) = UPPER(:planType))
-              AND (:grade IS NULL OR :grade = '' OR UPPER(s.selected_grade) = UPPER(:grade))
-              AND (:schoolId IS NULL OR ss.school_id = :schoolId)
+              AND (
+                    ((:grade IS NULL OR :grade = '') AND :schoolId IS NULL)
+                    OR EXISTS (
+                        SELECT 1
+                        FROM students s
+                        LEFT JOIN school_students ss ON ss.student_id = s.id
+                        WHERE s.user_id = u.id
+                          AND (:grade IS NULL OR :grade = '' OR UPPER(s.selected_grade) = UPPER(:grade))
+                          AND (:schoolId IS NULL OR ss.school_id = :schoolId)
+                    )
+              )
               AND (
                     :search IS NULL OR :search = '' OR
                     LOWER(u.email) LIKE CONCAT('%', LOWER(:search), '%') OR
                     LOWER(u.first_name) LIKE CONCAT('%', LOWER(:search), '%') OR
                     LOWER(u.last_name) LIKE CONCAT('%', LOWER(:search), '%')
               )
-            GROUP BY u.id
-            ORDER BY MAX(u.created_at) DESC
+            ORDER BY u.created_at DESC
             """, nativeQuery = true)
     List<UUID> findUserIdsByNotificationFilter(
             @Param("roleName") String roleName,
@@ -195,19 +207,32 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     );
 
     @Query(value = """
-            SELECT COUNT(DISTINCT u.id)
+            SELECT COUNT(*)
             FROM users u
-            LEFT JOIN user_roles ur ON ur.user_id = u.id
-            LEFT JOIN roles r ON r.id = ur.role_id
-            LEFT JOIN students s ON s.user_id = u.id
-            LEFT JOIN school_students ss ON ss.student_id = s.id
             WHERE u.deleted_at IS NULL
               AND (:activeOnly = FALSE OR u.status = 'ACTIVE')
-              AND (:roleName IS NULL OR :roleName = '' OR UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))
+              AND (
+                    :roleName IS NULL OR :roleName = '' OR EXISTS (
+                        SELECT 1
+                        FROM user_roles ur
+                        JOIN roles r ON r.id = ur.role_id
+                        WHERE ur.user_id = u.id
+                          AND (UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))
+                    )
+              )
               AND (:status IS NULL OR :status = '' OR UPPER(u.status) = UPPER(:status))
               AND (:planType IS NULL OR :planType = '' OR UPPER(u.plan_type) = UPPER(:planType))
-              AND (:grade IS NULL OR :grade = '' OR UPPER(s.selected_grade) = UPPER(:grade))
-              AND (:schoolId IS NULL OR ss.school_id = :schoolId)
+              AND (
+                    ((:grade IS NULL OR :grade = '') AND :schoolId IS NULL)
+                    OR EXISTS (
+                        SELECT 1
+                        FROM students s
+                        LEFT JOIN school_students ss ON ss.student_id = s.id
+                        WHERE s.user_id = u.id
+                          AND (:grade IS NULL OR :grade = '' OR UPPER(s.selected_grade) = UPPER(:grade))
+                          AND (:schoolId IS NULL OR ss.school_id = :schoolId)
+                    )
+              )
               AND (
                     :search IS NULL OR :search = '' OR
                     LOWER(u.email) LIKE CONCAT('%', LOWER(:search), '%') OR
@@ -225,3 +250,4 @@ public interface UserRepository extends JpaRepository<User, UUID> {
             @Param("activeOnly") boolean activeOnly
     );
 }
+
