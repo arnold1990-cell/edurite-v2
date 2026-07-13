@@ -95,9 +95,13 @@ class CurriculumResourceControllerWebMvcTest {
                         false,
                         true,
                         false,
+                        false,
+                        "District-wide",
+                        Boolean.TRUE,
+                        "Matches your teaching assignment.",
+                        null,
                         false
                 )));
-
         mockMvc.perform(get("/api/teacher/curriculum/resources")
                         .param("type", "SYLLABUS")
                         .param("grade", "Grade 12"))
@@ -110,3 +114,4 @@ class CurriculumResourceControllerWebMvcTest {
                 .andExpect(jsonPath("$[0].pdfAvailable").value(true));
     }
 }
+

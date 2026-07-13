@@ -4,6 +4,7 @@ import com.edurite.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import lombok.Getter;
@@ -20,6 +21,18 @@ public class CurriculumAsset extends BaseEntity {
 
     @Column(name = "school_id")
     private UUID schoolId;
+
+    @Column(name = "teacher_user_id")
+    private UUID teacherUserId;
+
+    @Column(name = "class_id")
+    private UUID classId;
+
+    @Column(name = "source_curriculum_asset_id")
+    private UUID sourceCurriculumAssetId;
+
+    @Column(name = "source_atp_calendar_item_id")
+    private UUID sourceAtpCalendarItemId;
 
     @Column(name = "owner_scope", nullable = false)
     private String ownerScope;
@@ -38,6 +51,9 @@ public class CurriculumAsset extends BaseEntity {
 
     @Column(name = "status", nullable = false)
     private String status = "ACTIVE";
+
+    @Column(name = "lesson_plan_status")
+    private String lessonPlanStatus;
 
     @Column(name = "title", nullable = false)
     private String title;
@@ -68,6 +84,42 @@ public class CurriculumAsset extends BaseEntity {
 
     @Column(name = "week_number")
     private Integer weekNumber;
+
+    @Column(name = "lesson_topic")
+    private String lessonTopic;
+
+    @Column(name = "lesson_date")
+    private LocalDate lessonDate;
+
+    @Column(name = "lesson_duration_minutes")
+    private Integer lessonDurationMinutes;
+
+    @Column(name = "language")
+    private String language;
+
+    @Column(name = "generation_request_key")
+    private String generationRequestKey;
+
+    @Column(name = "ai_provider")
+    private String aiProvider;
+
+    @Column(name = "ai_model")
+    private String aiModel;
+
+    @Column(name = "ai_generated_at")
+    private OffsetDateTime aiGeneratedAt;
+
+    @Column(name = "published_at")
+    private OffsetDateTime publishedAt;
+
+    @Column(name = "generated_by_ai", nullable = false)
+    private boolean generatedByAi;
+
+    @Column(name = "lesson_plan_payload_json", columnDefinition = "TEXT")
+    private String lessonPlanPayloadJson;
+
+    @Column(name = "ai_metadata_json", columnDefinition = "TEXT")
+    private String aiMetadataJson;
 
     @Column(name = "uploaded_by_user_id")
     private UUID uploadedByUserId;

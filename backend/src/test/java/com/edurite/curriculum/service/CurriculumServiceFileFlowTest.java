@@ -150,7 +150,12 @@ class CurriculumServiceFileFlowTest {
                     asset.isDeleted(),
                     asset.getPdfBytes() != null && asset.getPdfBytes().length > 0,
                     asset.getDocxBytes() != null && asset.getDocxBytes().length > 0,
-                    asset.getExcelBytes() != null && asset.getExcelBytes().length > 0
+                    asset.getExcelBytes() != null && asset.getExcelBytes().length > 0,
+                    "District-wide",
+                    null,
+                    null,
+                    null,
+                    false
             );
         });
 
@@ -231,7 +236,12 @@ class CurriculumServiceFileFlowTest {
                             asset.isDeleted(),
                             asset.getPdfFileName() != null,
                             asset.getDocxFileName() != null,
-                            asset.getExcelFileName() != null
+                            asset.getExcelFileName() != null,
+                            "District-wide",
+                            null,
+                            null,
+                            null,
+                            false
                     );
                 });
         when(curriculumAssetRepository.findActiveDistrictAssetSummariesByRepositoryType(eq(districtId), eq("ATP")))
@@ -274,3 +284,4 @@ class CurriculumServiceFileFlowTest {
         verify(curriculumAssetRepository).findActiveDistrictAssetSummariesByRepositoryType(districtId, "ATP");
     }
 }
+

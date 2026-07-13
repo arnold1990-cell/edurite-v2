@@ -66,7 +66,12 @@ public final class CurriculumDtos {
             boolean deleted,
             boolean pdfAvailable,
             boolean docxAvailable,
-            boolean excelAvailable
+            boolean excelAvailable,
+            String scopeLabel,
+            Boolean assignmentMatched,
+            String assignmentMatchReason,
+            String lessonPlanStatus,
+            boolean generatedByAi
     ) {}
 
     public record CurriculumResourceQuery(
@@ -261,6 +266,13 @@ public final class CurriculumDtos {
             Boolean regenerate
     ) {}
 
+    public record LessonPlanStageDto(
+            String stage,
+            String duration,
+            String teacherActivities,
+            String learnerActivities
+    ) {}
+
     public record TeacherLessonPlanDayDto(
             String day,
             String topicContent,
@@ -271,16 +283,87 @@ public final class CurriculumDtos {
             String evaluation
     ) {}
 
+    public record LessonPlanGenerationRequest(
+            UUID sourceAtpCalendarItemId,
+            UUID sourceCurriculumAssetId,
+            String subject,
+            String grade,
+            String phase,
+            Integer academicYear,
+            String term,
+            Integer weekNumber,
+            String topic,
+            LocalDate lessonDate,
+            Integer lessonDurationMinutes,
+            UUID classId,
+            UUID teacherUserId,
+            String language,
+            String availableResources,
+            String additionalInstructions,
+            Boolean regenerate
+    ) {}
+
+    public record LessonPlanDraftSaveRequest(
+            String title,
+            String schoolName,
+            String teacherName,
+            String className,
+            String subject,
+            String grade,
+            String phase,
+            Integer academicYear,
+            String term,
+            Integer weekNumber,
+            String topic,
+            LocalDate lessonDate,
+            Integer lessonDurationMinutes,
+            String language,
+            String sourceAtpTitle,
+            String curriculumReferences,
+            String priorKnowledge,
+            String availableResources,
+            String additionalInstructions,
+            String learningObjectives,
+            String introduction,
+            String teacherActivities,
+            String learnerActivities,
+            String differentiation,
+            String assessment,
+            String homework,
+            String reflection,
+            List<LessonPlanStageDto> stages
+    ) {}
+
     public record TeacherLessonPlanResponse(
             UUID lessonPlanAssetId,
             UUID sourceCalendarItemId,
+            UUID sourceCurriculumAssetId,
             boolean alreadyExisted,
             boolean pdfAvailable,
             boolean docxAvailable,
+            String lessonPlanStatus,
+            boolean generatedByAi,
             String title,
+            String schoolName,
+            String teacherName,
+            String className,
             String weekEnding,
             String subtopic,
             String sourceAtpTitle,
+            String subject,
+            String grade,
+            String phase,
+            Integer academicYear,
+            String term,
+            Integer weekNumber,
+            String topic,
+            LocalDate lessonDate,
+            Integer lessonDurationMinutes,
+            String language,
+            String curriculumReferences,
+            String priorKnowledge,
+            String availableResources,
+            String additionalInstructions,
             String learningObjectives,
             String introduction,
             String activities,
@@ -290,7 +373,11 @@ public final class CurriculumDtos {
             String homework,
             String differentiation,
             String reflection,
-            List<TeacherLessonPlanDayDto> days
+            List<LessonPlanStageDto> stages,
+            List<TeacherLessonPlanDayDto> days,
+            OffsetDateTime aiGeneratedAt,
+            String aiProvider,
+            String aiModel
     ) {}
 
     public record SchoolCurriculumCalendarResponse(

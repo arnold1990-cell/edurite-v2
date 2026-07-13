@@ -13,7 +13,6 @@ import com.edurite.school.portal.repository.SchoolSubjectRepository;
 import com.edurite.school.portal.repository.TeacherAssignmentRepository;
 import com.edurite.user.entity.User;
 import com.edurite.user.repository.UserRepository;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Comparator;
@@ -70,29 +69,18 @@ public class CurriculumResourceService {
         School school = requireSchool(schoolId);
         return findVisibleResourcesForSchool(school).stream()
                 .filter(asset -> matchesQuery(asset, query))
-                .map(this::toAssetDto)
+                .map(asset -> toAssetDto(asset, null, null))
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<CurriculumDtos.CurriculumAssetDto> getDistrictResourcesForTeacher(UUID schoolId, UUID teacherUserId, CurriculumDtos.CurriculumResourceQuery query) {
         School school = requireSchool(schoolId);
-        List<CurriculumAsset> visible = findVisibleResourcesForSchool(school);
-        Set<String> assignedSubjects = assignedSubjects(schoolId, teacherUserId);
-        Set<String> assignedGrades = assignedGrades(schoolId, teacherUserId);
-        boolean hasAssignments = !assignedSubjects.isEmpty() || !assignedGrades.isEmpty();
-        List<CurriculumAsset> scoped = visible.stream()
-                .filter(asset -> isTeacherLessonPlan(asset, teacherUserId) || !hasAssignments || matchesTeacherScope(asset, assignedSubjects, assignedGrades))
+        AssignmentScope scope = assignmentScope(schoolId, teacherUserId);
+        return findVisibleResourcesForSchool(school).stream()
                 .filter(asset -> matchesQuery(asset, query))
-                .toList();
-        if (!scoped.isEmpty() || !hasAssignments) {
-            return scoped.stream()
-                    .map(this::toAssetDto)
-                    .toList();
-        }
-        return visible.stream()
-                .filter(asset -> matchesQuery(asset, query))
-                .map(this::toAssetDto)
+                .map(asset -> toTeacherAssetDto(asset, teacherUserId, scope))
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -101,7 +89,7 @@ public class CurriculumResourceService {
         return activeDistrictAssets().stream()
                 .filter(asset -> districtId == null || Objects.equals(asset.getDistrictId(), districtId))
                 .filter(asset -> matchesQuery(asset, query))
-                .map(this::toAssetDto)
+                .map(asset -> toAssetDto(asset, null, null))
                 .toList();
     }
 
@@ -130,36 +118,7 @@ public class CurriculumResourceService {
     }
 
     public CurriculumDtos.CurriculumAssetDto toAssetDto(CurriculumAsset asset) {
-        return new CurriculumDtos.CurriculumAssetDto(
-                asset.getId(),
-                asset.getRepositoryType(),
-                asset.getContentSource(),
-                normalizeSource(asset),
-                firstNonBlank(asset.getVisibility(), defaultVisibility(asset)),
-                firstNonBlank(asset.getStatus(), STATUS_ACTIVE),
-                firstNonBlank(asset.getExtractionStatus(), "PENDING"),
-                asset.getExtractionError(),
-                badgeForAsset(asset),
-                asset.getTitle(),
-                asset.getSubject(),
-                asset.getGrade(),
-                asset.getCurriculumPhase(),
-                asset.getAcademicYear(),
-                asset.getProvince(),
-                asset.getVersionNumber(),
-                asset.getDescription(),
-                asset.getTerm(),
-                asset.getWeekNumber(),
-                uploadedByName(asset.getUploadedByUserId()),
-                asset.getUploadDate(),
-                asset.getExtractedAt(),
-                asset.isArchived(),
-                asset.isActive(),
-                asset.isDeleted(),
-                hasContent(asset.getPdfBytes(), asset.getPdfBase64()),
-                hasContent(asset.getDocxBytes(), asset.getDocxBase64()),
-                hasContent(asset.getExcelBytes(), asset.getExcelBase64())
-        );
+        return toAssetDto(asset, null, null);
     }
 
     public CurriculumDtos.CurriculumAssetDto toAssetDto(CurriculumAssetSummaryView asset, String uploadedBy) {
@@ -191,7 +150,12 @@ public class CurriculumResourceService {
                 asset.isDeleted(),
                 hasFileReference(asset.getPdfFileName()),
                 hasFileReference(asset.getDocxFileName()),
-                hasFileReference(asset.getExcelFileName())
+                hasFileReference(asset.getExcelFileName()),
+                summaryScopeLabel(asset),
+                null,
+                null,
+                null,
+                false
         );
     }
 
@@ -201,6 +165,111 @@ public class CurriculumResourceService {
             byte[] content,
             boolean inline
     ) {}
+
+    private CurriculumDtos.CurriculumAssetDto toTeacherAssetDto(CurriculumAsset asset, UUID teacherUserId, AssignmentScope scope) {
+        MatchResult match = matchForTeacher(asset, teacherUserId, scope);
+        if (!match.visible()) {
+            return null;
+        }
+        return toAssetDto(asset, match.assignmentMatched(), match.reason());
+    }
+
+    private CurriculumDtos.CurriculumAssetDto toAssetDto(CurriculumAsset asset, Boolean assignmentMatched, String assignmentReason) {
+        return new CurriculumDtos.CurriculumAssetDto(
+                asset.getId(),
+                asset.getRepositoryType(),
+                asset.getContentSource(),
+                normalizeSource(asset),
+                firstNonBlank(asset.getVisibility(), defaultVisibility(asset)),
+                firstNonBlank(asset.getStatus(), STATUS_ACTIVE),
+                firstNonBlank(asset.getExtractionStatus(), "PENDING"),
+                asset.getExtractionError(),
+                badgeForAsset(asset),
+                asset.getTitle(),
+                asset.getSubject(),
+                asset.getGrade(),
+                asset.getCurriculumPhase(),
+                asset.getAcademicYear(),
+                asset.getProvince(),
+                asset.getVersionNumber(),
+                asset.getDescription(),
+                asset.getTerm(),
+                asset.getWeekNumber(),
+                uploadedByName(asset.getUploadedByUserId()),
+                asset.getUploadDate(),
+                asset.getExtractedAt(),
+                asset.isArchived(),
+                asset.isActive(),
+                asset.isDeleted(),
+                hasContent(asset.getPdfBytes(), asset.getPdfBase64()),
+                hasContent(asset.getDocxBytes(), asset.getDocxBase64()),
+                hasContent(asset.getExcelBytes(), asset.getExcelBase64()),
+                scopeLabel(asset),
+                assignmentMatched,
+                assignmentReason,
+                firstNonBlank(asset.getLessonPlanStatus(), null),
+                asset.isGeneratedByAi()
+        );
+    }
+
+    private MatchResult matchForTeacher(CurriculumAsset asset, UUID teacherUserId, AssignmentScope scope) {
+        if (isTeacherOwnedLessonPlan(asset, teacherUserId)) {
+            return new MatchResult(true, true, "Generated by you.");
+        }
+        if ("LESSON_PLAN".equalsIgnoreCase(asset.getRepositoryType())) {
+            boolean matched = matchesTeacherScope(asset, scope.subjects(), scope.grades(), scope.phases());
+            boolean published = "PUBLISHED".equalsIgnoreCase(firstNonBlank(asset.getLessonPlanStatus(), ""));
+            if (matched && published) {
+                return new MatchResult(true, true, "Matches your teaching assignment.");
+            }
+            return new MatchResult(false, false, "");
+        }
+        if (scope.empty()) {
+            return new MatchResult(true, null, "No teaching assignment is mapped to your account yet.");
+        }
+        boolean subjectMatch = scope.subjects().isEmpty() || scope.subjects().contains(normalizeKey(asset.getSubject()));
+        boolean gradeMatch = scope.grades().isEmpty() || scope.grades().stream().anyMatch(item -> gradesOverlap(asset.getGrade(), item));
+        boolean phaseMatch = scope.phases().isEmpty() || scope.phases().contains(normalizeKey(asset.getCurriculumPhase()));
+        boolean matched = subjectMatch && gradeMatch && phaseMatch;
+        return new MatchResult(true, matched, matched ? "Matches your teaching assignment." : mismatchReason(subjectMatch, gradeMatch, phaseMatch));
+    }
+
+    private String mismatchReason(boolean subjectMatch, boolean gradeMatch, boolean phaseMatch) {
+        List<String> reasons = new ArrayList<>();
+        if (!subjectMatch) {
+            reasons.add("Subject does not match your assignment");
+        }
+        if (!gradeMatch) {
+            reasons.add("Grade does not match your assignment");
+        }
+        if (!phaseMatch) {
+            reasons.add("Phase does not match your assignment");
+        }
+        return reasons.isEmpty() ? null : String.join("; ", reasons) + ".";
+    }
+
+    private AssignmentScope assignmentScope(UUID schoolId, UUID teacherUserId) {
+        List<TeacherAssignment> assignments = teacherAssignmentRepository.findBySchoolIdAndTeacherUserIdAndActiveTrue(schoolId, teacherUserId);
+        if (assignments.isEmpty()) {
+            return new AssignmentScope(Set.of(), Set.of(), Set.of());
+        }
+        Map<UUID, SchoolSubject> subjectById = schoolSubjectRepository.findBySchoolIdAndActiveTrue(schoolId).stream()
+                .collect(Collectors.toMap(SchoolSubject::getId, item -> item, (left, right) -> left));
+        Set<String> subjects = new LinkedHashSet<>();
+        Set<String> grades = new LinkedHashSet<>();
+        Set<String> phases = new LinkedHashSet<>();
+        for (TeacherAssignment assignment : assignments) {
+            SchoolSubject subject = subjectById.get(assignment.getSubjectId());
+            if (subject != null) {
+                subjects.add(normalizeKey(subject.getSubjectName()));
+                addGrade(grades, firstNonBlank(subject.getGrade(), subject.getGradeRange()));
+                addPhase(phases, subject.getPhase());
+            }
+            addGrade(grades, assignment.getGrade());
+            addPhase(phases, assignment.getPhase());
+        }
+        return new AssignmentScope(subjects, grades, phases);
+    }
 
     private List<CurriculumAsset> findVisibleDistrictResourcesForSchool(School school) {
         return activeDistrictAssets().stream()
@@ -229,12 +298,11 @@ public class CurriculumResourceService {
     }
 
     private CurriculumAsset requireTeacherVisibleAsset(UUID schoolId, UUID teacherUserId, UUID resourceId) {
-        List<CurriculumAsset> resources = getDistrictResourcesForTeacher(schoolId, teacherUserId, new CurriculumDtos.CurriculumResourceQuery(null, null, null, null, null, null, null)).stream()
-                .map(item -> curriculumAssetRepository.findById(item.id()).orElse(null))
-                .filter(Objects::nonNull)
-                .toList();
-        return resources.stream()
-                .filter(asset -> asset.getId().equals(resourceId))
+        AssignmentScope scope = assignmentScope(schoolId, teacherUserId);
+        School school = requireSchool(schoolId);
+        return findVisibleResourcesForSchool(school).stream()
+                .filter(asset -> Objects.equals(asset.getId(), resourceId))
+                .filter(asset -> matchForTeacher(asset, teacherUserId, scope).visible())
                 .findFirst()
                 .orElseThrow(() -> new ResourceConflictException("Curriculum resource not found."));
     }
@@ -271,7 +339,6 @@ public class CurriculumResourceService {
             log.warn("Curriculum resource download failed resourceId={} fileName={} contentType={} status=MISSING_FILE", asset.getId(), fileName, contentType);
             throw new ResourceConflictException(label + " file is not available for this curriculum resource.");
         }
-        log.info("Curriculum resource download resourceId={} fileName={} contentType={} fileSize={} status=SUCCESS", asset.getId(), firstNonBlank(fileName, label.toLowerCase(Locale.ROOT) + "-resource"), firstNonBlank(contentType, defaultContentType(label)), content.length);
         return new ResourceFileResponse(
                 firstNonBlank(fileName, label.toLowerCase(Locale.ROOT) + "-resource"),
                 firstNonBlank(contentType, defaultContentType(label)),
@@ -280,60 +347,18 @@ public class CurriculumResourceService {
         );
     }
 
-    private boolean matchesTeacherScope(CurriculumAsset asset, Set<String> assignedSubjects, Set<String> assignedGrades) {
+    private boolean matchesTeacherScope(CurriculumAsset asset, Set<String> assignedSubjects, Set<String> assignedGrades, Set<String> assignedPhases) {
         boolean subjectMatch = assignedSubjects.isEmpty() || assignedSubjects.contains(normalizeKey(asset.getSubject()));
         boolean gradeMatch = assignedGrades.isEmpty() || assignedGrades.stream().anyMatch(grade -> gradesOverlap(asset.getGrade(), grade));
-        return subjectMatch && gradeMatch;
+        boolean phaseMatch = assignedPhases.isEmpty() || assignedPhases.contains(normalizeKey(asset.getCurriculumPhase()));
+        return subjectMatch && gradeMatch && phaseMatch;
     }
 
-    private boolean isTeacherLessonPlan(CurriculumAsset asset, UUID teacherUserId) {
+    private boolean isTeacherOwnedLessonPlan(CurriculumAsset asset, UUID teacherUserId) {
         return asset != null
                 && "LESSON_PLAN".equalsIgnoreCase(asset.getRepositoryType())
                 && teacherUserId != null
-                && Objects.equals(asset.getUploadedByUserId(), teacherUserId);
-    }
-
-    private Set<String> assignedSubjects(UUID schoolId, UUID teacherUserId) {
-        List<TeacherAssignment> assignments = teacherAssignmentRepository.findBySchoolIdAndTeacherUserIdAndActiveTrue(schoolId, teacherUserId);
-        if (assignments.isEmpty()) {
-            return Set.of();
-        }
-        var subjectById = schoolSubjectRepository.findBySchoolIdAndActiveTrue(schoolId).stream()
-                .collect(Collectors.toMap(SchoolSubject::getId, SchoolSubject::getSubjectName, (left, right) -> left));
-        Set<String> values = new LinkedHashSet<>();
-        for (TeacherAssignment assignment : assignments) {
-            String subjectName = subjectById.get(assignment.getSubjectId());
-            if (subjectName != null && !subjectName.isBlank()) {
-                values.add(normalizeKey(subjectName));
-            }
-        }
-        return values;
-    }
-
-    private Set<String> assignedGrades(UUID schoolId, UUID teacherUserId) {
-        List<TeacherAssignment> assignments = teacherAssignmentRepository.findBySchoolIdAndTeacherUserIdAndActiveTrue(schoolId, teacherUserId);
-        if (assignments.isEmpty()) {
-            return Set.of();
-        }
-        var subjectById = schoolSubjectRepository.findBySchoolIdAndActiveTrue(schoolId).stream()
-                .collect(Collectors.toMap(SchoolSubject::getId, subject -> subject, (left, right) -> left));
-        Set<String> grades = new LinkedHashSet<>();
-        for (TeacherAssignment assignment : assignments) {
-            addGrade(grades, assignment.getGrade());
-            SchoolSubject subject = subjectById.get(assignment.getSubjectId());
-            if (subject != null) {
-                addGrade(grades, subject.getGrade());
-                addGrade(grades, subject.getGradeRange());
-            }
-        }
-        return grades;
-    }
-
-    private void addGrade(Set<String> grades, String value) {
-        String normalized = normalizeGrade(value);
-        if (!normalized.isBlank()) {
-            grades.add(normalized);
-        }
+                && (Objects.equals(asset.getTeacherUserId(), teacherUserId) || Objects.equals(asset.getUploadedByUserId(), teacherUserId));
     }
 
     private boolean matchesQuery(CurriculumAsset asset, CurriculumDtos.CurriculumResourceQuery query) {
@@ -364,6 +389,9 @@ public class CurriculumResourceService {
 
     private boolean isVisibleToSchool(CurriculumAsset asset, School school) {
         if (asset.getSchoolId() != null && !Objects.equals(asset.getSchoolId(), school.getId())) {
+            return false;
+        }
+        if (!Objects.equals(asset.getDistrictId(), school.getDistrictId())) {
             return false;
         }
         if (asset.getProvince() != null && school.getProvince() != null
@@ -397,19 +425,11 @@ public class CurriculumResourceService {
     }
 
     private String badgeForAsset(CurriculumAsset asset) {
-        String source = normalizeSource(asset);
-        if (SOURCE_SUBJECT_ADVISOR.equalsIgnoreCase(source)) {
-            return "Subject Advisor Uploaded";
-        }
-        return isDistrictAsset(asset) ? "District Approved" : "School Uploaded";
+        return SOURCE_SUBJECT_ADVISOR.equalsIgnoreCase(normalizeSource(asset)) ? "Subject Advisor Uploaded" : isDistrictAsset(asset) ? "District Approved" : "School Uploaded";
     }
 
     private String badgeForAsset(CurriculumAssetSummaryView asset) {
-        String source = normalizeSource(asset);
-        if (SOURCE_SUBJECT_ADVISOR.equalsIgnoreCase(source)) {
-            return "Subject Advisor Uploaded";
-        }
-        return isDistrictAsset(asset) ? "District Approved" : "School Uploaded";
+        return SOURCE_SUBJECT_ADVISOR.equalsIgnoreCase(normalizeSource(asset)) ? "Subject Advisor Uploaded" : isDistrictAsset(asset) ? "District Approved" : "School Uploaded";
     }
 
     private boolean isActiveResource(CurriculumAsset asset) {
@@ -439,6 +459,26 @@ public class CurriculumResourceService {
 
     private String defaultVisibility(CurriculumAssetSummaryView asset) {
         return isDistrictAsset(asset) ? VISIBILITY_DISTRICT_WIDE : VISIBILITY_SCHOOL_ONLY;
+    }
+
+    private String scopeLabel(CurriculumAsset asset) {
+        if ("LESSON_PLAN".equalsIgnoreCase(asset.getRepositoryType()) && asset.isGeneratedByAi()) {
+            return "AI-generated lesson plan";
+        }
+        if (isDistrictAsset(asset) && asset.getSchoolId() == null) {
+            return "District-wide";
+        }
+        if (isDistrictAsset(asset)) {
+            return "School-specific district resource";
+        }
+        return "School upload";
+    }
+
+    private String summaryScopeLabel(CurriculumAssetSummaryView asset) {
+        if (isDistrictAsset(asset) && asset.getVisibility() != null && VISIBILITY_DISTRICT_WIDE.equalsIgnoreCase(asset.getVisibility())) {
+            return "District-wide";
+        }
+        return isDistrictAsset(asset) ? "District resource" : "School upload";
     }
 
     private boolean hasFileReference(String fileName) {
@@ -502,11 +542,9 @@ public class CurriculumResourceService {
         if (!currentDigits.isEmpty()) {
             digitPositions.put(tokenStart, Integer.parseInt(currentDigits.toString()));
         }
-
         if (digitPositions.isEmpty()) {
             return Set.of(normalized);
         }
-
         List<Map.Entry<Integer, Integer>> entries = new ArrayList<>(digitPositions.entrySet());
         Set<String> expanded = new LinkedHashSet<>();
         for (Map.Entry<Integer, Integer> entry : entries) {
@@ -531,6 +569,20 @@ public class CurriculumResourceService {
         return expanded;
     }
 
+    private void addGrade(Set<String> grades, String value) {
+        String normalized = normalizeGrade(value);
+        if (!normalized.isBlank()) {
+            grades.add(normalized);
+        }
+    }
+
+    private void addPhase(Set<String> phases, String value) {
+        String normalized = normalizeKey(value);
+        if (!normalized.isBlank()) {
+            phases.add(normalized);
+        }
+    }
+
     private String normalizeType(String value) {
         return normalizeKey(value).replace(' ', '_');
     }
@@ -543,10 +595,7 @@ public class CurriculumResourceService {
         if (value == null) {
             return "";
         }
-        return value.trim()
-                .toLowerCase(Locale.ROOT)
-                .replace("grade", "")
-                .replaceAll("\\s+", "");
+        return value.trim().toLowerCase(Locale.ROOT).replace("grade", "").replaceAll("\\s+", "");
     }
 
     private String uploadedByName(UUID userId) {
@@ -578,4 +627,12 @@ public class CurriculumResourceService {
         return schoolRepository.findById(schoolId)
                 .orElseThrow(() -> new ResourceConflictException("School not found."));
     }
+
+    private record AssignmentScope(Set<String> subjects, Set<String> grades, Set<String> phases) {
+        private boolean empty() {
+            return subjects.isEmpty() && grades.isEmpty() && phases.isEmpty();
+        }
+    }
+
+    private record MatchResult(boolean visible, Boolean assignmentMatched, String reason) {}
 }

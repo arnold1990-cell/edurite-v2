@@ -2,6 +2,7 @@ package com.edurite.curriculum.repository;
 
 import com.edurite.curriculum.entity.CurriculumAsset;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,6 +14,7 @@ public interface CurriculumAssetRepository extends JpaRepository<CurriculumAsset
     List<CurriculumAsset> findBySchoolIdAndArchivedFalseOrderByRepositoryTypeAscSubjectAscGradeAscUploadDateDesc(UUID schoolId);
     List<CurriculumAsset> findBySchoolIdAndRepositoryTypeIgnoreCaseAndArchivedFalseOrderBySubjectAscGradeAscUploadDateDesc(UUID schoolId, String repositoryType);
     List<CurriculumAsset> findByRepositoryTypeIgnoreCaseAndArchivedFalseOrderBySubjectAscGradeAscUploadDateDesc(String repositoryType);
+    Optional<CurriculumAsset> findByGenerationRequestKey(String generationRequestKey);
 
     @Query("""
             select
