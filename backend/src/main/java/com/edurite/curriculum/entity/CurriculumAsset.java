@@ -10,6 +10,7 @@ import java.util.UUID;
 import lombok.Getter;
 import lombok.Setter;
 
+@SuppressWarnings("JpaDataSourceORMInspection")
 @Entity
 @Table(name = "curriculum_assets")
 @Getter
