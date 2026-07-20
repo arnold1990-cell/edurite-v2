@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { AlertTriangle, ArrowDownToLine, BarChart3, BellRing, BookOpen, Building2, CalendarDays, ClipboardCheck, FileSpreadsheet, FileText, Filter, GraduationCap, LifeBuoy, Search, ShieldCheck, Sparkles, Trash2, Users2, Wrench } from 'lucide-react';
@@ -36,7 +36,7 @@ const StatCard = ({ item }: { item: DistrictMetricCard }) => (
 const ChartCard = ({ title, points }: { title: string; points: Array<DistrictTrendPoint | DistrictDistributionItem> }) => (
   <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
     <div className="flex items-center gap-2">
-      <BarChart3 className="h-4 w-4 text-blue-600" />
+      <BarChart3 className="h-4 w-4 text-primary-600" />
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
     </div>
     {points.length ? (
@@ -52,7 +52,7 @@ const ChartCard = ({ title, points }: { title: string; points: Array<DistrictTre
               </div>
               <div className="mt-2 h-2 rounded-full bg-slate-100">
                 <div
-                  className={`h-2 rounded-full ${point.tone === 'positive' ? 'bg-emerald-500' : point.tone === 'warning' || point.tone === 'critical' ? 'bg-amber-500' : 'bg-blue-500'}`}
+                  className={`h-2 rounded-full ${point.tone === 'positive' ? 'bg-emerald-500' : point.tone === 'warning' || point.tone === 'critical' ? 'bg-amber-500' : 'bg-primary-500'}`}
                   style={{ width: `${width}%` }}
                 />
               </div>
@@ -71,7 +71,7 @@ const ChartCard = ({ title, points }: { title: string; points: Array<DistrictTre
 const InsightList = ({ title, items, icon: Icon }: { title: string; items: DistrictInsightItem[]; icon: React.ComponentType<{ className?: string }>; }) => (
   <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
     <div className="flex items-center gap-2">
-      <Icon className="h-4 w-4 text-blue-600" />
+      <Icon className="h-4 w-4 text-primary-600" />
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
     </div>
     {items.length ? (
@@ -156,7 +156,7 @@ export const DistrictDashboardPage = () => {
     <DataShell isLoading={query.isLoading} error={query.error}>
       {query.data ? (
         <section className="space-y-6">
-          <div className="rounded-[32px] bg-gradient-to-r from-[#0F172A] via-[#1E3A8A] to-[#2563EB] px-6 py-7 text-white shadow-xl">
+          <div className="rounded-[32px] bg-gradient-to-r from-[#0B5BFF] via-[#1D4ED8] to-[#1E8BFF] px-6 py-7 text-white shadow-xl">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-blue-100">District Overview</p>
             <h1 className="mt-2 text-3xl font-semibold">{query.data.districtName}</h1>
             <p className="mt-3 max-w-4xl text-sm text-blue-50">{query.data.summaryHeadline}</p>
@@ -181,13 +181,13 @@ export const DistrictDashboardPage = () => {
           <div className="grid gap-5 xl:grid-cols-2">
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
-                <LifeBuoy className="h-4 w-4 text-blue-600" />
+                <LifeBuoy className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-slate-900">Recent Support Requests</h3>
               </div>
               <div className="mt-4 space-y-3">
                 {query.data.recentSupportRequests.length ? query.data.recentSupportRequests.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <p className="text-sm font-semibold text-slate-900">{item.schoolName} • {item.title}</p>
+                    <p className="text-sm font-semibold text-slate-900">{item.schoolName} â€¢ {item.title}</p>
                     <p className="mt-1 text-sm text-slate-600">{item.message}</p>
                   </div>
                 )) : <EmptyState title="Support requests" message="No school support requests are open." />}
@@ -195,7 +195,7 @@ export const DistrictDashboardPage = () => {
             </div>
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
-                <BellRing className="h-4 w-4 text-blue-600" />
+                <BellRing className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-slate-900">Recent Announcements</h3>
               </div>
               <div className="mt-4 space-y-3">
@@ -213,7 +213,7 @@ export const DistrictDashboardPage = () => {
             <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
               <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4 text-blue-600" />
+                  <ShieldCheck className="h-4 w-4 text-primary-600" />
                   <h3 className="text-sm font-semibold text-slate-900">Curriculum Compliance</h3>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -268,14 +268,14 @@ export const DistrictSchoolsPage = () => {
               </label>
               <label className="relative">
                 <Filter className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
-                <select value={riskLevel} onChange={(event) => setRiskLevel(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-10 py-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500">
+                <select value={riskLevel} onChange={(event) => setRiskLevel(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-10 py-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-primary-300">
                   <option value="">All risk levels</option>
                   <option value="Low">Low</option>
                   <option value="Medium">Medium</option>
                   <option value="High">High</option>
                 </select>
               </label>
-              <select value={complianceStatus} onChange={(event) => setComplianceStatus(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-blue-500">
+              <select value={complianceStatus} onChange={(event) => setComplianceStatus(event.target.value)} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-primary-300">
                 <option value="">All compliance states</option>
                 <option value="Compliant">Compliant</option>
                 <option value="Review Needed">Review Needed</option>
@@ -333,7 +333,7 @@ export const DistrictSchoolsPage = () => {
                       <td className="px-4 py-3">{item.riskLevel}</td>
                       <td className="px-4 py-3">{item.complianceStatus}</td>
                       <td className="px-4 py-3">
-                        <Link to={`/district/schools/${item.schoolId}`} className="font-semibold text-blue-600 hover:text-blue-700">Open school dashboard</Link>
+                        <Link to={`/district/schools/${item.schoolId}`} className="font-semibold text-primary-600 hover:text-primary-700">Open school dashboard</Link>
                       </td>
                     </tr>
                   )) : (
@@ -377,7 +377,7 @@ export const DistrictSchoolsPage = () => {
           <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">School Drill-down Dashboard</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-700">School Drill-down Dashboard</p>
                 <h1 className="mt-2 text-3xl font-semibold text-slate-900">{detailQuery.data.schoolName}</h1>
                 <div className="mt-4 flex flex-wrap gap-3 xl:hidden">
                   <Button onClick={() => handleExport('pdf')} disabled={exporting !== null} className="rounded-2xl px-4 py-2.5">
@@ -389,7 +389,7 @@ export const DistrictSchoolsPage = () => {
                     {exporting === 'xlsx' ? 'Exporting Excel...' : 'Export Excel'}
                   </Button>
                 </div>
-            <p className="mt-3 text-sm text-slate-600">{detailQuery.data.district || 'District not set'} • {detailQuery.data.province || 'Province not set'} • {detailQuery.data.contactEmail || 'No contact email'}</p>
+            <p className="mt-3 text-sm text-slate-600">{detailQuery.data.district || 'District not set'} â€¢ {detailQuery.data.province || 'Province not set'} â€¢ {detailQuery.data.contactEmail || 'No contact email'}</p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -442,7 +442,7 @@ export const DistrictSchoolDetailPage = () => {
           <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">School Drill-down Dashboard</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-700">School Drill-down Dashboard</p>
                 <h1 className="mt-2 text-3xl font-semibold text-slate-900">{detailQuery.data.schoolName}</h1>
                 <p className="mt-3 text-sm text-slate-600">{detailQuery.data.district || 'District not set'} | {detailQuery.data.province || 'Province not set'} | {detailQuery.data.contactEmail || 'No contact email'}</p>
               </div>
@@ -592,7 +592,7 @@ export const DistrictReportsPage = () => {
           {activeView === 'announcements' ? (
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
-                <BellRing className="h-4 w-4 text-blue-600" />
+                <BellRing className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-slate-900">Message History</h3>
               </div>
               <div className="mt-4 space-y-3">
@@ -613,7 +613,7 @@ export const DistrictReportsPage = () => {
                       <h3 className="text-lg font-semibold text-slate-900">{report.title}</h3>
                       <p className="mt-2 text-sm text-slate-600">{report.description}</p>
                     </div>
-                    <FileText className="h-5 w-5 text-blue-600" />
+                    <FileText className="h-5 w-5 text-primary-600" />
                   </div>
                   <div className="mt-5 flex flex-wrap gap-3">
                     <Button onClick={() => handleExport(report.key, 'pdf')} disabled={exporting !== null} className="rounded-2xl px-4 py-2.5">
@@ -663,14 +663,14 @@ export const DistrictInterventionsPage = () => {
           <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
-                <Wrench className="h-4 w-4 text-blue-600" />
+                <Wrench className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-slate-900">Open District Cases</h3>
               </div>
               <div className="mt-4 space-y-3">
                 {interventionsQuery.data.items.length ? interventionsQuery.data.items.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
                     <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                    <p className="mt-1 text-sm text-slate-600">{item.schoolName || 'District-wide'} • {item.category} • {item.priority}</p>
+                    <p className="mt-1 text-sm text-slate-600">{item.schoolName || 'District-wide'} â€¢ {item.category} â€¢ {item.priority}</p>
                     <p className="mt-2 text-sm text-slate-600">{item.notes}</p>
                   </div>
                 )) : <EmptyState title="Interventions" message="No district interventions have been opened yet." />}
@@ -679,7 +679,7 @@ export const DistrictInterventionsPage = () => {
 
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-blue-600" />
+                <ShieldCheck className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-slate-900">Create Intervention</h3>
               </div>
               <form
@@ -699,30 +699,30 @@ export const DistrictInterventionsPage = () => {
               >
                 <Input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="rounded-2xl border-slate-200 bg-slate-50 py-3" placeholder="Intervention title" required />
                 <div className="grid gap-3 md:grid-cols-2">
-                  <select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                  <select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300">
                     <option value="ACADEMIC_SUPPORT">Academic support</option>
                     <option value="REPORTING_ESCALATION">Reporting escalation</option>
                     <option value="TEACHER_SUPPORT">Teacher support</option>
                     <option value="READINESS_PROGRAMME">Readiness programme</option>
                   </select>
-                  <select value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                  <select value={form.priority} onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300">
                     <option value="LOW">Low</option>
                     <option value="MEDIUM">Medium</option>
                     <option value="HIGH">High</option>
                   </select>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <select value={form.targetScope} onChange={(event) => setForm((current) => ({ ...current, targetScope: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                  <select value={form.targetScope} onChange={(event) => setForm((current) => ({ ...current, targetScope: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300">
                     <option value="DISTRICT">District-wide</option>
                     <option value="SELECTED_SCHOOL">Selected school</option>
                   </select>
-                  <select value={form.schoolId} onChange={(event) => setForm((current) => ({ ...current, schoolId: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                  <select value={form.schoolId} onChange={(event) => setForm((current) => ({ ...current, schoolId: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300">
                     <option value="">No school selected</option>
                     {schoolsQuery.data.items.map((school) => <option key={school.schoolId} value={school.schoolId}>{school.schoolName}</option>)}
                   </select>
                 </div>
                 <Input type="date" value={form.followUpDate} onChange={(event) => setForm((current) => ({ ...current, followUpDate: event.target.value }))} className="rounded-2xl border-slate-200 bg-slate-50 py-3" />
-                <textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} className="min-h-32 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Intervention notes" required />
+                <textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} className="min-h-32 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300" placeholder="Intervention notes" required />
                 {createMutation.error ? <ErrorState message={createMutation.error instanceof Error ? createMutation.error.message : 'Unable to create intervention.'} /> : null}
                 <Button type="submit" disabled={createMutation.isPending} className="rounded-2xl px-5 py-3">
                   {createMutation.isPending ? 'Creating intervention...' : 'Create intervention'}
@@ -765,7 +765,7 @@ export const DistrictSettingsPage = () => {
 
           <div className="grid gap-5 xl:grid-cols-3">
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm xl:col-span-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-blue-700">District Profile</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary-700">District Profile</p>
               <div className="mt-4 space-y-3 text-sm text-slate-700">
                 <div><span className="font-semibold text-slate-900">Name:</span> {settingsQuery.data.districtName}</div>
                 <div><span className="font-semibold text-slate-900">Code:</span> {settingsQuery.data.districtCode || 'Not set'}</div>
@@ -778,7 +778,7 @@ export const DistrictSettingsPage = () => {
 
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm xl:col-span-2">
               <div className="flex items-center gap-2">
-                <BellRing className="h-4 w-4 text-blue-600" />
+                <BellRing className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-slate-900">Send Announcement</h3>
               </div>
               <form
@@ -795,22 +795,22 @@ export const DistrictSettingsPage = () => {
                 }}
               >
                 <div className="grid gap-3 md:grid-cols-2">
-                  <select value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                  <select value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300">
                     <option value="ALL_SCHOOLS">All schools</option>
                     <option value="SCHOOL_ADMINS">School admins</option>
                     <option value="TEACHERS">Teachers</option>
                   </select>
-                  <select value={form.deliveryScope} onChange={(event) => setForm((current) => ({ ...current, deliveryScope: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                  <select value={form.deliveryScope} onChange={(event) => setForm((current) => ({ ...current, deliveryScope: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300">
                     <option value="ALL_SCHOOLS">All schools</option>
                     <option value="SELECTED_SCHOOL">Selected school</option>
                   </select>
                 </div>
-                <select value={form.schoolId} onChange={(event) => setForm((current) => ({ ...current, schoolId: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <select value={form.schoolId} onChange={(event) => setForm((current) => ({ ...current, schoolId: event.target.value }))} className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300">
                   <option value="">No school selected</option>
                   {schoolsQuery.data.items.map((school) => <option key={school.schoolId} value={school.schoolId}>{school.schoolName}</option>)}
                 </select>
                 <Input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="rounded-2xl border-slate-200 bg-slate-50 py-3" placeholder="Announcement title" required />
-                <textarea value={form.message} onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))} className="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="Message to schools" required />
+                <textarea value={form.message} onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))} className="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300" placeholder="Message to schools" required />
                 {createMutation.error ? <ErrorState message={createMutation.error instanceof Error ? createMutation.error.message : 'Unable to send announcement.'} /> : null}
                 <Button type="submit" disabled={createMutation.isPending} className="rounded-2xl px-5 py-3">
                   {createMutation.isPending ? 'Sending announcement...' : 'Send announcement'}
@@ -822,13 +822,13 @@ export const DistrictSettingsPage = () => {
           <div className="grid gap-5 xl:grid-cols-2">
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
-                <LifeBuoy className="h-4 w-4 text-blue-600" />
+                <LifeBuoy className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-slate-900">Support Requests</h3>
               </div>
               <div className="mt-4 space-y-3">
                 {settingsQuery.data.supportRequests.length ? settingsQuery.data.supportRequests.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <p className="text-sm font-semibold text-slate-900">{item.schoolName} • {item.title}</p>
+                    <p className="text-sm font-semibold text-slate-900">{item.schoolName} â€¢ {item.title}</p>
                     <p className="mt-1 text-sm text-slate-600">{item.message}</p>
                   </div>
                 )) : <EmptyState title="Support requests" message="No support requests are waiting." />}
@@ -836,7 +836,7 @@ export const DistrictSettingsPage = () => {
             </div>
             <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-blue-600" />
+                <ShieldCheck className="h-4 w-4 text-primary-600" />
                 <h3 className="text-sm font-semibold text-slate-900">Security / Audit</h3>
               </div>
               <div className="mt-4 space-y-3">
@@ -1047,18 +1047,18 @@ export const DistrictCurriculumManagementPage = () => {
               <tr key={item.id} className="border-t border-slate-100 align-top">
                 <td className="px-4 py-3">
                   <p className="font-semibold text-slate-900">{item.title}</p>
-                  <p className="text-xs text-slate-500">{item.uploadedBy} · {new Date(item.uploadDate).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-500">{item.uploadedBy} Â· {new Date(item.uploadDate).toLocaleDateString()}</p>
                 </td>
                 <td className="px-4 py-3">
                   <p className="text-slate-900">{item.subject}</p>
-                  <p className="text-xs text-slate-500">{item.grade} · {item.curriculumPhase || 'Phase not set'}</p>
+                  <p className="text-xs text-slate-500">{item.grade} Â· {item.curriculumPhase || 'Phase not set'}</p>
                 </td>
                 <td className="px-4 py-3">{item.versionNumber || 'v1.0'}</td>
-                <td className="px-4 py-3"><span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{item.badge}</span></td>
+                <td className="px-4 py-3"><span className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700">{item.badge}</span></td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-2">
                     {item.pdfAvailable ? <Button type="button" onClick={() => downloadMutation.mutate({ assetId: item.id, format: 'PDF' })} className="rounded-xl px-3 py-2 text-xs"><FileText className="mr-2 h-3.5 w-3.5" />PDF</Button> : null}
-                    {item.docxAvailable ? <Button type="button" onClick={() => downloadMutation.mutate({ assetId: item.id, format: 'DOCX' })} className="rounded-xl bg-slate-900 px-3 py-2 text-xs hover:bg-slate-800"><FileText className="mr-2 h-3.5 w-3.5" />DOCX</Button> : null}
+                    {item.docxAvailable ? <Button type="button" onClick={() => downloadMutation.mutate({ assetId: item.id, format: 'DOCX' })} className="rounded-xl bg-primary-700 px-3 py-2 text-xs hover:bg-primary-700"><FileText className="mr-2 h-3.5 w-3.5" />DOCX</Button> : null}
                     {item.excelAvailable ? <Button type="button" onClick={() => downloadMutation.mutate({ assetId: item.id, format: 'EXCEL' })} className="rounded-xl bg-emerald-600 px-3 py-2 text-xs hover:bg-emerald-500"><FileSpreadsheet className="mr-2 h-3.5 w-3.5" />Excel</Button> : null}
                   </div>
                 </td>
@@ -1141,7 +1141,7 @@ export const DistrictCurriculumManagementPage = () => {
           setExcelFile(file);
           syncTitleFromFile(file);
         }} /></label>
-        <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 md:col-span-2" placeholder="Description or notes" />
+        <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300 md:col-span-2" placeholder="Description or notes" />
         {formError || upsertMutation.error ? <div className="md:col-span-2"><ErrorState message={formError ?? (upsertMutation.error instanceof Error ? upsertMutation.error.message : 'Unable to save curriculum asset.')} /></div> : null}
         <div className="md:col-span-2">
           <Button type="submit" disabled={upsertMutation.isPending} className="rounded-2xl px-5 py-3">
@@ -1160,7 +1160,7 @@ export const DistrictCurriculumManagementPage = () => {
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-blue-600" />
+            <ShieldCheck className="h-4 w-4 text-primary-600" />
             <h3 className="text-sm font-semibold text-slate-900">School Compliance</h3>
           </div>
           <div className="mt-4 space-y-3">
@@ -1170,7 +1170,7 @@ export const DistrictCurriculumManagementPage = () => {
                   <p className="text-sm font-semibold text-slate-900">{item.schoolName}</p>
                   <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${item.compliancePercent >= 85 ? 'bg-emerald-50 text-emerald-700' : item.compliancePercent >= 60 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>{item.compliancePercent}%</span>
                 </div>
-                <p className="mt-1 text-sm text-slate-600">{item.status} · {item.teachersBehind} teachers behind · {item.subjectsBehind} subjects behind</p>
+                <p className="mt-1 text-sm text-slate-600">{item.status} Â· {item.teachersBehind} teachers behind Â· {item.subjectsBehind} subjects behind</p>
               </div>
             )) : <EmptyState title="School compliance" message="No teacher assignment coverage is available yet." />}
           </div>
@@ -1184,7 +1184,7 @@ export const DistrictCurriculumManagementPage = () => {
             {data.riskAlerts.length ? data.riskAlerts.map((item) => (
               <div key={item.id} className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3">
                 <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                <p className="mt-1 text-sm text-slate-700">{item.schoolName} · {item.teacherName} · {item.subject}</p>
+                <p className="mt-1 text-sm text-slate-700">{item.schoolName} Â· {item.teacherName} Â· {item.subject}</p>
                 <p className="mt-1 text-sm text-slate-700">{item.detail}</p>
               </div>
             )) : <EmptyState title="Curriculum alerts" message="No curriculum risk alerts are open." />}
@@ -1197,7 +1197,7 @@ export const DistrictCurriculumManagementPage = () => {
       </div>
       <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-blue-600" />
+          <BarChart3 className="h-4 w-4 text-primary-600" />
           <h3 className="text-sm font-semibold text-slate-900">Curriculum Heat Map</h3>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -1205,7 +1205,7 @@ export const DistrictCurriculumManagementPage = () => {
             <div key={`${item.schoolName}-${item.subject}`} className={`rounded-2xl border px-4 py-3 ${item.tone === 'positive' ? 'border-emerald-200 bg-emerald-50' : item.tone === 'warning' ? 'border-amber-200 bg-amber-50' : 'border-rose-200 bg-rose-50'}`}>
               <p className="text-sm font-semibold text-slate-900">{item.schoolName}</p>
               <p className="mt-1 text-sm text-slate-700">{item.subject}</p>
-              <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-500">{item.status} · {item.compliancePercent}%</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.12em] text-slate-500">{item.status} Â· {item.compliancePercent}%</p>
             </div>
           )) : <EmptyState title="Heat map" message="No subject coverage heat map is available yet." />}
         </div>
@@ -1217,7 +1217,7 @@ export const DistrictCurriculumManagementPage = () => {
     <section className="space-y-6">
       <div className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center gap-3">
-          <PageIcon className="h-5 w-5 text-blue-600" />
+          <PageIcon className="h-5 w-5 text-primary-600" />
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">{meta.title}</h1>
             <p className="mt-2 text-sm text-slate-600">{meta.subtitle}</p>
@@ -1276,10 +1276,10 @@ export const DistrictCurriculumManagementPage = () => {
                   <div key={item.id} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-sm font-semibold text-slate-900">{item.subject} · {item.grade}</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{item.term} · Week {item.weekNumber} · {item.status}</p>
+                        <p className="text-sm font-semibold text-slate-900">{item.subject} Â· {item.grade}</p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{item.term} Â· Week {item.weekNumber} Â· {item.status}</p>
                       </div>
-                      <CalendarDays className="h-5 w-5 text-blue-600" />
+                      <CalendarDays className="h-5 w-5 text-primary-600" />
                     </div>
                     <p className="mt-4 text-lg font-semibold text-slate-900">{item.topic}</p>
                     <p className="mt-1 text-sm text-slate-600">{item.subtopic || 'Manual subtopic review required before publish.'}</p>
@@ -1427,7 +1427,7 @@ export const DistrictCircuitDashboardPage = () => {
                   {(interventionsQuery.data ?? []).slice(0, 4).map((item) => (
                     <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                       <p className="text-[13px] font-semibold text-slate-900">{item.title}</p>
-                      <p className="mt-1 text-[12px] text-slate-500">{item.schoolName || 'District-wide'} · {item.priority}</p>
+                      <p className="mt-1 text-[12px] text-slate-500">{item.schoolName || 'District-wide'} Â· {item.priority}</p>
                       <ProgressBar value={item.priority === 'CRITICAL' ? 100 : item.priority === 'HIGH' ? 75 : item.priority === 'MEDIUM' ? 50 : 25} tone={item.priority} />
                     </div>
                   ))}
@@ -1486,7 +1486,7 @@ export const DistrictDirectorDashboardPage = () => {
                   {complianceQuery.data.riskAlerts.slice(0, 5).map((item) => (
                     <div key={item.id} className="rounded-2xl border border-amber-100 bg-amber-50 p-3">
                       <p className="text-[13px] font-semibold text-slate-900">{item.schoolName}</p>
-                      <p className="mt-1 text-[12px] text-slate-600">{item.subject} · {item.teacherName}</p>
+                      <p className="mt-1 text-[12px] text-slate-600">{item.subject} Â· {item.teacherName}</p>
                     </div>
                   ))}
                   {!complianceQuery.data.riskAlerts.length ? <EmptyStateCompact title="Open Interventions" message="No interventions are open." /> : null}
@@ -1564,7 +1564,7 @@ export const DistrictSubjectAdvisorDashboardPage = () => {
                   {(monitoringQuery.data?.items ?? []).slice(0, 5).map((item) => (
                     <div key={`${item.teacherUserId}-${item.subject}-${item.grade}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                       <p className="text-[13px] font-semibold text-slate-900">{item.teacherName}</p>
-                      <p className="mt-1 text-[12px] text-slate-500">{item.schoolName} · {item.subject}</p>
+                      <p className="mt-1 text-[12px] text-slate-500">{item.schoolName} Â· {item.subject}</p>
                       <ProgressBar value={Math.max(0, Math.min(100, item.atpWeek * 10))} tone={item.status} />
                     </div>
                   ))}
@@ -1576,7 +1576,7 @@ export const DistrictSubjectAdvisorDashboardPage = () => {
                   {(assessmentsQuery.data ?? []).slice(0, 5).map((item) => (
                     <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                       <p className="text-[13px] font-semibold text-slate-900">{item.title}</p>
-                      <p className="mt-1 text-[12px] text-slate-500">{item.subject} · {item.grade} · {item.term}</p>
+                      <p className="mt-1 text-[12px] text-slate-500">{item.subject} Â· {item.grade} Â· {item.term}</p>
                     </div>
                   ))}
                   {!(assessmentsQuery.data ?? []).length ? <EmptyStateCompact title="Assessments" message="No common assessments have been created yet." /> : null}
@@ -1781,12 +1781,12 @@ export const DistrictCircuitSupportRequestsPage = () => {
                   <p className="text-sm font-semibold text-slate-900">{item.schoolName}</p>
                   <p className="mt-1 text-sm text-slate-600">{item.requestType}</p>
                 </div>
-                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{item.status}</span>
+                <span className="rounded-full bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700">{item.status}</span>
               </div>
               <p className="mt-3 text-sm text-slate-600">{item.description}</p>
               <div className="mt-4 flex gap-2">
                 <Button type="button" className="rounded-xl px-3 py-2 text-xs" onClick={() => updateRequest.mutate({ id: item.id, status: 'IN_PROGRESS' })}>Mark In Progress</Button>
-                <Button type="button" className="rounded-xl bg-slate-900 px-3 py-2 text-xs hover:bg-slate-800" onClick={() => updateRequest.mutate({ id: item.id, status: 'CLOSED' })}>Close Request</Button>
+                <Button type="button" className="rounded-xl bg-primary-700 px-3 py-2 text-xs hover:bg-primary-700" onClick={() => updateRequest.mutate({ id: item.id, status: 'CLOSED' })}>Close Request</Button>
               </div>
             </div>
           )) : <EmptyState title="Support Requests" message="No support requests are waiting." />}
@@ -1823,7 +1823,7 @@ export const DistrictCircuitInterventionsPage = () => {
             <Input value={form.subject} onChange={(event) => setForm((current) => ({ ...current, subject: event.target.value }))} placeholder="Subject" className="rounded-2xl" />
             <Input value={form.grade} onChange={(event) => setForm((current) => ({ ...current, grade: event.target.value }))} placeholder="Grade" className="rounded-2xl" />
             <Input type="date" value={form.dueDate} onChange={(event) => setForm((current) => ({ ...current, dueDate: event.target.value }))} className="rounded-2xl" />
-            <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 md:col-span-3" placeholder="Description" />
+            <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300 md:col-span-3" placeholder="Description" />
           </div>
           <Button type="button" className="mt-4 rounded-2xl" onClick={() => createIntervention.mutate()} disabled={createIntervention.isPending || !form.title.trim()}>
             {createIntervention.isPending ? 'Creating intervention...' : 'Create intervention'}
@@ -1961,3 +1961,8 @@ export const DistrictSubjectAdvisorAssessmentsPage = () => {
     </DataShell>
   );
 };
+
+
+
+
+

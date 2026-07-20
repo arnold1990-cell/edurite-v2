@@ -388,7 +388,7 @@ export const SchoolStudentWorkspace = ({
             <textarea className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" rows={5} value={submissionText} onChange={(e) => setSubmissionText(e.target.value)} placeholder="Write your answer..." />
             <Input className="mt-2 h-10 rounded-xl text-sm" value={fileUrl} onChange={(e) => setFileUrl(e.target.value)} placeholder="Optional file URL" />
             <div className="mt-3 flex justify-end gap-2">
-              <Button className="h-10 rounded-xl bg-slate-600 px-4 text-sm hover:bg-slate-700" onClick={() => setShowSubmitModal(false)}>Cancel</Button>
+              <Button className="h-10 rounded-xl bg-primary-600 px-4 text-sm hover:bg-primary-700" onClick={() => setShowSubmitModal(false)}>Cancel</Button>
               <Button
                 className="h-10 rounded-xl px-4 text-sm"
                 onClick={async () => {
@@ -407,3 +407,6 @@ export const SchoolStudentWorkspace = ({
     </section>
   );
 };
+
+
+

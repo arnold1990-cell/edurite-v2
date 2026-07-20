@@ -9,6 +9,7 @@ import com.edurite.psychometric.service.PsychometricService;
 import com.edurite.student.dto.StudentProfileUpsertRequest;
 import com.edurite.student.dto.StudentSavedProfilePayload;
 import com.edurite.student.dto.StudentSavedProfileSaveRequest;
+import com.edurite.student.dto.StudentSubjectAchievementDto;
 import com.edurite.security.service.CurrentUserService;
 import com.edurite.student.dto.StudentSettingsDto;
 import com.edurite.student.entity.StudentProfile;
@@ -374,6 +375,39 @@ class StudentServiceTest {
         assertThat(result.lastName()).isEqualTo("Profile");
         assertThat(result.skills()).containsExactly("Java");
         assertThat(result.careerGoals()).isEqualTo("Mechanical Engineering");
+    }
+
+    @Test
+    void upsertProfileNormalizesCommonSubjectTypos() {
+        StudentProfile profile = new StudentProfile();
+        profile.setId(UUID.randomUUID());
+        profile.setUserId(user.getId());
+        when(profileRepository.findByUserId(user.getId())).thenReturn(Optional.of(profile));
+        when(profileRepository.save(any(StudentProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        StudentProfileUpsertRequest request = new StudentProfileUpsertRequest(
+                "Test",
+                "Student",
+                null,
+                null,
+                null,
+                null,
+                null,
+                "High School",
+                "Grade 12",
+                List.of(new StudentSubjectAchievementDto("Accpount", 5)),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                null
+        );
+
+        var result = studentService.upsertProfile(principal, request);
+
+        assertThat(result.subjectAchievements())
+                .extracting(StudentSubjectAchievementDto::subjectName)
+                .containsExactly("Accounting");
     }
 }
 

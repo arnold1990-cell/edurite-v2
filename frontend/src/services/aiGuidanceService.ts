@@ -10,6 +10,7 @@ import type {
 const demoModeEnabled = false;
 export const AI_ERROR_MESSAGE = 'Our AI could not process your request at this time. Please try again.';
 const FRIENDLY_AI_UNAVAILABLE_MESSAGE = 'AI guidance is temporarily unavailable. Please try again later.';
+const FRIENDLY_SOURCE_UNAVAILABLE_MESSAGE = 'Some official university sources were temporarily unavailable during analysis.';
 
 const normalizeWarningMessage = (warning?: string | null): string | null | undefined => {
   if (!warning) return warning;
@@ -21,10 +22,29 @@ const normalizeWarningMessage = (warning?: string | null): string | null | undef
     || normalized.includes('live ai guidance')
     || normalized.includes('provider rejected')
     || normalized.includes('provider configuration')
+    || normalized.includes('http')
+    || normalized.includes('fetch')
+    || normalized.includes('timeout')
+    || normalized.includes('cache')
+    || normalized.includes('connection')
   ) {
     return FRIENDLY_AI_UNAVAILABLE_MESSAGE;
   }
   return warning;
+};
+
+const normalizeDiagnosticStatus = (status?: string | null) => {
+  const normalized = (status ?? '').toLowerCase();
+  if (!normalized) return 'Status unavailable';
+  if (normalized.includes('success') || normalized.includes('ok')) return 'Available';
+  if (normalized.includes('partial')) return 'Partially available';
+  if (normalized.includes('fail') || normalized.includes('error') || normalized.includes('timeout')) return 'Unavailable';
+  return 'Unavailable';
+};
+
+const normalizeDiagnosticReason = (reason?: string | null) => {
+  if (!reason) return null;
+  return FRIENDLY_SOURCE_UNAVAILABLE_MESSAGE;
 };
 
 const normalizeUniversityResponse = (payload: UniversitySourcesAnalysisResponse): UniversitySourcesAnalysisResponse => {
@@ -55,7 +75,11 @@ const normalizeUniversityResponse = (payload: UniversitySourcesAnalysisResponse)
     warnings,
     suitabilitySignalsUsed: payload.suitabilitySignalsUsed ?? [],
     suitabilityScoreLimitations: payload.suitabilityScoreLimitations ?? [],
-    sourceDiagnostics: payload.sourceDiagnostics ?? [],
+    sourceDiagnostics: (payload.sourceDiagnostics ?? []).map((item) => ({
+      ...item,
+      fetchStatus: normalizeDiagnosticStatus(item.fetchStatus),
+      failureReason: normalizeDiagnosticReason(item.failureReason),
+    })),
     sourceCoverage,
     totalSourcesUsed: payload.totalSourcesUsed ?? payload.successfullyAnalysedUrls?.length ?? sourceCoverage?.successfulSourcesCount ?? 0,
     planCode: payload.planCode ?? 'PLAN_BASIC',

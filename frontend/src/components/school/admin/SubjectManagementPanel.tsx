@@ -1,4 +1,4 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+﻿import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { MoreHorizontal, Search, Upload } from 'lucide-react';
 import { useAppQuery } from '@/hooks/useAppQuery';
@@ -281,7 +281,7 @@ const SubjectEditModal = ({
       </div>
       <div className="mt-6 flex justify-end gap-3">
         <Button type="button" className="rounded-2xl bg-slate-200 px-4 text-slate-800 hover:bg-slate-300" onClick={onClose}>Cancel</Button>
-        <Button type="button" className="rounded-2xl bg-[#0B5BFF] px-5 hover:bg-[#0849cb]" disabled={saving || !form.subjectName.trim() || !form.phase.trim() || !(form.grade.trim() || form.gradeRange.trim())} onClick={onSave}>
+        <Button type="button" className="rounded-2xl bg-primary-600 px-5 hover:bg-primary-500" disabled={saving || !form.subjectName.trim() || !form.phase.trim() || !(form.grade.trim() || form.gradeRange.trim())} onClick={onSave}>
           {saving ? 'Saving...' : 'Save subject'}
         </Button>
       </div>
@@ -788,7 +788,7 @@ export const SubjectManagementPanel = () => {
         subtitle="Manage all subjects and track curriculum configuration, readiness, and performance."
         actions={
           <>
-            <Button type="button" className="h-11 rounded-2xl bg-[#0B5BFF] px-4 hover:bg-[#0849cb]" onClick={() => openEditModal()}>Add Subject</Button>
+            <Button type="button" className="h-11 rounded-2xl bg-primary-600 px-4 hover:bg-primary-500" onClick={() => openEditModal()}>Add Subject</Button>
             <Button type="button" className="h-11 rounded-2xl bg-white px-4 text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={() => setIsCapsModalOpen(true)}>Import Subjects</Button>
             <Button type="button" className="h-11 rounded-2xl bg-white px-4 text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={exportSubjectsCsv}>Export</Button>
           </>
@@ -862,7 +862,7 @@ export const SubjectManagementPanel = () => {
                   <div className="hidden gap-4 px-5 py-4 xl:grid xl:grid-cols-[2fr_1fr_1fr_1fr_0.65fr_0.65fr_0.7fr_0.9fr_0.9fr_0.7fr_0.8fr_1fr] xl:items-center">
                   <div>
                     <p className="text-[15px] font-semibold text-slate-950">{subject.subjectName}</p>
-                    <p className="mt-1 text-xs text-slate-500">{subject.subjectType || 'General'}{subject.isCompulsory ? ' · Compulsory' : ' · Elective'}{subject.capsAligned === false ? ' · Review CAPS alignment' : ' · CAPS aligned'}</p>
+                    <p className="mt-1 text-xs text-slate-500">{subject.subjectType || 'General'}{subject.isCompulsory ? ' Â· Compulsory' : ' Â· Elective'}{subject.capsAligned === false ? ' Â· Review CAPS alignment' : ' Â· CAPS aligned'}</p>
                   </div>
                   <div className="text-sm text-slate-700">{subject.phase}<div className="text-xs text-slate-500">{subject.grade || subject.gradeRange || 'Not set'}</div></div>
                   <div className="text-sm text-slate-700">{subject.languageLevel || (subject.isLanguage ? 'Language subject' : 'Not applicable')}</div>
@@ -876,13 +876,13 @@ export const SubjectManagementPanel = () => {
                   <div><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${toneClasses[insight?.riskLevel ?? 'Healthy']}`}>{insight?.riskLevel ?? 'Healthy'}</span></div>
                   <div><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${subject.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>{subject.active ? 'Active' : 'Inactive'}</span></div>
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" className="h-9 rounded-xl bg-slate-900 px-3 text-xs hover:bg-slate-800" onClick={() => setViewSubjectId(subject.id)}>View</Button>
+                    <Button type="button" className="h-9 rounded-xl bg-primary-700 px-3 text-xs hover:bg-primary-700" onClick={() => setViewSubjectId(subject.id)}>View</Button>
                     <Button type="button" className="h-9 rounded-xl bg-white px-3 text-xs text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={() => openEditModal(subject)}>Edit</Button>
                     <Button type="button" className="h-9 rounded-xl bg-white px-3 text-xs text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={() => openAssignModal([subject.id])}>Assign Teacher</Button>
                     <Button type="button" className="h-9 rounded-xl bg-white px-3 text-xs text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={() => openAssignModal([subject.id])}>Assign HOD</Button>
                     <Button type="button" className="h-9 rounded-xl bg-white px-3 text-xs text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={() => setUploadState({ subjectId: subject.id, file: null })}>Upload ATP</Button>
                     <Button type="button" className="h-9 rounded-xl bg-white px-3 text-xs text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={() => setAssessmentState({ ...emptyAssessment, subjectId: subject.id })}>Create Assessment</Button>
-                    <Button type="button" className="h-9 rounded-xl bg-[#0B5BFF] px-3 text-xs hover:bg-[#0849cb]" onClick={() => setAiState({ subjectId: subject.id, action: 'lesson-plan' })}>Generate AI Lesson Plan</Button>
+                    <Button type="button" className="h-9 rounded-xl bg-primary-600 px-3 text-xs hover:bg-primary-500" onClick={() => setAiState({ subjectId: subject.id, action: 'lesson-plan' })}>Generate AI Lesson Plan</Button>
                     <Button type="button" className="h-9 rounded-xl bg-amber-500 px-3 text-xs hover:bg-amber-600" disabled={!subject.active || deactivateSubject.isPending} onClick={() => deactivateSubject.mutate(subject.id)}>Deactivate</Button>
                   </div>
                   </div>
@@ -891,7 +891,7 @@ export const SubjectManagementPanel = () => {
                 <div className="hidden xl:grid xl:grid-cols-[2fr_1fr_1fr_1fr_0.65fr_0.65fr_0.7fr_0.9fr_0.9fr_0.7fr_0.8fr_1fr] gap-4 px-5 py-4 xl:items-center">
                   <div>
                     <p className="text-[15px] font-semibold text-slate-950">{subject.subjectName}</p>
-                    <p className="mt-1 text-[13px] text-slate-500">{subject.subjectType || 'General'}{subject.isCompulsory ? ' · Compulsory' : ' · Elective'}{subject.capsAligned === false ? ' · Review CAPS alignment' : ' · CAPS aligned'}</p>
+                    <p className="mt-1 text-[13px] text-slate-500">{subject.subjectType || 'General'}{subject.isCompulsory ? ' Â· Compulsory' : ' Â· Elective'}{subject.capsAligned === false ? ' Â· Review CAPS alignment' : ' Â· CAPS aligned'}</p>
                   </div>
                   <div className="text-[14px] text-slate-700">{subject.phase}<div className="text-[13px] text-slate-500">{subject.grade || subject.gradeRange || 'Not set'}</div></div>
                   <div className="text-[14px] text-slate-700">{subject.languageLevel || (subject.isLanguage ? 'Language subject' : 'Not applicable')}</div>
@@ -900,7 +900,7 @@ export const SubjectManagementPanel = () => {
                   <div className="text-[14px] text-slate-700">{classCount}</div>
                   <div className="text-[14px] text-slate-700">{subject.learnerCount}</div>
                   <div><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${(subjectMetrics.atpBySubject[subject.id] ?? 0) > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>{(subjectMetrics.atpBySubject[subject.id] ?? 0) > 0 ? 'Available' : 'Missing'}</span></div>
-                  <div><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${(subjectMetrics.assessmentsBySubject[subject.id] ?? 0) > 0 ? 'bg-blue-50 text-blue-700' : 'bg-rose-50 text-rose-700'}`}>{(subjectMetrics.assessmentsBySubject[subject.id] ?? 0) > 0 ? 'Configured' : 'Missing'}</span></div>
+                  <div><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${(subjectMetrics.assessmentsBySubject[subject.id] ?? 0) > 0 ? 'bg-primary-50 text-primary-700' : 'bg-rose-50 text-rose-700'}`}>{(subjectMetrics.assessmentsBySubject[subject.id] ?? 0) > 0 ? 'Configured' : 'Missing'}</span></div>
                   <div className="text-[14px] text-slate-700">{formatPercent(insight?.passRate ?? null)}</div>
                   <div><span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${toneClasses[insight?.riskLevel ?? 'Healthy']}`}>{insight?.riskLevel ?? 'Healthy'}</span></div>
                   <div className="flex items-center gap-2">
@@ -917,7 +917,7 @@ export const SubjectManagementPanel = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-base font-semibold text-slate-900">{subject.subjectName}</p>
-                      <p className="mt-1 text-sm text-slate-500">{subject.phase} · {subject.grade || subject.gradeRange || 'Not set'}</p>
+                      <p className="mt-1 text-sm text-slate-500">{subject.phase} Â· {subject.grade || subject.gradeRange || 'Not set'}</p>
                     </div>
                     <input
                       type="checkbox"
@@ -939,10 +939,10 @@ export const SubjectManagementPanel = () => {
                     <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${subject.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>{subject.active ? 'Active' : 'Inactive'}</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <Button type="button" className="h-9 rounded-xl bg-slate-900 px-3 text-xs hover:bg-slate-800" onClick={() => setViewSubjectId(subject.id)}>View</Button>
+                    <Button type="button" className="h-9 rounded-xl bg-primary-700 px-3 text-xs hover:bg-primary-700" onClick={() => setViewSubjectId(subject.id)}>View</Button>
                     <Button type="button" className="h-9 rounded-xl bg-white px-3 text-xs text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={() => openEditModal(subject)}>Edit</Button>
                     <Button type="button" className="h-9 rounded-xl bg-white px-3 text-xs text-slate-900 ring-1 ring-slate-200 hover:bg-slate-50" onClick={() => openAssignModal([subject.id])}>Assign</Button>
-                    <Button type="button" className="h-9 rounded-xl bg-[#0B5BFF] px-3 text-xs hover:bg-[#0849cb]" onClick={() => setAiState({ subjectId: subject.id, action: 'lesson-plan' })}>AI</Button>
+                    <Button type="button" className="h-9 rounded-xl bg-primary-600 px-3 text-xs hover:bg-primary-500" onClick={() => setAiState({ subjectId: subject.id, action: 'lesson-plan' })}>AI</Button>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
                     Resource centre: {resourceCounts.notes} notes, {resourceCounts.pdfResources} PDFs, {resourceCounts.worksheets} worksheets, {resourceCounts.memorandums} memorandums.
@@ -954,7 +954,7 @@ export const SubjectManagementPanel = () => {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-[15px] font-semibold text-slate-950">{subject.subjectName}</p>
-                      <p className="mt-1 text-[13px] text-slate-500">{subject.phase} · {subject.grade || subject.gradeRange || 'Not set'}</p>
+                      <p className="mt-1 text-[13px] text-slate-500">{subject.phase} Â· {subject.grade || subject.gradeRange || 'Not set'}</p>
                     </div>
                     <span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${subject.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-700'}`}>{subject.active ? 'Active' : 'Inactive'}</span>
                   </div>
@@ -1027,7 +1027,7 @@ export const SubjectManagementPanel = () => {
                 const rates = filteredSubjects
                   .map((subject) => subjectMetrics.insights.find((entry) => entry.subjectId === subject.id)?.passRate ?? null)
                   .filter((value): value is number => value != null);
-                if (!rates.length) return '—';
+                if (!rates.length) return 'â€”';
                 return `${Math.round(rates.reduce((sum, value) => sum + value, 0) / rates.length)}%`;
               })()}
             </p>
@@ -1091,14 +1091,14 @@ export const SubjectManagementPanel = () => {
                   onClick={() => setCapsSelected((current) => selected ? current.filter((id) => id !== item.id) : [...current, item.id])}
                   className={`rounded-[24px] border p-4 text-left transition ${
                     duplicateExists ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400'
-                      : selected ? 'border-[#0B5BFF] bg-blue-50 text-slate-900'
+                      : selected ? 'border-primary-400 bg-primary-50 text-slate-900'
                         : 'border-slate-200 bg-white text-slate-900 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="text-sm font-semibold">{item.subjectName}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.grade} · {item.category}</p>
+                      <p className="mt-1 text-xs text-slate-500">{item.grade} Â· {item.category}</p>
                     </div>
                     <input type="checkbox" readOnly checked={selected} />
                   </div>
@@ -1117,7 +1117,7 @@ export const SubjectManagementPanel = () => {
             <p className="text-sm text-slate-600">{capsSelected.length} subject(s) selected.</p>
             <div className="flex gap-2">
               <Button type="button" className="rounded-2xl bg-slate-200 px-4 text-slate-800 hover:bg-slate-300" onClick={() => setCapsSelected([])}>Clear</Button>
-              <Button type="button" className="rounded-2xl bg-[#0B5BFF] px-5 hover:bg-[#0849cb]" disabled={addCapsSubjects.isPending || !capsSelected.length} onClick={() => addCapsSubjects.mutate()}>
+              <Button type="button" className="rounded-2xl bg-primary-600 px-5 hover:bg-primary-500" disabled={addCapsSubjects.isPending || !capsSelected.length} onClick={() => addCapsSubjects.mutate()}>
                 {addCapsSubjects.isPending ? 'Adding...' : 'Add selected CAPS subjects'}
               </Button>
             </div>
@@ -1131,7 +1131,7 @@ export const SubjectManagementPanel = () => {
             <label className="space-y-2">
               <FieldLabel>Selected subjects</FieldLabel>
               <div className="max-h-40 overflow-y-auto rounded-2xl border border-slate-200 p-3 text-sm text-slate-700">
-                {selectedSubjects.map((subject) => <p key={subject.id}>{subject.subjectName} · {subject.grade || subject.gradeRange || subject.phase}</p>)}
+                {selectedSubjects.map((subject) => <p key={subject.id}>{subject.subjectName} Â· {subject.grade || subject.gradeRange || subject.phase}</p>)}
               </div>
             </label>
             <label className="space-y-2">
@@ -1142,7 +1142,7 @@ export const SubjectManagementPanel = () => {
               </select>
               {assignmentState.teacherUserId && workloadByTeacherId[assignmentState.teacherUserId] ? (
                 <p className={`text-xs ${(workloadByTeacherId[assignmentState.teacherUserId].workloadBand ?? '').toLowerCase() === 'high' ? 'text-amber-700' : 'text-slate-500'}`}>
-                  Workload: {workloadByTeacherId[assignmentState.teacherUserId].workloadBand} · {workloadByTeacherId[assignmentState.teacherUserId].subjectsAssigned} subjects · {workloadByTeacherId[assignmentState.teacherUserId].classesAssigned} classes
+                  Workload: {workloadByTeacherId[assignmentState.teacherUserId].workloadBand} Â· {workloadByTeacherId[assignmentState.teacherUserId].subjectsAssigned} subjects Â· {workloadByTeacherId[assignmentState.teacherUserId].classesAssigned} classes
                 </p>
               ) : null}
             </label>
@@ -1188,7 +1188,7 @@ export const SubjectManagementPanel = () => {
           </div>
           <div className="mt-6 flex justify-end gap-3">
             <Button type="button" className="rounded-2xl bg-slate-200 px-4 text-slate-800 hover:bg-slate-300" onClick={() => setIsBulkAssignOpen(false)}>Cancel</Button>
-            <Button type="button" className="rounded-2xl bg-[#0B5BFF] px-5 hover:bg-[#0849cb]" disabled={bulkAssign.isPending || !assignmentState.subjectIds.length} onClick={() => bulkAssign.mutate()}>
+            <Button type="button" className="rounded-2xl bg-primary-600 px-5 hover:bg-primary-500" disabled={bulkAssign.isPending || !assignmentState.subjectIds.length} onClick={() => bulkAssign.mutate()}>
               {bulkAssign.isPending ? 'Assigning...' : 'Apply subject assignments'}
             </Button>
           </div>
@@ -1235,7 +1235,7 @@ export const SubjectManagementPanel = () => {
                     <div className="mt-3 space-y-2">
                       {assignments.length ? assignments.map((assignment) => (
                         <div key={assignment.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                          {teacherById[assignment.teacherUserId]?.fullName ?? assignment.teacherUserId} · {toClassLabel(classById[assignment.classId] ?? {})}
+                          {teacherById[assignment.teacherUserId]?.fullName ?? assignment.teacherUserId} Â· {toClassLabel(classById[assignment.classId] ?? {})}
                         </div>
                       )) : <p className="text-sm text-slate-500">No teacher allocations yet.</p>}
                     </div>
@@ -1253,9 +1253,9 @@ export const SubjectManagementPanel = () => {
                     </div>
                   </section>
                   <section className="rounded-[24px] border border-slate-200 bg-white p-5">
-                    <h4 className="text-lg font-semibold text-slate-900">Subject → Career Pathways</h4>
+                    <h4 className="text-lg font-semibold text-slate-900">Subject â†’ Career Pathways</h4>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {pathways.map((pathway) => <span key={pathway} className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700">{pathway}</span>)}
+                      {pathways.map((pathway) => <span key={pathway} className="rounded-full bg-primary-50 px-3 py-1 text-sm text-primary-700">{pathway}</span>)}
                     </div>
                   </section>
                 </div>
@@ -1310,7 +1310,7 @@ export const SubjectManagementPanel = () => {
           </div>
           <div className="mt-6 flex justify-end gap-3">
             <Button type="button" className="rounded-2xl bg-slate-200 px-4 text-slate-800 hover:bg-slate-300" onClick={() => setAssessmentState(emptyAssessment)}>Cancel</Button>
-            <Button type="button" className="rounded-2xl bg-[#0B5BFF] px-5 hover:bg-[#0849cb]" disabled={createAssessment.isPending || !assessmentState.subjectId || !assessmentState.classId || !assessmentState.title.trim() || !assessmentState.dueDate || !assessmentState.maxMarks} onClick={() => createAssessment.mutate()}>
+            <Button type="button" className="rounded-2xl bg-primary-600 px-5 hover:bg-primary-500" disabled={createAssessment.isPending || !assessmentState.subjectId || !assessmentState.classId || !assessmentState.title.trim() || !assessmentState.dueDate || !assessmentState.maxMarks} onClick={() => createAssessment.mutate()}>
               {createAssessment.isPending ? 'Creating...' : 'Create Assessment'}
             </Button>
           </div>
@@ -1350,7 +1350,7 @@ export const SubjectManagementPanel = () => {
                 key={action.key}
                 type="button"
                 onClick={() => setAiState({ ...aiState, action: action.key })}
-                className={`rounded-[24px] border p-4 text-left ${aiState.action === action.key ? 'border-[#0B5BFF] bg-blue-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                className={`rounded-[24px] border p-4 text-left ${aiState.action === action.key ? 'border-primary-400 bg-primary-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}
               >
                 <p className="font-semibold text-slate-900">{action.label}</p>
                 <p className="mt-2 text-sm text-slate-600">Prepare a subject-specific {action.label.toLowerCase()} workflow.</p>
@@ -1369,3 +1369,8 @@ export const SubjectManagementPanel = () => {
     </AdminPageLayout>
   );
 };
+
+
+
+
+

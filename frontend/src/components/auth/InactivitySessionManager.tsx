@@ -44,8 +44,6 @@ export const InactivitySessionManager = () => {
 
   const hardClearClientState = useCallback(() => {
     authStore.clear();
-    localStorage.clear();
-    sessionStorage.clear();
   }, []);
 
   const navigateToLoginWithExpiredMessage = useCallback(() => {
@@ -58,7 +56,13 @@ export const InactivitySessionManager = () => {
   const broadcastLogout = useCallback((reason: string) => {
     const payload: SessionEventMessage = { type: 'logout', reason, at: Date.now() };
     channelRef.current?.postMessage(payload);
-    localStorage.setItem(STORAGE_EVENT_KEY, JSON.stringify(payload));
+    try {
+      localStorage.setItem(STORAGE_EVENT_KEY, JSON.stringify(payload));
+    } catch {
+      if (import.meta.env.DEV) {
+        console.warn('[auth] unable to persist inactivity logout event to localStorage.');
+      }
+    }
   }, []);
 
   const finalizeLocalLogout = useCallback(() => {
@@ -193,7 +197,7 @@ export const InactivitySessionManager = () => {
           <Button type="button" onClick={() => void handleKeepAlive()} className="w-full sm:flex-1">
             Yes, keep me signed in
           </Button>
-          <Button type="button" className="w-full bg-slate-700 hover:bg-slate-600 sm:flex-1" onClick={() => void performLogout(true)}>
+          <Button type="button" className="w-full bg-primary-600 hover:bg-primary-700 sm:flex-1" onClick={() => void performLogout(true)}>
             Logout now
           </Button>
         </div>
@@ -201,3 +205,6 @@ export const InactivitySessionManager = () => {
     </div>
   );
 };
+
+
+

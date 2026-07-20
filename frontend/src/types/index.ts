@@ -1,4 +1,4 @@
-﻿export type Role =
+export type Role =
   | 'STUDENT'
   | 'COMPANY'
   | 'ADMIN'
@@ -37,12 +37,19 @@ export interface StudentProfile {
   bio?: string;
   qualificationLevel?: string;
   selectedGrade?: string;
+  preferredCareer?: string;
+  preferredStudyLocation?: string;
+  preferredInstitutionType?: string;
+  curriculum?: string;
+  availableStudyTimeHours?: number | null;
   subjectAchievements?: StudentSubjectAchievement[];
   qualifications: string[];
+  preferredCourses?: string[];
   experience: string[];
   skills: string[];
   interests: string[];
   careerGoals?: string;
+  fundingPreferences?: string[];
   cvFileUrl?: string;
   transcriptFileUrl?: string;
   profileCompleted: boolean;
@@ -52,6 +59,7 @@ export interface StudentProfile {
 export interface StudentSubjectAchievement {
   subjectName: string;
   achievementLevel?: number | null;
+  markPercentage?: number | null;
 }
 
 export type ReadinessStatus = 'GREEN' | 'ORANGE' | 'RED';
@@ -97,6 +105,15 @@ export interface StudentPlanSummary {
   premium: boolean;
   careerSuggestionLimit?: number | null;
   upgradeMessage?: string | null;
+  careerSuitabilityStatus?: string | null;
+  careerSuitabilityScore?: number | null;
+  admissionEligibilityStatus?: string | null;
+  sourceConfidenceStatus?: string | null;
+  verifiedProgrammeCount?: number | null;
+  importantAction?: string | null;
+  scoreExplanation?: string | null;
+  scoreSignalsUsed?: string[];
+  scoreLimitations?: string[];
 }
 
 export interface StudentDashboard {
@@ -138,12 +155,19 @@ export interface StudentSavedProfilePayload {
   bio?: string;
   qualificationLevel?: string;
   selectedGrade?: string;
+  preferredCareer?: string;
+  preferredStudyLocation?: string;
+  preferredInstitutionType?: string;
+  curriculum?: string;
+  availableStudyTimeHours?: number | null;
   subjectAchievements?: StudentSubjectAchievement[];
   qualifications?: string[];
+  preferredCourses?: string[];
   experience?: string[];
   skills?: string[];
   interests?: string[];
   careerGoals?: string;
+  fundingPreferences?: string[];
 }
 
 export interface StudentSavedProfileSummary {
@@ -203,6 +227,11 @@ export interface Institution {
   country?: string;
   officialWebsite?: string;
   website?: string;
+  admissionsInfoUrl?: string;
+  onlineApplicationUrl?: string;
+  applicationLinkStatus?: string;
+  applicationLinkLastVerifiedAt?: string | null;
+  applicationSourceDomain?: string;
   applicationUrl?: string;
   logoPath?: string;
   logoUrl?: string;
@@ -234,6 +263,15 @@ export interface Recommendation {
   careerSuggestionLimit?: number | null;
   careerSuggestionsLimited?: boolean;
   upgradeMessage?: string | null;
+  careerSuitabilityStatus?: string | null;
+  careerSuitabilityScore?: number | null;
+  admissionEligibilityStatus?: string | null;
+  sourceConfidenceStatus?: string | null;
+  verifiedProgrammeCount?: number | null;
+  importantAction?: string | null;
+  scoreExplanation?: string | null;
+  scoreSignalsUsed?: string[];
+  scoreLimitations?: string[];
 }
 
 export interface ProgressScoreCard { key: string; label: string; percentage: number; color: 'green' | 'orange' | 'red' | string; recommendation: string; }
@@ -315,13 +353,22 @@ export interface ApsSubjectResult {
   markPercentage?: number | null;
   level?: number | null;
   apsPoints?: number | null;
+  included: boolean;
+  exclusionReason?: string | null;
 }
 
 export interface ApsCalculationResponse {
+  source?: 'MANUAL' | 'PROFILE' | string;
+  status?: 'COMPLETE' | 'PROVISIONAL' | 'UNAVAILABLE' | string;
   grade?: string;
   province?: string;
   subjects: ApsSubjectResult[];
-  totalAps: number;
+  totalAps?: number | null;
+  missingRequirements?: string[];
+  calculationRule?: string;
+  lifeOrientationIncluded?: boolean;
+  resultSetLabel?: string | null;
+  resultSetId?: string | null;
 }
 
 export interface CareerRoadmapOverview {
@@ -464,6 +511,15 @@ export interface CareerAdviceResponse {
   careerSuggestionLimit?: number | null;
   careerSuggestionsLimited?: boolean;
   upgradeMessage?: string | null;
+  careerSuitabilityStatus?: string | null;
+  careerSuitabilityScore?: number | null;
+  admissionEligibilityStatus?: string | null;
+  sourceConfidenceStatus?: string | null;
+  verifiedProgrammeCount?: number | null;
+  importantAction?: string | null;
+  scoreExplanation?: string | null;
+  scoreSignalsUsed?: string[];
+  scoreLimitations?: string[];
 }
 
 export interface UniversitySourcesAnalysisRequest {
@@ -472,6 +528,17 @@ export interface UniversitySourcesAnalysisRequest {
   careerInterest?: string;
   qualificationLevel?: string;
   maxRecommendations?: number;
+}
+
+export interface UniversitySourceEvidence {
+  sourceUrl: string;
+  university: string;
+  programme: string;
+  informationType: string;
+  retrievalDate: string;
+  verificationStatus: string;
+  officialSource: boolean;
+  sourceTitle: string;
 }
 
 export interface UniversityRecommendedCareer {
@@ -487,6 +554,8 @@ export interface UniversityRecommendedCareer {
   sourceStatus?: string | null;
   rankingCategory?: string | null;
   nextBestActions?: string[];
+  verificationStatus?: string | null;
+  sourceEvidence?: UniversitySourceEvidence[];
 }
 
 export interface UniversityRecommendedProgramme {
@@ -502,6 +571,13 @@ export interface UniversityRecommendedProgramme {
   sourceStatus?: string | null;
   rankingCategory?: string | null;
   nextBestActions?: string[];
+  matchLevel?: string | null;
+  whyItMatches?: string | null;
+  confirmedRequirements?: string[];
+  studentEligibilityStatus?: string | null;
+  officialSourceUrl?: string | null;
+  verificationStatus?: string | null;
+  sourceEvidence?: UniversitySourceEvidence[];
 }
 
 export interface UniversitySourceDiagnostic {
@@ -554,6 +630,15 @@ export interface UniversitySourcesAnalysisResponse {
   careerSuggestionLimit?: number | null;
   careerSuggestionsLimited?: boolean;
   upgradeMessage?: string | null;
+  careerSuitabilityStatus?: string | null;
+  careerSuitabilityScore?: number | null;
+  admissionEligibilityStatus?: string | null;
+  sourceConfidenceStatus?: string | null;
+  verifiedProgrammeCount?: number | null;
+  importantAction?: string | null;
+  scoreExplanation?: string | null;
+  scoreSignalsUsed?: string[];
+  scoreLimitations?: string[];
 }
 export interface Notification { id: string; title: string; message: string; read?: boolean; type?: string; createdAt?: string; isRead?: boolean; priority?: string; }
 export type PaymentProviderCode = 'paypal' | 'payfast' | 'mock' | 'internal';
@@ -683,6 +768,302 @@ export interface GamificationSummary {
 }
 export interface PaginatedResponse<T> { content: T[]; totalElements: number; totalPages: number; number: number; size: number; }
 export interface ApiError { message: string; status?: number; details?: Record<string, string[]>; code?: string; }
+
+export interface PersonalizedRoadmapHistoryItem {
+  id: string;
+  careerName: string;
+  generationBlocked: boolean;
+  missingInformation: string[];
+  learnerAps?: number | null;
+  roadmapStatus: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfirmedProfileSnapshot {
+  learnerProfileId: string;
+  grade?: string | null;
+  curriculum?: string | null;
+  location?: string | null;
+  preferredStudyLocation?: string | null;
+  preferredInstitutionType?: string | null;
+  preferredCareer?: string | null;
+  careerGoals?: string | null;
+  careerInterests: string[];
+  preferredCourses: string[];
+  qualifications: string[];
+  fundingPreferences: string[];
+  availableStudyTimeHours?: number | null;
+  profileUpdatedAt?: string | null;
+}
+
+export interface LatestSubjectResult {
+  subjectName: string;
+  markPercentage?: number | null;
+  achievementLevel?: number | null;
+  weakestSubject: boolean;
+  strongestSubject: boolean;
+}
+
+export interface LatestResultsSnapshot {
+  resultSource: string;
+  resultsUpdatedAt?: string | null;
+  subjects: LatestSubjectResult[];
+}
+
+export interface ApsBreakdownLine {
+  subjectName: string;
+  markPercentage?: number | null;
+  achievementLevel?: number | null;
+  apsPoints?: number | null;
+  includedInAps: boolean;
+}
+
+export interface CalculatedRoadmapSnapshot {
+  apsCalculationRule: string;
+  learnerAps?: number | null;
+  apsBreakdown: ApsBreakdownLine[];
+  apsCalculationAvailable: boolean;
+}
+
+export interface GuidanceAction {
+  id: string;
+  label: string;
+  description: string;
+  targetUrl: string;
+  actionType: string;
+}
+
+export interface SkillGapAssessment {
+  status: 'Identified gaps' | 'No significant gaps based on available information' | 'Insufficient information to assess' | string;
+  identifiedGaps: string[];
+  summary: string;
+}
+
+export interface TypoCorrection {
+  originalValue: string;
+  suggestedValue: string;
+  confirmationRequired: boolean;
+  confidence: string;
+}
+
+export interface SourceEvidence {
+  sourceUrl: string;
+  university: string;
+  programme: string;
+  informationType: string;
+  retrievalDate?: string | null;
+  verificationStatus: string;
+  officialSource: boolean;
+  sourceTitle: string;
+}
+
+export interface RequirementComparisonRow {
+  requirement: string;
+  programmeMinimum: string;
+  learnerResult: string;
+  status: 'Meets' | 'Above requirement' | 'Below requirement' | 'Missing information' | 'Cannot assess' | 'Not verified' | string;
+  suggestedAction: string;
+  mandatory: boolean;
+  verified: boolean;
+}
+
+export interface ProgrammeAlternative {
+  programmeRequirementId: string;
+  programmeName: string;
+  institutionName: string;
+  qualificationType?: string | null;
+  whySuggested: string;
+  eligibilityStatus: string;
+  officialSourceUrl?: string | null;
+}
+
+export interface ProgrammeRecommendationResponse {
+  institutionId?: string | null;
+  programmeRequirementId: string;
+  institutionName: string;
+  programmeName: string;
+  campus?: string | null;
+  province?: string | null;
+  institutionType?: string | null;
+  qualificationType?: string | null;
+  fieldOfStudy?: string | null;
+  studyMode?: string | null;
+  programmeDuration?: string | null;
+  minimumAps?: number | null;
+  apsRule?: string | null;
+  matchLevel: 'Best match' | 'Strong alternative' | 'Explore option' | string;
+  whyItMatches: string;
+  confirmedRequirements: string[];
+  requirementComparisons: RequirementComparisonRow[];
+  studentEligibilityStatus: 'You currently qualify' | 'You are close to qualifying' | 'You currently do not qualify' | 'Cannot assess' | string;
+  eligibilityExplanation: string;
+  missingInformation: string[];
+  officialWebsiteUrl?: string | null;
+  admissionsInfoUrl?: string | null;
+  onlineApplicationUrl?: string | null;
+  officialSourceUrl?: string | null;
+  officialSourceLabel?: string | null;
+  applicationLinkStatus: string;
+  applicationLinkVerified: boolean;
+  applicationLinkLastVerifiedAt?: string | null;
+  applicationOpeningDate?: string | null;
+  applicationClosingDate?: string | null;
+  applicationDeadline?: string | null;
+  requirementSource?: string | null;
+  sourceVerificationStatus: string;
+  verifiedSources: SourceEvidence[];
+  suggestedActions: GuidanceAction[];
+  strengths: string[];
+  weaknesses: string[];
+  alternatives: ProgrammeAlternative[];
+}
+
+export interface StudyPlanPriorityItem {
+  subject: string;
+  reason: string;
+  target: string;
+  activities: string[];
+}
+
+export interface WeeklyStudyPlanItem {
+  day: string;
+  subject: string;
+  focus: string;
+  duration: string;
+}
+
+export interface LearningSupportFilter {
+  subject?: string | null;
+  grade?: string | null;
+  topic?: string | null;
+  difficultyLevel?: string | null;
+  career?: string | null;
+  recommendedCourse?: string | null;
+}
+
+export interface PersonalizedStudyPlanResponse {
+  generated: boolean;
+  missingInformation: string[];
+  currentAcademicPosition: string;
+  currentAps?: number | null;
+  targetAps?: number | null;
+  priorities: StudyPlanPriorityItem[];
+  weeklyTimetable: WeeklyStudyPlanItem[];
+  revisionSchedule: string[];
+  milestones: string[];
+  suggestedResources: string[];
+}
+
+export interface PersonalizedRoadmapResponse {
+  analysisId?: string | null;
+  careerName: string;
+  personalized: boolean;
+  generationBlocked: boolean;
+  refreshed: boolean;
+  missingInformation: string[];
+  confirmedProfile: ConfirmedProfileSnapshot;
+  latestResults: LatestResultsSnapshot;
+  calculatedInformation: CalculatedRoadmapSnapshot;
+  programmeRecommendations: ProgrammeRecommendationResponse[];
+  profileMatchReasons: string[];
+  subjectsToImprove: string[];
+  alternativePathways: string[];
+  entryLevelJobs: string[];
+  longTermCareerProgression: Array<{ title: string; description: string }>;
+  studyPlan?: PersonalizedStudyPlanResponse | null;
+  careerInputCorrection?: TypoCorrection | null;
+  careerSuitabilityStatus?: string | null;
+  careerSuitabilityScore?: number | null;
+  admissionEligibilityStatus?: string | null;
+  sourceConfidenceStatus?: string | null;
+  verifiedProgrammeCount?: number | null;
+  importantAction?: string | null;
+  skillGapAssessment?: SkillGapAssessment | null;
+  recommendedActions: GuidanceAction[];
+  disclaimer: string;
+  generatedAt: string;
+}
+
+export interface ProgrammeSearchResult {
+  programmeRequirementId: string;
+  programmeName: string;
+  university: string;
+  qualificationType?: string | null;
+  institutionType?: string | null;
+  province?: string | null;
+  fieldOfStudy?: string | null;
+  searchGroup: 'Programmes' | 'Careers' | 'Universities' | string;
+  verificationStatus: string;
+  officialSourceUrl?: string | null;
+  matchedTerm?: string | null;
+  matchScore?: number | null;
+}
+
+export interface ScoreComponent {
+  label: string;
+  weight: number;
+  awarded: number;
+  available: boolean;
+  reason: string;
+}
+
+export interface ScoreBreakdown {
+  score?: number | null;
+  status: string;
+  explanation: string;
+  components: ScoreComponent[];
+}
+
+export interface ProgrammeSummary {
+  programmeName: string;
+  university: string;
+  qualificationType?: string | null;
+  duration?: string | null;
+  campus?: string | null;
+  studyMode?: string | null;
+  applicationDeadline?: string | null;
+  officialProgrammeUrl?: string | null;
+  verificationStatus: string;
+}
+
+export interface QualificationResult {
+  status: 'QUALIFIES' | 'CLOSE_TO_QUALIFYING' | 'DOES_NOT_CURRENTLY_QUALIFY' | 'CANNOT_ASSESS' | string;
+  learnerAps?: number | null;
+  requiredAps?: number | null;
+  confidence: string;
+  explanation: string;
+  careerSuitability: ScoreBreakdown;
+  admissionEligibility: ScoreBreakdown;
+  sourceConfidence: ScoreBreakdown;
+  missingInformation: string[];
+}
+
+export interface QualificationAssessmentResponse {
+  assessmentId?: string | null;
+  programmeRequirementId: string;
+  assessmentType: string;
+  programme: ProgrammeSummary;
+  qualificationResult: QualificationResult;
+  requirementComparison: RequirementComparisonRow[];
+  strengths: string[];
+  weaknesses: string[];
+  improvementSuggestions: string[];
+  nextActions: GuidanceAction[];
+  alternatives: ProgrammeAlternative[];
+  sources: SourceEvidence[];
+  assessedAt: string;
+}
+
+export interface ProgrammeAssessmentHistoryItem {
+  assessmentId: string;
+  programmeRequirementId: string;
+  programmeName: string;
+  institutionName: string;
+  assessedAt: string;
+  eligibilityStatus: string;
+  learnerAps?: number | null;
+}
 
 
 

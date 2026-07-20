@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -168,7 +168,7 @@ export const AssignmentManagementPanel = () => {
       {createTask.isError ? <ErrorState message={(createTask.error as Error | null)?.message ?? 'Assignment creation failed.'} /> : null}
       <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
         <AdminCard className="p-4">
-          <p className="text-[13px] font-semibold text-blue-700">Create Assignment</p>
+          <p className="text-[13px] font-semibold text-primary-700">Create Assignment</p>
           <div className="mt-4 grid gap-3">
             <select className="h-11 rounded-2xl border border-slate-200 px-3 text-sm" value={form.classId} onChange={(e) => setForm((current) => ({ ...current, classId: e.target.value }))}>
               <option value="">Select class</option>
@@ -228,7 +228,7 @@ export const AssignmentManagementPanel = () => {
             <textarea value={form.resources} onChange={(e) => setForm((current) => ({ ...current, resources: e.target.value }))} placeholder="Resources / materials" className="min-h-[90px] rounded-2xl border border-slate-200 px-3 py-3 text-sm" />
             <Button
               type="button"
-              className="h-11 rounded-2xl bg-[#0B5BFF] hover:bg-[#0849cb]"
+              className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-500"
               disabled={createTask.isPending || !form.classId || !form.subjectId || !form.title.trim() || !form.dueDate || !form.maxMarks.trim()}
               onClick={() => createTask.mutate()}
             >
@@ -277,3 +277,8 @@ export const AssignmentManagementPanel = () => {
     </AdminPageLayout>
   );
 };
+
+
+
+
+

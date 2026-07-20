@@ -80,7 +80,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     activeUserIdRef.current = user?.id ?? null;
   }, [user?.id]);
 
-  const syncStudentProfileState = (profile: { profileCompleted: boolean; profileCompleteness: number }) => {
+  const rememberMePreference = useCallback(() => authStore.shouldPersistSession(), []);
+
+  const syncStudentProfileState = useCallback((profile: { profileCompleted: boolean; profileCompleteness: number }) => {
     setUser((currentUser) => {
       if (!currentUser) return currentUser;
       const normalizedRoles = getNormalizedUserRoles(currentUser);
@@ -92,13 +94,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         profileCompleted: profile.profileCompleted,
         profileCompleteness: profile.profileCompleteness,
       };
-      const rememberMe = localStorage.getItem('edurite_access_token') !== null;
+      const rememberMe = rememberMePreference();
       authStore.setUser(next, rememberMe);
       return next;
     });
-  };
+  }, [rememberMePreference]);
 
-  const syncCompanyApprovalState = (profile: { status?: User['approvalStatus']; companyName?: string }) => {
+  const syncCompanyApprovalState = useCallback((profile: { status?: User['approvalStatus']; companyName?: string }) => {
     setUser((currentUser) => {
       if (!currentUser) return currentUser;
       const normalizedRoles = getNormalizedUserRoles(currentUser);
@@ -111,11 +113,74 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         companyName: profile.companyName ?? currentUser.companyName,
         verified: currentUser.verified,
       };
-      const rememberMe = localStorage.getItem('edurite_access_token') !== null;
+      const rememberMe = rememberMePreference();
       authStore.setUser(next, rememberMe);
       return next;
     });
-  };
+  }, [rememberMePreference]);
+
+  const syncSupplementaryProfileState = useCallback((candidate: User | null) => {
+    const roles = getNormalizedUserRoles(candidate);
+    if (roles.includes('ROLE_STUDENT')) {
+      setIsStudentProfileStatusSyncing(true);
+      studentService.getMe()
+        .then((profile) => {
+          syncStudentProfileState({
+            profileCompleted: profile.profileCompleted,
+            profileCompleteness: profile.profileCompleteness,
+          });
+        })
+        .catch(() => undefined)
+        .finally(() => {
+          setIsStudentProfileStatusSyncing(false);
+        });
+      return;
+    }
+    if (roles.includes('ROLE_COMPANY')) {
+      setIsStudentProfileStatusSyncing(false);
+      companyService.getMe()
+        .then((profile) => {
+          syncCompanyApprovalState({
+            status: profile?.status,
+            companyName: profile?.companyName,
+          });
+        })
+        .catch(() => undefined);
+      return;
+    }
+    setIsStudentProfileStatusSyncing(false);
+  }, [syncCompanyApprovalState, syncStudentProfileState]);
+
+  const commitSession = useCallback((payload: { accessToken: string; refreshToken?: string; user: User }, options?: { rememberMe?: boolean }) => {
+    const rememberMe = options?.rememberMe ?? true;
+    const normalizedUser = normalizeStoredUser(payload.user, payload.accessToken);
+    if (!normalizedUser) {
+      if (import.meta.env.DEV) {
+        console.error('[auth] refusing to commit invalid session payload', { payload });
+      }
+      authStore.clearUser();
+      return null;
+    }
+    const previousStoredUser = normalizeStoredUser(authStore.getUser(), authStore.getAccessToken());
+    if (previousStoredUser?.id && previousStoredUser.id !== normalizedUser.id) {
+      clearSessionScopedClientState();
+    }
+    authStore.setTokens(payload.accessToken, payload.refreshToken, rememberMe);
+    authStore.setUser(normalizedUser, rememberMe);
+    flushSync(() => {
+      setUser(normalizedUser);
+    });
+    if (import.meta.env.DEV) {
+      console.info('[auth] auth context session committed', {
+        email: normalizedUser.email,
+        roles: normalizedUser.roles,
+        primaryRole: normalizedUser.primaryRole,
+        approvalStatus: normalizedUser.approvalStatus,
+        ...authStore.debugSnapshot(),
+      });
+    }
+    return normalizedUser;
+  }, [clearSessionScopedClientState]);
 
   useEffect(() => {
     let active = true;
@@ -130,54 +195,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
-    if (storedUser) {
-      setUser(storedUser);
-      authService.me()
-        .then((session) => {
-          if (!active) return;
-          setSession(session, { rememberMe: authStore.shouldPersistSession() });
-        })
-        .catch((error: unknown) => {
-          if (!active || !isUnauthorizedApiError(error)) return;
+    const restoreSessionFromServer = async (hydrateWhenDone: boolean) => {
+      try {
+        const session = await authService.me();
+        if (!active) return;
+        const restoredUser = commitSession(session, { rememberMe: authStore.shouldPersistSession() });
+        if (restoredUser) {
+          syncSupplementaryProfileState(restoredUser);
+        } else {
+          clearSessionScopedClientState();
+          setUser(null);
+        }
+      } catch (error: unknown) {
+        if (!active) return;
+        if (isUnauthorizedApiError(error)) {
           clearSessionScopedClientState();
           authStore.clear();
           setUser(null);
-        });
-      const roles = getNormalizedUserRoles(storedUser);
-      if (roles.includes('ROLE_STUDENT')) {
-        setIsStudentProfileStatusSyncing(true);
-        studentService.getMe()
-          .then((profile) => {
-            if (!active) return;
-            syncStudentProfileState({
-              profileCompleted: profile.profileCompleted,
-              profileCompleteness: profile.profileCompleteness,
-            });
-          })
-          .catch(() => undefined)
-          .finally(() => {
-            if (!active) return;
-            setIsStudentProfileStatusSyncing(false);
-          });
-      } else if (roles.includes('ROLE_COMPANY')) {
-        companyService.getMe()
-          .then((profile) => {
-            if (!active) return;
-            syncCompanyApprovalState({
-              status: profile?.status,
-              companyName: profile?.companyName,
-            });
-          })
-          .catch(() => undefined);
-      } else {
-        setIsStudentProfileStatusSyncing(false);
+        } else if (import.meta.env.DEV) {
+          console.error('[auth] startup session restore failed', error);
+        }
+      } finally {
+        if (active && hydrateWhenDone) {
+          setIsHydrated(true);
+        }
       }
+    };
+
+    if (storedUser) {
+      setUser(storedUser);
+      void restoreSessionFromServer(false);
+      syncSupplementaryProfileState(storedUser);
+      setIsHydrated(true);
+    } else {
+      if (import.meta.env.DEV) {
+        console.warn('[auth] stored user data is missing or invalid; attempting session recovery using the access token.');
+      }
+      authStore.clearUser();
+      void restoreSessionFromServer(true);
     }
-    setIsHydrated(true);
     return () => {
       active = false;
     };
-  }, [clearSessionScopedClientState]);
+  }, [clearSessionScopedClientState, commitSession, syncSupplementaryProfileState]);
 
   useEffect(() => {
     const onStorageSync = (event: StorageEvent) => {
@@ -214,37 +274,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [clearSessionScopedClientState]);
 
   const setSession = (payload: { accessToken: string; refreshToken?: string; user: User }, options?: { rememberMe?: boolean }) => {
-    const rememberMe = options?.rememberMe ?? true;
-    const normalizedUser = normalizeStoredUser(payload.user, payload.accessToken);
+    const normalizedUser = commitSession(payload, options);
     if (!normalizedUser) {
       throw new Error('Authenticated session did not include a supported role.');
-    }
-    const previousStoredUser = normalizeStoredUser(authStore.getUser(), authStore.getAccessToken());
-    if (previousStoredUser?.id && previousStoredUser.id !== normalizedUser.id) {
-      clearSessionScopedClientState();
-    }
-    authStore.setTokens(payload.accessToken, payload.refreshToken, rememberMe);
-    authStore.setUser(normalizedUser, rememberMe);
-    flushSync(() => {
-      setUser(normalizedUser);
-    });
-    if (import.meta.env.DEV) {
-      console.info('[auth] auth context session committed', {
-        email: normalizedUser.email,
-        roles: normalizedUser.roles,
-        primaryRole: normalizedUser.primaryRole,
-        approvalStatus: normalizedUser.approvalStatus,
-        localStorageAuth: {
-          accessToken: localStorage.getItem('edurite_access_token'),
-          refreshToken: localStorage.getItem('edurite_refresh_token'),
-          user: localStorage.getItem('edurite_user'),
-        },
-        sessionStorageAuth: {
-          accessToken: sessionStorage.getItem('edurite_access_token'),
-          refreshToken: sessionStorage.getItem('edurite_refresh_token'),
-          user: sessionStorage.getItem('edurite_user'),
-        },
-      });
     }
     return normalizedUser;
   };

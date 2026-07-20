@@ -12,7 +12,11 @@ export class GlobalErrorBoundary extends React.Component<React.PropsWithChildren
   }
 
   componentDidCatch(error: unknown, errorInfo: React.ErrorInfo) {
-    console.error('EduRite startup error', error, errorInfo);
+    if (import.meta.env.DEV) {
+      console.error('EduRite startup error', error, errorInfo);
+      return;
+    }
+    console.error('EduRite startup error');
   }
 
   handleReload = () => {

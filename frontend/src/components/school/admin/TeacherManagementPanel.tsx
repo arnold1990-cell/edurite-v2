@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -166,7 +166,7 @@ export const TeacherManagementPanel = () => {
         </AdminCard>
 
         <AdminCard className="p-4">
-          <p className="text-[13px] font-semibold text-blue-700">Teacher Registration</p>
+          <p className="text-[13px] font-semibold text-primary-700">Teacher Registration</p>
           <h3 className="mt-2 text-[20px] font-semibold text-slate-900">Create teacher and assign subjects</h3>
           <div className="mt-4 grid gap-3">
             <Input value={teacherForm.firstName} onChange={(e) => setTeacherForm((current) => ({ ...current, firstName: e.target.value }))} placeholder="First name" className="h-11 rounded-2xl" />
@@ -204,7 +204,7 @@ export const TeacherManagementPanel = () => {
               </div>
             ))}
             <AdminActionButton type="button" variant="ghost" className="h-11" onClick={() => setDrafts((current) => [...current, emptyDraft()])}>Add Assignment Row</AdminActionButton>
-            <Button type="button" className="h-11 rounded-2xl bg-[#0B5BFF] hover:bg-[#0849cb]" disabled={createTeacher.isPending || !teacherForm.firstName.trim() || !teacherForm.lastName.trim() || !teacherForm.email.trim() || !teacherForm.password.trim()} onClick={() => createTeacher.mutate()}>
+            <Button type="button" className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-500" disabled={createTeacher.isPending || !teacherForm.firstName.trim() || !teacherForm.lastName.trim() || !teacherForm.email.trim() || !teacherForm.password.trim()} onClick={() => createTeacher.mutate()}>
               {createTeacher.isPending ? 'Saving...' : 'Create Teacher'}
             </Button>
           </div>
@@ -216,7 +216,7 @@ export const TeacherManagementPanel = () => {
           <div className="w-full max-w-3xl rounded-[32px] border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#0B5BFF]">Assign Subjects</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary-700">Assign Subjects</p>
                 <h3 className="mt-2 text-2xl font-semibold text-slate-900">{assignmentTeacher.fullName}</h3>
                 <p className="mt-2 text-sm text-slate-600">Assignments are limited to the school&apos;s registered subjects. Teachers will only see these subjects on their dashboard and mark-entry flows.</p>
               </div>
@@ -256,7 +256,7 @@ export const TeacherManagementPanel = () => {
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <Button type="button" className="rounded-2xl bg-slate-200 px-4 text-slate-800 hover:bg-slate-300" onClick={() => { setAssignmentModalOpen(false); setAssignmentTeacher(null); }}>Cancel</Button>
-              <Button type="button" className="rounded-2xl bg-[#0B5BFF] px-5 hover:bg-[#0849cb]" disabled={saveAssignments.isPending} onClick={() => saveAssignments.mutate()}>
+              <Button type="button" className="rounded-2xl bg-primary-600 px-5 hover:bg-primary-500" disabled={saveAssignments.isPending} onClick={() => saveAssignments.mutate()}>
                 {saveAssignments.isPending ? 'Saving...' : 'Save Assignments'}
               </Button>
             </div>
@@ -266,3 +266,7 @@ export const TeacherManagementPanel = () => {
     </AdminPageLayout>
   );
 };
+
+
+
+

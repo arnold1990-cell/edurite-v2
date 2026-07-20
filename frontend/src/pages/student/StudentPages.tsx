@@ -21,6 +21,7 @@ import { accountService } from '@/services/accountService';
 import { featureModulesService } from '@/services/featureModulesService';
 import { jobsService } from '@/services/jobsService';
 import { schoolService } from '@/services/schoolService';
+import { formatRewardClaimSummary, formatRewardEventSummary, getRewardClaimState, normalizeRewardText, REWARD_CLAIM_COST } from '@/pages/student/rewards.utils';
 import { AlertTriangle, Bell, BookOpen, Brain, BriefcaseBusiness, CheckCheck, CheckCircle2, CircleDollarSign, Clock3, FileText, FileUp, GraduationCap, PlayCircle, Settings, Sparkles, Target, UserCircle2, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -932,6 +933,16 @@ export const StudentProfilePage = () => {
   const [selectedTranscriptName, setSelectedTranscriptName] = useState('');
   const [guidanceRefresh, setGuidanceRefresh] = useState(0);
 
+  const invalidateProfileDerivedQueries = () => {
+    qc.invalidateQueries({ queryKey: ['me'] });
+    qc.invalidateQueries({ queryKey: ['dash'] });
+    qc.invalidateQueries({ queryKey: ['student-aps-profile'] });
+    qc.invalidateQueries({ queryKey: ['student-career-roadmaps-saved'] });
+    qc.invalidateQueries({ queryKey: ['profile-ai-readiness'] });
+    qc.invalidateQueries({ queryKey: ['ai-guidance-university-sources'] });
+    qc.invalidateQueries({ queryKey: ['career-roadmap-career-match'] });
+  };
+
   const toFormState = (source?: StudentProfile | null) => ({
     firstName: source?.firstName ?? '',
     lastName: source?.lastName ?? '',
@@ -1005,8 +1016,7 @@ export const StudentProfilePage = () => {
         profileCompleted: updatedProfile.profileCompleted,
         profileCompleteness: updatedProfile.profileCompleteness,
       });
-      qc.invalidateQueries({ queryKey: ['me'] });
-      qc.invalidateQueries({ queryKey: ['dash'] });
+      invalidateProfileDerivedQueries();
       gamificationService.completeTask('PROFILE_UPDATE').catch(() => undefined);
     },
   });
@@ -1018,8 +1028,7 @@ export const StudentProfilePage = () => {
         profileCompleted: updatedProfile.profileCompleted,
         profileCompleteness: updatedProfile.profileCompleteness,
       });
-      qc.invalidateQueries({ queryKey: ['me'] });
-      qc.invalidateQueries({ queryKey: ['dash'] });
+      invalidateProfileDerivedQueries();
     },
   });
 
@@ -1030,8 +1039,7 @@ export const StudentProfilePage = () => {
         profileCompleted: updatedProfile.profileCompleted,
         profileCompleteness: updatedProfile.profileCompleteness,
       });
-      qc.invalidateQueries({ queryKey: ['me'] });
-      qc.invalidateQueries({ queryKey: ['dash'] });
+      invalidateProfileDerivedQueries();
     },
   });
 
@@ -1052,8 +1060,7 @@ export const StudentProfilePage = () => {
         profileCompleted: updatedProfile.profileCompleted,
         profileCompleteness: updatedProfile.profileCompleteness,
       });
-      qc.invalidateQueries({ queryKey: ['me'] });
-      qc.invalidateQueries({ queryKey: ['dash'] });
+      invalidateProfileDerivedQueries();
     },
   });
 
@@ -1644,7 +1651,7 @@ export const StudentCareerRecommendationsPage = () => {
       </div>}
       {sourceCoverage && <div className="rounded border p-3 bg-white text-sm">
         <h3 className="font-semibold mb-1">Source coverage</h3>
-        <p>Successful: {sourceCoverage.successfulSourcesCount} Â· Failed: {sourceCoverage.failedSourcesCount} Â· Partial: {sourceCoverage.partialSourcesCount}</p>
+        <p>Successful: {sourceCoverage.successfulSourcesCount} • Failed: {sourceCoverage.failedSourcesCount} • Partial: {sourceCoverage.partialSourcesCount}</p>
         {!!sourceCoverage.universitiesWithUsableProgrammeData?.length && <p className="mt-1">Universities with usable programme data: {sourceCoverage.universitiesWithUsableProgrammeData.join(', ')}</p>}
       </div>}
     </>}
@@ -1687,8 +1694,16 @@ export const StudentCareerRecommendationsPage = () => {
       </div>}
 
       {sourceDiagnostics.length > 0 && <div className="space-y-2">
-        <h3 className="font-semibold">Source fetch status</h3>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2">{sourceDiagnostics.map((item) => <div key={item.sourceUrl} className="rounded border p-3 text-sm"><p className="font-medium">{item.university ?? 'University Source'}</p><p className="break-all text-slate-500">{item.sourceUrl}</p><p className="mt-1"><span className="font-medium">Status:</span> {item.fetchStatus}</p>{item.failureReason && <p><span className="font-medium">Reason:</span> {item.failureReason}</p>}</div>)}</div>
+        <h3 className="font-semibold">Source availability</h3>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2">
+          {sourceDiagnostics.map((item) => (
+            <div key={item.sourceUrl} className="rounded border p-3 text-sm">
+              <p className="font-medium">{item.university ?? 'University source'}</p>
+              <p className="mt-1"><span className="font-medium">Availability:</span> {item.fetchStatus}</p>
+              {item.failureReason && <p className="mt-1 text-slate-600">{item.failureReason}</p>}
+            </div>
+          ))}
+        </div>
       </div>}
 
       {aiAdvice.data?.summary && <div className="rounded border p-3 bg-slate-50">
@@ -3081,18 +3096,40 @@ export const StudentLearningCentrePage = () => {
 export const StudentRewardsPage = () => {
   const qc = useQueryClient();
   const summary = useAppQuery({ queryKey: ['gamification', 'summary'], queryFn: gamificationService.summary });
-  const [claimName, setClaimName] = useState('End of Term Reward');
-  const [claimDescription, setClaimDescription] = useState('Reward claim for consistent engagement this term.');
+  const rewardTitle = 'End of Term Reward';
+  const rewardDescription = 'Reward claim for consistent engagement this term.';
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!feedback) {
+      return undefined;
+    }
+    const timeout = window.setTimeout(() => setFeedback(null), 2400);
+    return () => window.clearTimeout(timeout);
+  }, [feedback]);
 
   const claim = useMutation({
-    mutationFn: () => gamificationService.claimReward(claimName, claimDescription),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['gamification', 'summary'] }),
+    mutationFn: () => gamificationService.claimReward(rewardTitle, rewardDescription),
+    onSuccess: async () => {
+      setFeedback({ type: 'success', message: 'Reward claim submitted for review.' });
+      await qc.invalidateQueries({ queryKey: ['gamification', 'summary'] });
+    },
+    onError: (error) => {
+      setFeedback({ type: 'error', message: error instanceof Error ? error.message : 'Unable to submit reward claim right now.' });
+    },
   });
 
   if (summary.isLoading) return <LoadingState />;
   if (summary.isError || !summary.data) return <ErrorState message="Could not load points and rewards right now." />;
 
+  const claimState = getRewardClaimState(summary.data.availablePoints, REWARD_CLAIM_COST);
+
   return <Section title="Points & Rewards">
+    {feedback ? (
+      <div className={`fixed right-4 top-4 z-50 rounded-2xl border px-4 py-3 text-sm font-medium shadow-lg ${feedback.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800 shadow-emerald-100' : 'border-red-200 bg-red-50 text-red-700 shadow-red-100'}`}>
+        {feedback.message}
+      </div>
+    ) : null}
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <Card label="Total points" value={summary.data.totalPoints} />
       <Card label="Reserved points" value={summary.data.reservedPoints} />
@@ -3101,21 +3138,32 @@ export const StudentRewardsPage = () => {
     <p className="text-sm text-slate-600">Current term: {summary.data.currentTermCode}</p>
     <div className="rounded border p-4 space-y-3">
       <h3 className="font-semibold">Claim end-of-term reward</h3>
-      <Input value={claimName} onChange={(event) => setClaimName(event.target.value)} />
-      <Input value={claimDescription} onChange={(event) => setClaimDescription(event.target.value)} />
-      <Button onClick={() => claim.mutate()} disabled={claim.isPending}>Claim Reward (500 points)</Button>
-      {claim.isError ? <p className="text-sm text-red-600">Unable to submit reward claim. Ensure you have enough points.</p> : null}
-      {claim.isSuccess ? <p className="text-sm text-emerald-700">Reward claim submitted for review.</p> : null}
+      <div className="space-y-1 text-sm">
+        <p className="font-medium text-slate-900">{rewardTitle}</p>
+        <p className="text-slate-600">{rewardDescription}</p>
+      </div>
+      <Button
+        onClick={() => claim.mutate()}
+        disabled={claim.isPending || !claimState.canClaim}
+        className="disabled:cursor-not-allowed"
+        aria-describedby="reward-claim-help"
+        title={!claimState.canClaim ? claimState.helperMessage : undefined}
+      >
+        {claim.isPending ? 'Claiming...' : claimState.buttonLabel}
+      </Button>
+      <p id="reward-claim-help" className={`text-sm ${claimState.canClaim ? 'text-slate-600' : 'text-slate-600'}`}>
+        {claimState.helperMessage}
+      </p>
     </div>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
       <div className="rounded border p-4">
         <h3 className="font-semibold">Recent activity</h3>
-        {(summary.data.recentEvents ?? []).map((event, index) => <p key={`${event.awardedAt}-${index}`} className="text-sm">â€¢ {event.eventType} (+{event.points})</p>)}
+        {(summary.data.recentEvents ?? []).map((event, index) => <p key={`${event.awardedAt}-${index}`} className="text-sm">{formatRewardEventSummary(event)}</p>)}
         {!summary.data.recentEvents?.length ? <p className="text-sm text-slate-500">No activity recorded yet.</p> : null}
       </div>
       <div className="rounded border p-4">
         <h3 className="font-semibold">Recent claims</h3>
-        {(summary.data.recentClaims ?? []).map((item, index) => <p key={`${item.claimedAt}-${index}`} className="text-sm">â€¢ {item.rewardName} ({item.status})</p>)}
+        {(summary.data.recentClaims ?? []).map((item, index) => <p key={`${item.claimedAt}-${index}`} className="text-sm">{formatRewardClaimSummary(item)}</p>)}
         {!summary.data.recentClaims?.length ? <p className="text-sm text-slate-500">No claims submitted yet.</p> : null}
       </div>
     </div>

@@ -104,6 +104,25 @@ public class StudentService {
             "First Additional Language",
             "Second Additional Language"
     );
+    private static final Map<String, String> SUBJECT_NAME_ALIASES = Map.ofEntries(
+            Map.entry("accpount", "Accounting"),
+            Map.entry("account", "Accounting"),
+            Map.entry("accounting", "Accounting"),
+            Map.entry("business study", "Business Studies"),
+            Map.entry("business studies", "Business Studies"),
+            Map.entry("maths", "Mathematics"),
+            Map.entry("mathematics", "Mathematics"),
+            Map.entry("math lit", "Mathematical Literacy"),
+            Map.entry("mathematical literacy", "Mathematical Literacy"),
+            Map.entry("english fal", "First Additional Language"),
+            Map.entry("first additional language", "First Additional Language"),
+            Map.entry("second additional language", "Second Additional Language"),
+            Map.entry("life orientation", "Life Orientation"),
+            Map.entry("physical science", "Physical Sciences"),
+            Map.entry("physical sciences", "Physical Sciences"),
+            Map.entry("life science", "Life Sciences"),
+            Map.entry("life sciences", "Life Sciences")
+    );
 
     private final StudentProfileRepository repository;
     private final StudentProfileCompletionService studentProfileCompletionService;
@@ -981,7 +1000,7 @@ public class StudentService {
         return incoming.stream()
                 .filter(item -> item != null && item.subjectName() != null && !item.subjectName().isBlank())
                 .map(item -> {
-                    String normalizedSubjectName = item.subjectName().trim();
+                    String normalizedSubjectName = canonicalizeSubjectName(item.subjectName());
                     if (!allowedSubjects.isEmpty() && !allowedSubjects.contains(normalizedSubjectName)) {
                         throw new ResourceConflictException("Subject '%s' is not valid for %s.".formatted(normalizedSubjectName, selectedGrade));
                     }
@@ -1028,6 +1047,26 @@ public class StudentService {
             return FET_SUBJECTS;
         }
         return Set.of();
+    }
+
+    private String canonicalizeSubjectName(String subjectName) {
+        String trimmed = subjectName == null ? "" : subjectName.trim();
+        if (trimmed.isBlank()) {
+            return trimmed;
+        }
+        String alias = SUBJECT_NAME_ALIASES.get(trimmed.toLowerCase(Locale.ROOT));
+        if (alias != null) {
+            return alias;
+        }
+        Set<String> allowedSubjects = new LinkedHashSet<>();
+        allowedSubjects.addAll(SENIOR_PHASE_SUBJECTS);
+        allowedSubjects.addAll(FET_SUBJECTS);
+        for (String allowed : allowedSubjects) {
+            if (allowed.equalsIgnoreCase(trimmed)) {
+                return allowed;
+            }
+        }
+        return trimmed;
     }
 
     private String normalizeValue(String value) {

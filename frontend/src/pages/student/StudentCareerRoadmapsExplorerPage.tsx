@@ -1,19 +1,25 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback/States';
 import { Input } from '@/components/ui/Input';
 import { InstitutionLogo } from '@/components/institutions/InstitutionLogo';
+import { careerService } from '@/services/careerService';
 import { resolveInstitutionDisplay } from '@/lib/institutionRegistry';
 import { useAppQuery } from '@/hooks/useAppQuery';
+import { authoritativeAps, calculateApsGap, calculateNscLevel, countValidManualSubjects, createSubjectRow, fingerprintCalculation, normalizeManualRow, type ResultSource, type SubjectRow, toSubjectRowsFromAps } from '@/pages/student/roadmapAps.utils';
 import { featureModulesService } from '@/services/featureModulesService';
 import { studentService } from '@/services/studentService';
 import type {
+  ApsCalculationResponse,
   ApsSubjectInput,
+  Career,
   CareerRoadmapGenerateResponse,
   CareerRoadmapPathwayStep,
   CareerRoadmapSubjectRequirement,
+  PaginatedResponse,
   SavedCareerRoadmap,
   StudentProfile,
 } from '@/types';
@@ -49,12 +55,25 @@ const subjectOptions = [
 const tabs = ['Roadmap', 'University Requirements', 'APS Readiness', 'Subject Requirements', 'Alternative Pathways', 'AI Study Plan'] as const;
 const careerSuggestions = ['Chartered Accountant', 'Doctor', 'Software Engineer', 'Lawyer', 'Nurse', 'Engineer'];
 
-type SubjectRow = {
-  id: string;
-  subjectName: string;
-  markPercentage: string;
-  level: string;
+type FeedbackState = {
+  type: 'success' | 'error';
+  message: string;
 };
+
+type AcademicResultSet = {
+  source: ResultSource;
+  resultSetId?: string;
+  verificationStatus: 'VERIFIED' | 'UNVERIFIED' | 'INCOMPLETE';
+  subjects: SubjectRow[];
+};
+
+const TEXT_REPLACEMENTS: Array<[string, string]> = [
+  ['â€¢', '•'],
+  ['â€“', '–'],
+  ['â€”', '—'],
+  ['â€™', '’'],
+  ['ï¿½', '�'],
+];
 
 const roadmapStatusColor = (status?: string): 'emerald' | 'amber' | 'slate' => {
   const normalized = (status ?? '').toLowerCase();
@@ -63,69 +82,16 @@ const roadmapStatusColor = (status?: string): 'emerald' | 'amber' | 'slate' => {
   return 'slate';
 };
 
-const levelFromMark = (mark?: number | null) => {
-  if (mark == null || Number.isNaN(mark)) return null;
-  if (mark >= 80) return 7;
-  if (mark >= 70) return 6;
-  if (mark >= 60) return 5;
-  if (mark >= 50) return 4;
-  if (mark >= 40) return 3;
-  if (mark >= 30) return 2;
-  return 1;
+const normalizeText = (value?: string | null) => {
+  if (!value) return '';
+  return TEXT_REPLACEMENTS.reduce((result, [from, to]) => result.split(from).join(to), value).replace(/\uFFFD/g, '•');
 };
 
-const apsFromLevel = (level?: number | null) => {
-  if (level == null || Number.isNaN(level)) return 0;
-  return Math.max(1, Math.min(7, level));
-};
-
-const normalizeRow = (row: SubjectRow): ApsSubjectInput | null => {
-  if (!row.subjectName.trim()) return null;
-  const mark = row.markPercentage === '' ? null : Number(row.markPercentage);
-  const level = row.level === '' ? levelFromMark(mark) : Number(row.level);
-  return {
-    subjectName: row.subjectName.trim(),
-    markPercentage: mark == null || Number.isNaN(mark) ? null : mark,
-    level: level == null || Number.isNaN(level) ? null : level,
-    apsPoints: level == null || Number.isNaN(level) ? null : apsFromLevel(level),
-  };
-};
-
-const localAps = (rows: SubjectRow[]) => {
-  const subjects = rows.map(normalizeRow).filter(Boolean) as ApsSubjectInput[];
-  const resolved = subjects.map((subject) => {
-    const level = subject.level ?? levelFromMark(subject.markPercentage);
-    return { ...subject, level, apsPoints: apsFromLevel(level) };
-  });
-  return {
-    subjects: resolved,
-    totalAps: resolved.reduce((sum, item) => sum + (item.apsPoints ?? 0), 0),
-  };
-};
-
-const toSubjectRows = (profile?: StudentProfile, apsProfile?: { subjectName: string; markPercentage?: number | null; level?: number | null }[]) => {
-  if (apsProfile?.length) {
-    return apsProfile.map((item, index) => ({
-      id: `${item.subjectName}-${index}`,
-      subjectName: item.subjectName,
-      markPercentage: item.markPercentage == null ? '' : String(item.markPercentage),
-      level: item.level == null ? '' : String(item.level),
-    }));
-  }
-  if (profile?.subjectAchievements?.length) {
-    return profile.subjectAchievements.map((item, index) => ({
-      id: `${item.subjectName}-${index}`,
-      subjectName: item.subjectName,
-      markPercentage: '',
-      level: item.achievementLevel == null ? '' : String(item.achievementLevel),
-    }));
-  }
-  return [
-    { id: '1', subjectName: 'Mathematics', markPercentage: '', level: '' },
-    { id: '2', subjectName: 'English HL', markPercentage: '', level: '' },
-    { id: '3', subjectName: 'Life Orientation', markPercentage: '', level: '' },
-  ];
-};
+const slugifyFilename = (value: string) => value
+  .trim()
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '') || 'career-roadmap';
 
 const pathwayBlock = (title: string, steps: CareerRoadmapPathwayStep[]) => (
   <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -133,8 +99,8 @@ const pathwayBlock = (title: string, steps: CareerRoadmapPathwayStep[]) => (
     <div className="mt-3 space-y-3">
       {steps.map((step) => (
         <div key={`${title}-${step.title}`}>
-          <p className="text-sm font-medium text-slate-800">{step.title}</p>
-          <p className="text-sm text-slate-600">{step.description}</p>
+          <p className="text-sm font-medium text-slate-800">{normalizeText(step.title)}</p>
+          <p className="text-sm text-slate-600">{normalizeText(step.description)}</p>
         </div>
       ))}
     </div>
@@ -145,46 +111,102 @@ const subjectRequirementCard = (item: CareerRoadmapSubjectRequirement) => (
   <article key={`${item.subject}-${item.required}`} className="rounded-2xl border border-slate-200 bg-white p-4">
     <div className="flex items-start justify-between gap-3">
       <div>
-        <h3 className="text-sm font-semibold text-slate-900">{item.subject}</h3>
-        <p className="text-sm text-slate-600">{item.notes || (item.required ? 'Required subject' : 'Recommended subject')}</p>
+        <h3 className="text-sm font-semibold text-slate-900">{normalizeText(item.subject)}</h3>
+        <p className="text-sm text-slate-600">{normalizeText(item.notes) || (item.required ? 'Required subject' : 'Recommended subject')}</p>
       </div>
       <Badge color={item.required ? 'emerald' : 'amber'}>{item.required ? 'Required' : 'Recommended'}</Badge>
     </div>
     <div className="mt-3 grid gap-2 text-sm text-slate-700 sm:grid-cols-3">
-      <div><p className="text-xs uppercase tracking-wide text-slate-400">Minimum</p><p>{item.minimumPass || 'Not set'}</p></div>
+      <div><p className="text-xs uppercase tracking-wide text-slate-400">Minimum</p><p>{normalizeText(item.minimumPass) || 'Not set'}</p></div>
       <div><p className="text-xs uppercase tracking-wide text-slate-400">Level</p><p>{item.minimumLevel ?? 'Not set'}</p></div>
-      <div><p className="text-xs uppercase tracking-wide text-slate-400">Suggested mark</p><p>{item.suggestedMark || 'Not set'}</p></div>
+      <div><p className="text-xs uppercase tracking-wide text-slate-400">Suggested mark</p><p>{normalizeText(item.suggestedMark) || 'Not set'}</p></div>
     </div>
   </article>
 );
 
 export const StudentCareerRoadmapsExplorerPage = () => {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const profile = useAppQuery({ queryKey: ['me'], queryFn: studentService.getMe });
   const apsProfile = useAppQuery({ queryKey: ['student-aps-profile'], queryFn: featureModulesService.apsProfile });
   const savedRoadmaps = useAppQuery({ queryKey: ['student-career-roadmaps-saved'], queryFn: featureModulesService.savedCareerRoadmaps });
+  const [actionFeedback, setActionFeedback] = useState<FeedbackState | null>(null);
 
   const [careerName, setCareerName] = useState('Chartered Accountant');
   const [grade, setGrade] = useState('Grade 12');
   const [province, setProvince] = useState('Gauteng');
-  const [subjects, setSubjects] = useState<SubjectRow[]>([]);
+  const [activeSource, setActiveSource] = useState<ResultSource>('MANUAL');
+  const [manualSubjects, setManualSubjects] = useState<SubjectRow[]>([
+    createSubjectRow(),
+    createSubjectRow(),
+    createSubjectRow(),
+  ]);
+  const [profileSubjects, setProfileSubjects] = useState<SubjectRow[]>([]);
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>('Roadmap');
   const [generated, setGenerated] = useState<CareerRoadmapGenerateResponse | null>(null);
+  const [generatedFingerprint, setGeneratedFingerprint] = useState('');
   const [history, setHistory] = useState<string[]>([]);
 
   useEffect(() => {
     if (!profile.data && !apsProfile.data) return;
     setGrade((current) => current || profile.data?.selectedGrade || apsProfile.data?.grade || 'Grade 12');
     setProvince((current) => current || apsProfile.data?.province || 'Gauteng');
-    setSubjects((current) => current.length ? current : toSubjectRows(profile.data, apsProfile.data?.subjects));
+    setProfileSubjects((current) => current.length ? current : toSubjectRowsFromAps(apsProfile.data?.subjects));
   }, [profile.data, apsProfile.data]);
 
-  const apsPreview = useMemo(() => localAps(subjects), [subjects]);
+  const subjects = activeSource === 'PROFILE' ? profileSubjects : manualSubjects;
+  const activeInputs = useMemo(() => subjects.map(normalizeManualRow).filter(Boolean) as ApsSubjectInput[], [subjects]);
+  const manualFingerprint = useMemo(() => fingerprintCalculation('MANUAL', careerName, grade, province, manualSubjects.map(normalizeManualRow).filter(Boolean) as ApsSubjectInput[]), [careerName, grade, province, manualSubjects]);
+  const profileFingerprint = useMemo(() => fingerprintCalculation('PROFILE', careerName, grade, province, apsProfile.data?.subjects?.map((item) => ({
+    subjectName: item.subjectName,
+    markPercentage: item.markPercentage ?? null,
+    level: item.level ?? null,
+    apsPoints: item.apsPoints ?? item.level ?? null,
+  })) ?? [], apsProfile.data?.resultSetId), [careerName, grade, province, apsProfile.data]);
+  const activeFingerprint = activeSource === 'PROFILE' ? profileFingerprint : manualFingerprint;
+  const manualAps = useAppQuery<ApsCalculationResponse>({
+    queryKey: ['student-roadmap-aps-manual', grade, province, manualFingerprint],
+    enabled: activeSource === 'MANUAL' && activeInputs.length > 0,
+    queryFn: () => featureModulesService.calculateAps({ grade, province, subjects: activeInputs }),
+  });
+  const activeAps = activeSource === 'PROFILE' ? apsProfile : manualAps;
+  const current = generated;
+  const manualResultSet = useMemo<AcademicResultSet>(() => ({
+    source: 'MANUAL',
+    verificationStatus: activeInputs.length >= 6 ? 'VERIFIED' : activeInputs.length > 0 ? 'INCOMPLETE' : 'UNVERIFIED',
+    subjects: manualSubjects,
+  }), [activeInputs.length, manualSubjects]);
+  const profileResultSet = useMemo<AcademicResultSet>(() => ({
+    source: 'PROFILE',
+    resultSetId: apsProfile.data?.resultSetId ?? undefined,
+    verificationStatus: !profileSubjects.length
+      ? 'INCOMPLETE'
+      : apsProfile.data?.status === 'UNAVAILABLE'
+        ? 'INCOMPLETE'
+        : 'VERIFIED',
+    subjects: profileSubjects,
+  }), [apsProfile.data?.resultSetId, apsProfile.data?.status, profileSubjects]);
+  const activeResultSet = activeSource === 'PROFILE' ? profileResultSet : manualResultSet;
+  const careerLookup = useAppQuery<PaginatedResponse<Career> | Career[]>({
+    queryKey: ['career-roadmap-career-match', current?.careerName ?? ''],
+    enabled: Boolean(current?.careerName?.trim()),
+    queryFn: () => careerService.list({ q: current?.careerName ?? '', size: 25 }),
+  });
+  const careerOptions = useMemo(() => Array.isArray(careerLookup.data) ? careerLookup.data : careerLookup.data?.content ?? [], [careerLookup.data]);
+  const matchedCareer = useMemo(() => {
+    if (!current?.careerName) return null;
+    const normalizedCareerName = current.careerName.trim().toLowerCase();
+    return careerOptions.find((item) => item.title?.trim().toLowerCase() === normalizedCareerName)
+      ?? careerOptions.find((item) => item.title?.trim().toLowerCase().includes(normalizedCareerName))
+      ?? null;
+  }, [careerOptions, current?.careerName]);
 
   const generate = useMutation({
-    mutationFn: () => featureModulesService.generateCareerRoadmap({ careerName, grade, province, subjects: apsPreview.subjects }),
+    mutationFn: () => featureModulesService.generateCareerRoadmap({ careerName, grade, province, subjects: activeInputs }),
     onSuccess: (data) => {
       setGenerated(data);
+      setGeneratedFingerprint(activeFingerprint);
+      setActionFeedback(null);
       setHistory((current) => [data.careerName, ...current.filter((item) => item !== data.careerName)].slice(0, 8));
     },
   });
@@ -195,7 +217,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
       return featureModulesService.saveCareerRoadmap({
         careerName: generated.careerName,
         roadmap: generated,
-        learnerAps: generated.apsReadiness.learnerAps,
+        learnerAps: authoritativeAps(activeAps.data) ?? generated.apsReadiness.learnerAps,
         requiredAps: generated.apsReadiness.requiredAps,
         apsGap: generated.apsReadiness.apsGap,
         readinessScore: generated.apsReadiness.readinessScore,
@@ -203,32 +225,106 @@ export const StudentCareerRoadmapsExplorerPage = () => {
     },
     onSuccess: (saved) => {
       queryClient.invalidateQueries({ queryKey: ['student-career-roadmaps-saved'] });
+      setActionFeedback({ type: 'success', message: 'Roadmap saved successfully.' });
       setHistory((current) => [saved.careerName, ...current.filter((item) => item !== saved.careerName)].slice(0, 8));
+    },
+    onError: (error) => {
+      setActionFeedback({ type: 'error', message: (error as Error).message || 'Could not save this roadmap right now.' });
+    },
+  });
+
+  const addToCareerPlan = useMutation({
+    mutationFn: async () => {
+      if (!matchedCareer?.id) {
+        throw new Error('This roadmap career is not available in your saved careers catalog yet.');
+      }
+      await studentService.saveCareer(matchedCareer.id);
+    },
+    onSuccess: async () => {
+      setActionFeedback({ type: 'success', message: 'Career added to My Career Plan.' });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+    onError: (error) => {
+      setActionFeedback({ type: 'error', message: (error as Error).message || 'Could not add this career to your plan right now.' });
     },
   });
 
   const selectSaved = (item: SavedCareerRoadmap) => {
     setCareerName(item.careerName);
     setGenerated(item.roadmap);
+    setGeneratedFingerprint(`saved:${item.id}`);
     setActiveTab('Roadmap');
+    setActionFeedback(null);
+  };
+
+  const selectHistoryItem = (item: string) => {
+    const saved = (savedRoadmaps.data ?? []).find((roadmap) => roadmap.careerName === item);
+    if (saved) {
+      selectSaved(saved);
+      return;
+    }
+    setCareerName(item);
+    setGenerated(null);
+    setActiveTab('Roadmap');
+    setActionFeedback(null);
+  };
+
+  const exportRoadmap = () => {
+    if (!current) return;
+    const previousTitle = document.title;
+    document.title = `${slugifyFilename(current.careerName)}-career-roadmap`;
+    window.print();
+    window.setTimeout(() => {
+      document.title = previousTitle;
+    }, 1000);
   };
 
   if (profile.isLoading || apsProfile.isLoading) return <LoadingState message="Loading AI career roadmap explorer..." />;
-  if (profile.isError || apsProfile.isError) return <ErrorState message="Could not load your career roadmap planner." />;
+  if (profile.isError || apsProfile.isError || (activeSource === 'MANUAL' && manualAps.isError)) return <ErrorState message="Could not load your career roadmap planner." />;
 
-  const current = generated;
+  const switchToManual = () => {
+    setActiveSource('MANUAL');
+    setGenerated(null);
+    setGeneratedFingerprint('');
+  };
+
+  const switchToProfile = () => {
+    if (!(apsProfile.data?.subjects?.length)) {
+      setActionFeedback({ type: 'error', message: 'No verified academic results were found in your profile. Upload a report or enter your subjects manually.' });
+      return;
+    }
+    setProfileSubjects(toSubjectRowsFromAps(apsProfile.data.subjects));
+    setActiveSource('PROFILE');
+    setGenerated(null);
+    setGeneratedFingerprint('');
+    setActionFeedback(null);
+  };
+
+  const addToCareerPlanDisabledReason = !generated
+    ? 'Generate a roadmap before adding it to your career plan.'
+    : !matchedCareer?.id
+      ? 'This roadmap is generated, but it is not linked to a saved EduRite career record for My Career Plan yet.'
+      : '';
+  const activeApsValue = authoritativeAps(activeAps.data);
+  const activeApsStatus = activeAps.data?.status ?? 'UNAVAILABLE';
+  const analysisOutdated = Boolean(generated && generatedFingerprint && generatedFingerprint !== activeFingerprint);
+  const canUseActiveAnalysis = activeApsStatus !== 'UNAVAILABLE' && activeResultSet.subjects.length > 0;
+  const displayRequiredAps = current?.apsReadiness.requiredAps ?? current?.gapAnalysis.requiredAps ?? null;
+  const displayCurrentAps = canUseActiveAnalysis ? activeApsValue : null;
+  const displayApsGap = calculateApsGap(displayCurrentAps, displayRequiredAps);
+  const profileRowsUnavailable = activeSource === 'PROFILE' && activeApsStatus === 'UNAVAILABLE';
   const topStats = current ? [
-    { label: 'Your APS', value: current.apsReadiness.learnerAps },
-    { label: 'Required APS', value: current.apsReadiness.requiredAps },
-    { label: 'APS Gap', value: current.apsReadiness.apsGap },
+    { label: 'Your APS', value: displayCurrentAps ?? '--' },
+    { label: 'Required APS', value: displayRequiredAps ?? '--' },
+    { label: 'APS Gap', value: displayApsGap ?? '--' },
     { label: 'Best-fit Universities', value: current.apsReadiness.bestFitUniversities },
-    { label: 'Readiness Score', value: `${current.apsReadiness.readinessScore}%` },
+    { label: 'Readiness Score', value: current.apsReadiness.status },
   ] : [
-    { label: 'Your APS', value: apsPreview.totalAps },
+    { label: 'Your APS', value: activeApsValue ?? '--' },
     { label: 'Required APS', value: '--' },
     { label: 'APS Gap', value: '--' },
     { label: 'Best-fit Universities', value: '--' },
-    { label: 'Readiness Score', value: '--' },
+    { label: 'Readiness Score', value: activeAps.data?.status ?? '--' },
   ];
 
   return <Section title="AI Career Roadmap Explorer">
@@ -238,8 +334,8 @@ export const StudentCareerRoadmapsExplorerPage = () => {
           <p className="text-xs uppercase tracking-[0.22em] text-sky-200">Search History</p>
           <div className="mt-4 space-y-2">
             {[...history, ...(savedRoadmaps.data ?? []).map((item) => item.careerName)].filter((item, index, list) => list.indexOf(item) === index).slice(0, 8).map((item) => (
-              <button key={item} type="button" className="block w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10" onClick={() => setCareerName(item)}>
-                {item}
+              <button key={item} type="button" className="block w-full rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/10" onClick={() => selectHistoryItem(item)}>
+                {normalizeText(item)}
               </button>
             ))}
             {!history.length && !(savedRoadmaps.data ?? []).length ? <p className="text-sm text-sky-100/80">Saved and generated careers will appear here.</p> : null}
@@ -250,8 +346,8 @@ export const StudentCareerRoadmapsExplorerPage = () => {
           <div className="mt-3 space-y-2">
             {(savedRoadmaps.data ?? []).map((item) => (
               <button key={item.id} type="button" className="block w-full rounded-2xl border border-slate-200 px-3 py-3 text-left hover:border-primary-300 hover:bg-primary-50" onClick={() => selectSaved(item)}>
-                <p className="text-sm font-medium text-slate-900">{item.careerName}</p>
-                <p className="text-xs text-slate-500">APS {item.learnerAps} â€¢ Score {item.readinessScore}%</p>
+                <p className="text-sm font-medium text-slate-900">{normalizeText(item.careerName)}</p>
+                <p className="text-xs text-slate-500">Saved snapshot APS {item.learnerAps} • Score {item.readinessScore}%</p>
               </button>
             ))}
             {!(savedRoadmaps.data ?? []).length ? <p className="text-sm text-slate-500">No saved roadmaps yet.</p> : null}
@@ -291,9 +387,40 @@ export const StudentCareerRoadmapsExplorerPage = () => {
               <div>
                 <h2 className="text-sm font-semibold text-slate-900">Current subjects and marks</h2>
                 <p className="text-sm text-slate-500">APS is calculated automatically from NSC levels.</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Analysis source: {activeSource === 'PROFILE' ? 'My Profile' : 'Manually entered subjects'}
+                  {activeSource === 'PROFILE' && activeAps.data?.resultSetLabel ? ` — ${activeAps.data.resultSetLabel}` : ''}
+                  {activeSource === 'MANUAL' ? ` — ${countValidManualSubjects(manualSubjects)} valid subjects` : ''}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">Result status: {activeResultSet.verificationStatus}</p>
               </div>
-              <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => setSubjects((currentRows) => [...currentRows, { id: `${Date.now()}`, subjectName: '', markPercentage: '', level: '' }])}>Add Subject</Button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  className="bg-slate-700 hover:bg-slate-600"
+                  aria-label="Use verified profile results"
+                  onClick={switchToProfile}
+                >
+                  Link to My Profile
+                </Button>
+                <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => {
+                  setActiveSource('MANUAL');
+                  setManualSubjects((currentRows) => [...currentRows, createSubjectRow()]);
+                  setGenerated(null);
+                  setGeneratedFingerprint('');
+                }}>Add Subject</Button>
+              </div>
             </div>
+            {activeSource === 'PROFILE' && !(apsProfile.data?.subjects?.length) ? (
+              <div className="border-b border-slate-200 px-4 py-3 text-sm text-amber-800">
+                No verified academic results were found in your profile. Upload a report or enter your subjects manually. <button type="button" className="font-medium text-primary-600 hover:text-primary-500" onClick={() => navigate('/student/profile')}>Open My Profile</button>
+              </div>
+            ) : null}
+            {profileRowsUnavailable ? (
+              <div className="border-b border-slate-200 px-4 py-3 text-sm text-amber-800">
+                Your profile subject results are incomplete for APS analysis. Add the missing marks in My Profile or switch to manual entry before generating a roadmap.
+              </div>
+            ) : null}
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200 text-sm">
                 <thead className="bg-slate-50">
@@ -307,22 +434,37 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {subjects.map((row) => {
-                    const normalized = normalizeRow(row);
-                    const level = normalized?.level ?? levelFromMark(normalized?.markPercentage);
-                    const aps = apsFromLevel(level);
+                    const normalized = normalizeManualRow(row);
+                    const level = normalized?.level ?? calculateNscLevel(normalized?.markPercentage);
+                    const aps = normalized?.apsPoints ?? level ?? '--';
                     return <tr key={row.id}>
                       <td className="px-4 py-3">
-                        <input list="career-roadmap-subjects" className="w-full rounded-lg border border-slate-300 px-3 py-2" value={row.subjectName} onChange={(event) => setSubjects((currentRows) => currentRows.map((item) => item.id === row.id ? { ...item, subjectName: event.target.value } : item))} placeholder="Subject name" />
+                        <input list="career-roadmap-subjects" className="w-full rounded-lg border border-slate-300 px-3 py-2" value={row.subjectName} onChange={(event) => {
+                          setActiveSource('MANUAL');
+                          setGenerated(null);
+                          setGeneratedFingerprint('');
+                          setManualSubjects((currentRows) => currentRows.map((item) => item.id === row.id ? { ...item, subjectName: event.target.value } : item));
+                        }} placeholder="Subject name" disabled={activeSource === 'PROFILE'} />
                       </td>
                       <td className="px-4 py-3">
-                        <Input type="number" min={0} max={100} value={row.markPercentage} onChange={(event) => setSubjects((currentRows) => currentRows.map((item) => item.id === row.id ? { ...item, markPercentage: event.target.value, level: event.target.value ? String(levelFromMark(Number(event.target.value)) ?? '') : item.level } : item))} placeholder="75" />
+                        <Input type="number" min={0} max={100} value={row.markPercentage} onChange={(event) => {
+                          setActiveSource('MANUAL');
+                          setGenerated(null);
+                          setGeneratedFingerprint('');
+                          setManualSubjects((currentRows) => currentRows.map((item) => item.id === row.id ? { ...item, markPercentage: event.target.value } : item));
+                        }} placeholder="" disabled={activeSource === 'PROFILE'} />
                       </td>
                       <td className="px-4 py-3">
-                        <Input type="number" min={1} max={7} value={row.level} onChange={(event) => setSubjects((currentRows) => currentRows.map((item) => item.id === row.id ? { ...item, level: event.target.value } : item))} placeholder="6" />
+                        <Input type="number" min={1} max={7} value={level == null ? '' : String(level)} readOnly placeholder="" />
                       </td>
                       <td className="px-4 py-3 text-slate-700">{normalized?.subjectName ? aps : '--'}</td>
                       <td className="px-4 py-3">
-                        <button type="button" className="text-sm font-medium text-red-600 hover:text-red-500" onClick={() => setSubjects((currentRows) => currentRows.filter((item) => item.id !== row.id))}>Remove</button>
+                        <button type="button" className="text-sm font-medium text-red-600 hover:text-red-500 disabled:cursor-not-allowed disabled:text-slate-400" onClick={() => {
+                          setActiveSource('MANUAL');
+                          setGenerated(null);
+                          setGeneratedFingerprint('');
+                          setManualSubjects((currentRows) => currentRows.filter((item) => item.id !== row.id));
+                        }} disabled={activeSource === 'PROFILE'}>Remove</button>
                       </td>
                     </tr>;
                   })}
@@ -336,15 +478,27 @@ export const StudentCareerRoadmapsExplorerPage = () => {
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3">
               <p className="text-xs uppercase tracking-[0.22em] text-sky-600">Your APS</p>
-              <p className="text-2xl font-semibold text-slate-900">{apsPreview.totalAps}</p>
+              <p className="text-2xl font-semibold text-slate-900">{activeApsValue ?? '--'}</p>
+              <p className="mt-1 text-xs text-slate-500">{activeApsStatus} • {activeAps.data?.calculationRule ?? 'General NSC APS preview'}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => generate.mutate()} disabled={generate.isPending || !careerName.trim()}>{generate.isPending ? 'Generating...' : 'Generate Roadmap'}</Button>
-              <Button type="button" className="bg-slate-700 hover:bg-slate-600" disabled={!generated || saveRoadmap.isPending} onClick={() => saveRoadmap.mutate()}>{saveRoadmap.isPending ? 'Saving...' : 'Save Roadmap'}</Button>
-              <Button type="button" className="bg-slate-700 hover:bg-slate-600" disabled={!generated} onClick={() => window.print()}>Export PDF</Button>
-              <Button type="button" className="bg-slate-700 hover:bg-slate-600" disabled={!generated || saveRoadmap.isPending} onClick={() => saveRoadmap.mutate()}>Add to My Career Plan</Button>
+              <Button type="button" onClick={() => generate.mutate()} disabled={generate.isPending || !careerName.trim() || !activeInputs.length || activeAps.data?.status === 'UNAVAILABLE'}>{generate.isPending ? 'Generating...' : 'Generate Roadmap'}</Button>
+              <Button type="button" className="bg-slate-700 hover:bg-slate-600" disabled={!generated || analysisOutdated || saveRoadmap.isPending} onClick={() => saveRoadmap.mutate()}>{saveRoadmap.isPending ? 'Saving...' : 'Save Roadmap'}</Button>
+              <Button type="button" className="bg-slate-700 hover:bg-slate-600" disabled={!generated || analysisOutdated} onClick={exportRoadmap}>Export PDF</Button>
+              <Button
+                type="button"
+                className="bg-slate-700 hover:bg-slate-600"
+                disabled={!generated || analysisOutdated || addToCareerPlan.isPending || !matchedCareer?.id}
+                onClick={() => addToCareerPlan.mutate()}
+                title={addToCareerPlanDisabledReason}
+              >
+                {addToCareerPlan.isPending ? 'Adding...' : 'Add to My Career Plan'}
+              </Button>
             </div>
           </div>
+          {analysisOutdated ? <p className="mt-3 text-sm text-amber-700">Your subject results changed. Regenerate the roadmap to refresh APS, eligibility, and study-plan analysis.</p> : null}
+          {actionFeedback ? <p className={`mt-3 text-sm ${actionFeedback.type === 'success' ? 'text-emerald-700' : 'text-red-600'}`}>{actionFeedback.message}</p> : null}
+          {!actionFeedback && addToCareerPlanDisabledReason && generated ? <p className="mt-3 text-sm text-slate-500">{addToCareerPlanDisabledReason}</p> : null}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -371,8 +525,8 @@ export const StudentCareerRoadmapsExplorerPage = () => {
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900">{current.careerName}</h2>
-                    <p className="mt-2 text-sm text-slate-600">{current.overview.description || 'Career overview is being refined.'}</p>
+                    <h2 className="text-lg font-semibold text-slate-900">{normalizeText(current.careerName)}</h2>
+                    <p className="mt-2 text-sm text-slate-600">{normalizeText(current.overview.description) || 'Career overview is being refined.'}</p>
                   </div>
                   <Badge color={roadmapStatusColor(current.apsReadiness.status)}>{current.apsReadiness.status}</Badge>
                 </div>
@@ -380,20 +534,20 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Daily responsibilities</p>
                     <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                      {current.overview.dailyResponsibilities.map((item) => <li key={item}>â€¢ {item}</li>)}
+                      {current.overview.dailyResponsibilities.map((item) => <li key={item}>• {normalizeText(item)}</li>)}
                     </ul>
                   </div>
                   <div>
                     <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Skills needed</p>
                     <ul className="mt-2 space-y-2 text-sm text-slate-700">
-                      {current.overview.skillsNeeded.map((item) => <li key={item}>â€¢ {item}</li>)}
+                      {current.overview.skillsNeeded.map((item) => <li key={item}>• {normalizeText(item)}</li>)}
                     </ul>
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-3">
-                  <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Career demand</p><p>{current.overview.careerDemand || 'Verify current demand by region.'}</p></div>
-                  <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Salary range</p><p>{current.overview.salaryRange || 'Varies by experience.'}</p></div>
-                  <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Professional body</p><p>{current.overview.professionalBody || 'Check sector-specific registration.'}</p></div>
+                  <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Career demand</p><p>{normalizeText(current.overview.careerDemand) || 'Verify current demand by region.'}</p></div>
+                  <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Salary range</p><p>{normalizeText(current.overview.salaryRange) || 'Varies by experience.'}</p></div>
+                  <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Professional body</p><p>{normalizeText(current.overview.professionalBody) || 'Check sector-specific registration.'}</p></div>
                 </div>
               </div>
               <div className="grid gap-4 lg:grid-cols-2">
@@ -405,8 +559,8 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                 <div className="mt-4 space-y-3">
                   {current.roadmapTimeline.map((item) => (
                     <div key={`${item.stage}-${item.title}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-                      <p className="text-sm font-medium text-slate-900">{item.stage ? `${item.stage}. ` : ''}{item.title}</p>
-                      <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+                      <p className="text-sm font-medium text-slate-900">{item.stage ? `${item.stage}. ` : ''}{normalizeText(item.title)}</p>
+                      <p className="mt-1 text-sm text-slate-600">{normalizeText(item.description)}</p>
                     </div>
                   ))}
                 </div>
@@ -424,7 +578,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                         <InstitutionLogo src={institution.logoUrl} institutionName={institution.displayName} abbreviation={institution.abbreviation} size={56} className="rounded-2xl" />
                         <div>
                           <h3 className="text-sm font-semibold text-slate-900">{item.institutionName}</h3>
-                          <p className="text-sm text-slate-600">{item.qualificationName}</p>
+                          <p className="text-sm text-slate-600">{normalizeText(item.qualificationName)}</p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -433,14 +587,14 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                       </div>
                     </div>
                     <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
-                      <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">APS</p><p>{item.apsRequired ?? 'Verify'}{item.apsGap ? ` · Gap ${item.apsGap}` : ''}</p></div>
+                      <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">{item.verified ? 'APS' : 'Estimated APS'}</p><p>{item.apsRequired ?? 'Verify'}{item.apsGap != null ? ` · Gap ${item.apsGap}` : ''}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Province</p><p>{item.province || 'South Africa'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Mathematics</p><p>{item.mathematicsRequirement || 'Not stated'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">English</p><p>{item.englishRequirement || 'Not stated'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Accounting</p><p>{item.accountingRequirement || 'Not stated'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Duration</p><p>{item.duration || 'Verify with institution'}</p></div>
                     </div>
-                    <p className="mt-3 text-sm text-slate-600">{item.notes || item.source || 'Verify the full admission requirement directly with the institution.'}</p>
+                    <p className="mt-3 text-sm text-slate-600">{normalizeText(item.notes || item.source) || 'Verify the full admission requirement directly with the institution.'}</p>
                     {item.applicationUrl ? <a className="mt-3 inline-block text-sm font-medium text-primary-600 hover:text-primary-500" href={item.applicationUrl} target="_blank" rel="noreferrer">Application link</a> : null}
                   </article>
                 );
@@ -453,16 +607,16 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Readiness summary</h3>
                   <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
-                    <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Current APS</p><p>{current.gapAnalysis.currentAps}</p></div>
-                    <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Required APS</p><p>{current.gapAnalysis.requiredAps}</p></div>
-                    <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">APS gap</p><p>{current.gapAnalysis.apsGap}</p></div>
+                    <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Current APS</p><p>{displayCurrentAps ?? 'Unavailable'}</p></div>
+                    <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Required APS</p><p>{displayRequiredAps ?? 'APS requirement not verified'}</p></div>
+                    <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">APS gap</p><p>{displayApsGap ?? 'Unavailable'}</p></div>
                     <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Risk level</p><p>{current.gapAnalysis.riskLevel}</p></div>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Improvement suggestions</h3>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {current.gapAnalysis.improvementSuggestions.map((item) => <li key={item}>â€¢ {item}</li>)}
+                    {current.gapAnalysis.improvementSuggestions.map((item) => <li key={item}>• {normalizeText(item)}</li>)}
                   </ul>
                 </div>
               </div>
@@ -476,7 +630,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Subjects needing improvement</h3>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {current.gapAnalysis.subjectsNeedingImprovement.length ? current.gapAnalysis.subjectsNeedingImprovement.map((item) => <li key={item}>â€¢ {item}</li>) : <li className="text-slate-500">No urgent subject improvements flagged.</li>}
+                    {current.gapAnalysis.subjectsNeedingImprovement.length ? current.gapAnalysis.subjectsNeedingImprovement.map((item) => <li key={item}>• {normalizeText(item)}</li>) : <li className="text-slate-500">No urgent subject improvements flagged.</li>}
                   </ul>
                 </div>
               </div>
@@ -493,13 +647,13 @@ export const StudentCareerRoadmapsExplorerPage = () => {
               <div className="rounded-2xl border border-slate-200 bg-white p-4">
                 <h3 className="text-sm font-semibold text-slate-900">Alternative pathways</h3>
                 <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                  {current.alternativePathways.map((item) => <li key={item}>â€¢ {item}</li>)}
+                  {current.alternativePathways.map((item) => <li key={item}>• {normalizeText(item)}</li>)}
                 </ul>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold text-slate-900">Best-fit universities</h3>
                 <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                  {current.gapAnalysis.bestFitUniversities.map((item) => <li key={item}>â€¢ {item}</li>)}
+                  {current.gapAnalysis.bestFitUniversities.map((item) => <li key={item}>• {normalizeText(item)}</li>)}
                 </ul>
               </div>
             </div> : null}
@@ -507,10 +661,10 @@ export const StudentCareerRoadmapsExplorerPage = () => {
             {current && activeTab === 'AI Study Plan' ? <div className="space-y-4">
               {current.studyPlan.map((item) => (
                 <article key={item.title} className="rounded-2xl border border-slate-200 bg-white p-4">
-                  <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
-                  <p className="mt-1 text-sm text-slate-600">{item.focus}</p>
+                  <h3 className="text-sm font-semibold text-slate-900">{normalizeText(item.title)}</h3>
+                  <p className="mt-1 text-sm text-slate-600">{normalizeText(item.focus)}</p>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {item.actions.map((action) => <li key={action}>â€¢ {action}</li>)}
+                    {item.actions.map((action) => <li key={action}>• {normalizeText(action)}</li>)}
                   </ul>
                 </article>
               ))}
@@ -531,13 +685,13 @@ export const StudentCareerRoadmapsExplorerPage = () => {
               <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Status</p>
               <div className="mt-2 flex items-center justify-between gap-3">
                 <p className="text-lg font-semibold text-slate-900">{current.apsReadiness.status}</p>
-                <Badge color={roadmapStatusColor(current.apsReadiness.status)}>{current.apsReadiness.readinessScore}%</Badge>
+                <Badge color={roadmapStatusColor(current.apsReadiness.status)}>{analysisOutdated ? 'Outdated' : activeApsStatus}</Badge>
               </div>
             </div>
             <div className="grid gap-3 text-sm text-slate-700">
-              <div className="rounded-2xl border border-slate-200 p-3"><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Learner APS</p><p className="mt-1 font-semibold text-slate-900">{current.apsReadiness.learnerAps}</p></div>
-              <div className="rounded-2xl border border-slate-200 p-3"><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Required APS</p><p className="mt-1 font-semibold text-slate-900">{current.apsReadiness.requiredAps}</p></div>
-              <div className="rounded-2xl border border-slate-200 p-3"><p className="text-xs uppercase tracking-[0.2em] text-slate-400">APS Gap</p><p className="mt-1 font-semibold text-slate-900">{current.apsReadiness.apsGap}</p></div>
+              <div className="rounded-2xl border border-slate-200 p-3"><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Learner APS</p><p className="mt-1 font-semibold text-slate-900">{displayCurrentAps ?? 'Unavailable'}</p></div>
+              <div className="rounded-2xl border border-slate-200 p-3"><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Required APS</p><p className="mt-1 font-semibold text-slate-900">{displayRequiredAps ?? 'APS requirement not verified'}</p></div>
+              <div className="rounded-2xl border border-slate-200 p-3"><p className="text-xs uppercase tracking-[0.2em] text-slate-400">APS Gap</p><p className="mt-1 font-semibold text-slate-900">{displayApsGap ?? 'Unavailable'}</p></div>
             </div>
           </div> : <p className="mt-3 text-sm text-slate-500">Generate a roadmap to see eligibility, APS gap, and matched institutions.</p>}
         </div>

@@ -87,7 +87,7 @@ export const SchoolRegistrationRequestsPage = () => {
               key={tab.key}
               type="button"
               onClick={() => setSearchParams({ status: tab.key })}
-              className={`rounded-[24px] border px-5 py-4 text-left transition ${active ? 'border-blue-200 bg-blue-50 shadow-sm' : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50'}`}
+              className={`rounded-[24px] border px-5 py-4 text-left transition ${active ? 'border-primary-200 bg-primary-50 shadow-sm' : 'border-slate-200 bg-white hover:border-primary-200 hover:bg-slate-50'}`}
             >
               <p className="text-sm font-semibold text-slate-900">{tab.label}</p>
               <p className="mt-1 text-sm text-slate-600">{tab.helper}</p>
@@ -165,7 +165,7 @@ export const SchoolRegistrationRequestsPage = () => {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => setDetailRequestId(item.requestId)}>
+                        <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => setDetailRequestId(item.requestId)}>
                           View Details
                         </Button>
                         <Button
@@ -216,7 +216,7 @@ export const SchoolRegistrationRequestsPage = () => {
             />
             {decisionMutation.isError ? <p className="mt-3 text-sm text-rose-600">{(decisionMutation.error as Error).message}</p> : null}
             <div className="mt-4 flex justify-end gap-3">
-              <Button className="bg-slate-700 hover:bg-slate-600" onClick={() => setSelectedRequestId(null)}>Cancel</Button>
+              <Button className="bg-primary-600 hover:bg-primary-700" onClick={() => setSelectedRequestId(null)}>Cancel</Button>
               <Button
                 disabled={decisionMutation.isPending || !rejectionReason.trim()}
                 onClick={() => decisionMutation.mutate({ requestId: selectedRequest.requestId, decision: 'REJECT', rejectionReason })}
@@ -260,7 +260,7 @@ export const SchoolRegistrationRequestsPage = () => {
             ) : null}
             {decisionMutation.isError ? <p className="mt-4 text-sm text-rose-600">{(decisionMutation.error as Error).message}</p> : null}
             <div className="mt-5 flex flex-wrap justify-end gap-3">
-              <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => setDetailRequestId(null)}>Close</Button>
+              <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => setDetailRequestId(null)}>Close</Button>
               <Button
                 type="button"
                 disabled={decisionMutation.isPending || detailRequest.status !== 'PENDING_DISTRICT_APPROVAL'}
@@ -286,3 +286,6 @@ export const SchoolRegistrationRequestsPage = () => {
     </section>
   );
 };
+
+
+

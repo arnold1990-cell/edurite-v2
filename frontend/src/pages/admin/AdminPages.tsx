@@ -135,7 +135,7 @@ export const AdminUsersPage = () => {
         <div className="flex flex-wrap items-center gap-3">
           <input type="file" accept=".csv,text/csv" onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
           <Button type="button" onClick={() => file && uploadCsv.mutate(file)} disabled={!file || uploadCsv.isPending}>Upload CSV</Button>
-          <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={async () => {
+          <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={async () => {
             const template = await adminService.getBulkUploadTemplate();
             const blob = new Blob([template], { type: 'text/csv;charset=utf-8' });
             const href = URL.createObjectURL(blob);
@@ -287,10 +287,10 @@ export const AdminCompanyReviewPage = () => {
         <div className="flex flex-wrap gap-2">
           <Button type="button" onClick={() => id && void run(() => adminService.approveCompany(id, notes))}>Approve</Button>
           <Button type="button" className="bg-amber-600 hover:bg-amber-500" onClick={() => id && void run(() => adminService.requestCompanyMoreInfo(id, notes))}>Request More Info</Button>
-          <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => id && void run(() => adminService.reactivateCompany(id, notes))}>Reactivate</Button>
+          <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => id && void run(() => adminService.reactivateCompany(id, notes))}>Reactivate</Button>
           <Button type="button" className="bg-red-600 hover:bg-red-500" onClick={() => id && void run(() => adminService.rejectCompany(id, notes))}>Reject</Button>
           <Button type="button" className="bg-red-800 hover:bg-red-700" onClick={() => id && void run(() => adminService.suspendCompany(id, notes))}>Suspend</Button>
-          <Button type="button" className="bg-black hover:bg-slate-800" onClick={() => {
+          <Button type="button" className="bg-primary-700 hover:bg-primary-600" onClick={() => {
             if (!window.confirm('Delete this company and disable account access?')) return;
             if (id) void run(() => adminService.deleteCompany(id, notes || 'Deleted by admin'));
           }}>Delete Company</Button>
@@ -809,7 +809,7 @@ export const AdminDistrictManagementPage = () => {
               <p className="text-lg font-semibold text-slate-900">Edit District: {editingDistrict.districtName}</p>
               <p className="text-sm text-slate-600">Assign district leadership and contact details.</p>
             </div>
-            <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => setEditingDistrictId(null)}>Close</Button>
+            <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => setEditingDistrictId(null)}>Close</Button>
           </div>
           <form
             className="grid gap-4 md:grid-cols-2"
@@ -840,7 +840,7 @@ export const AdminDistrictManagementPage = () => {
               <p className="text-lg font-semibold text-slate-900">{selectedDistrict.districtName}</p>
               <p className="text-sm text-slate-600">{selectedDistrict.districtCode}</p>
             </div>
-            <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => setViewDistrictId(null)}>Close</Button>
+            <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => setViewDistrictId(null)}>Close</Button>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm"><span className="font-semibold text-slate-900">District Director:</span> {selectedDistrict.directorName || 'Not assigned'}</div>
@@ -862,4 +862,7 @@ export const AdminDistrictManagementPage = () => {
     </section>
   );
 };
+
+
+
 

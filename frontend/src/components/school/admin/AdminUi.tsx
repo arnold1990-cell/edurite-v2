@@ -6,7 +6,7 @@ export const adminToneClass = (tone?: string) => {
   if (tone === 'positive') return 'border-emerald-200 bg-emerald-50 text-emerald-700';
   if (tone === 'warning') return 'border-amber-200 bg-amber-50 text-amber-700';
   if (tone === 'critical') return 'border-rose-200 bg-rose-50 text-rose-700';
-  if (tone === 'info') return 'border-blue-200 bg-blue-50 text-blue-700';
+  if (tone === 'info') return 'border-primary-200 bg-primary-50 text-primary-700';
   return 'border-slate-200 bg-slate-100 text-slate-700';
 };
 
@@ -132,3 +132,6 @@ export const AdminActionButton = ({
             : 'border border-slate-200 bg-white text-slate-900 hover:bg-slate-50';
   return <Button className={cn('h-9 rounded-xl px-3 text-[13px] font-semibold shadow-none', variantClass, className)} {...props}>{children}</Button>;
 };
+
+
+

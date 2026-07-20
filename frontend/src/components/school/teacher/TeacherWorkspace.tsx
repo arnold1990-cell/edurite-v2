@@ -1,4 +1,4 @@
-ï»¿import { useMemo, useState, type ComponentType } from 'react';
+import { useMemo, useState, type ComponentType } from 'react';
 import {
   BookOpen,
   Calendar,
@@ -145,7 +145,7 @@ export const TeacherWorkspace = ({
         {classes.map((cls) => (
           <div key={cls.classId} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
             <p className="font-semibold text-slate-900">{cls.grade} {cls.className}</p>
-            <p>{cls.subjectName} Â· {cls.learnerCount} learners</p>
+            <p>{cls.subjectName} · {cls.learnerCount} learners</p>
           </div>
         ))}
         {!classes.length ? <EmptyState title="No assigned classes yet." message="No assigned classes yet." /> : null}
@@ -160,7 +160,7 @@ export const TeacherWorkspace = ({
         {subjects.map((subject) => (
           <div key={subject.subjectId} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-sm font-semibold text-slate-900">{subject.subjectName}</p>
-            <p className="text-xs text-slate-600">{subject.phase}{subject.grade ? ` Â· ${subject.grade}` : ''}</p>
+            <p className="text-xs text-slate-600">{subject.phase}{subject.grade ? ` · ${subject.grade}` : ''}</p>
             <p className="mt-1 text-xs text-slate-500">{subject.classCount} assigned classes</p>
           </div>
         ))}
@@ -201,7 +201,7 @@ export const TeacherWorkspace = ({
           {filteredTasks.map((task) => (
             <div key={task.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-sm font-semibold text-slate-900">{task.title}</p>
-              <p className="text-xs text-slate-600">{task.taskType} Â· Due {new Date(task.dueAt).toLocaleString()}</p>
+              <p className="text-xs text-slate-600">{task.taskType} · Due {new Date(task.dueAt).toLocaleString()}</p>
             </div>
           ))}
           {!filteredTasks.length ? <EmptyState title="No tasks found." message="No tasks found." /> : null}
@@ -241,7 +241,7 @@ export const TeacherWorkspace = ({
         {assessments.map((assessment) => (
           <div key={assessment.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-sm font-semibold text-slate-900">{assessment.title}</p>
-            <p className="text-xs text-slate-500">{assessment.taskType} Â· Due {new Date(assessment.dueAt).toLocaleString()}</p>
+            <p className="text-xs text-slate-500">{assessment.taskType} · Due {new Date(assessment.dueAt).toLocaleString()}</p>
           </div>
         ))}
       </div>
@@ -345,7 +345,7 @@ export const TeacherWorkspace = ({
       <h3 className="text-sm font-semibold text-slate-900">Settings</h3>
       <p className="mt-2 text-sm text-slate-600">Use account settings to update profile and password.</p>
       <div className="mt-3">
-        <Button type="button" className="h-10 rounded-xl bg-slate-700 px-4 text-sm hover:bg-slate-800" onClick={onLogout}>Logout</Button>
+        <Button type="button" className="h-10 rounded-xl bg-primary-700 px-4 text-sm hover:bg-primary-700" onClick={onLogout}>Logout</Button>
       </div>
     </div>
   );
@@ -404,3 +404,6 @@ export const TeacherWorkspace = ({
     </section>
   );
 };
+
+
+

@@ -248,7 +248,7 @@ export const SchoolAdminWorkspace = ({
                       <Input value={editUser.email} onChange={(e) => setEditUser((prev) => prev ? ({ ...prev, email: e.target.value }) : prev)} placeholder="Email" />
                       <div className="sm:col-span-3 flex gap-2">
                         <Button type="button" disabled={updateUser.isPending} onClick={() => void updateUser.mutate(editUser)}>{updateUser.isPending ? 'Saving...' : 'Save'}</Button>
-                        <Button type="button" className="bg-slate-600 hover:bg-slate-700" onClick={() => setEditUser(null)}>Cancel</Button>
+                        <Button type="button" className="bg-primary-600 hover:bg-primary-600" onClick={() => setEditUser(null)}>Cancel</Button>
                       </div>
                     </div>
                   ) : (
@@ -258,7 +258,7 @@ export const SchoolAdminWorkspace = ({
                         <p className="text-xs text-slate-600">{item.email}</p>
                       </div>
                       <div className="flex gap-2">
-                        <Button type="button" className="bg-slate-700 hover:bg-slate-800" onClick={() => {
+                        <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => {
                           const [firstName, ...rest] = item.fullName.split(' ');
                           setEditUser({ userId: item.userId, firstName: firstName || '', lastName: rest.join(' '), email: item.email });
                         }}>Edit</Button>
@@ -354,14 +354,14 @@ export const SchoolAdminWorkspace = ({
                         <Input value={editClass.term ?? ''} onChange={(e) => setEditClass((prev) => prev ? ({ ...prev, term: e.target.value }) : prev)} placeholder="Term" />
                         <div className="sm:col-span-4 flex gap-2">
                           <Button type="button" disabled={updateClass.isPending} onClick={() => void updateClass.mutate(editClass)}>{updateClass.isPending ? 'Saving...' : 'Save'}</Button>
-                          <Button type="button" className="bg-slate-600 hover:bg-slate-700" onClick={() => setEditClass(null)}>Cancel</Button>
+                          <Button type="button" className="bg-primary-600 hover:bg-primary-600" onClick={() => setEditClass(null)}>Cancel</Button>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="text-sm text-slate-800">{item.grade} {item.className} · {item.academicYear}</p>
                         <div className="flex gap-2">
-                          <Button type="button" className="bg-slate-700 hover:bg-slate-800" onClick={() => setEditClass(item)}>Edit</Button>
+                          <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => setEditClass(item)}>Edit</Button>
                           <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => deactivateClass.mutate(item.id)} disabled={deactivateClass.isPending}>Deactivate</Button>
                         </div>
                       </div>
@@ -403,14 +403,14 @@ export const SchoolAdminWorkspace = ({
                         <Input value={editSubject.grade ?? ''} onChange={(e) => setEditSubject((prev) => prev ? ({ ...prev, grade: e.target.value }) : prev)} placeholder="Grade" />
                         <div className="sm:col-span-3 flex gap-2">
                           <Button type="button" disabled={updateSubject.isPending} onClick={() => void updateSubject.mutate(editSubject)}>{updateSubject.isPending ? 'Saving...' : 'Save'}</Button>
-                          <Button type="button" className="bg-slate-600 hover:bg-slate-700" onClick={() => setEditSubject(null)}>Cancel</Button>
+                          <Button type="button" className="bg-primary-600 hover:bg-primary-600" onClick={() => setEditSubject(null)}>Cancel</Button>
                         </div>
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="text-sm text-slate-800">{item.subjectName} · {item.phase} {item.grade ? `· ${item.grade}` : ''}</p>
                         <div className="flex gap-2">
-                          <Button type="button" className="bg-slate-700 hover:bg-slate-800" onClick={() => setEditSubject(item)}>Edit</Button>
+                          <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => setEditSubject(item)}>Edit</Button>
                           <Button type="button" className="bg-red-600 hover:bg-red-700" onClick={() => deactivateSubject.mutate(item.id)} disabled={deactivateSubject.isPending}>Deactivate</Button>
                         </div>
                       </div>
@@ -518,7 +518,7 @@ export const SchoolAdminWorkspace = ({
         <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-lg font-semibold text-slate-900">My Notifications</h2>
-            <Button type="button" className="bg-slate-700 hover:bg-slate-800" disabled={markAllNotificationsRead.isPending || !items.length} onClick={() => markAllNotificationsRead.mutate()}>
+            <Button type="button" className="bg-primary-600 hover:bg-primary-700" disabled={markAllNotificationsRead.isPending || !items.length} onClick={() => markAllNotificationsRead.mutate()}>
               Mark all read
             </Button>
           </div>
@@ -611,3 +611,6 @@ export const SchoolAdminWorkspace = ({
     </section>
   );
 };
+
+
+

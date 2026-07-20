@@ -18,3 +18,5 @@ export const PopiaConsentCheckbox = ({ version, label, inputProps }: PopiaConsen
     </span>
   </label>
 );
+
+

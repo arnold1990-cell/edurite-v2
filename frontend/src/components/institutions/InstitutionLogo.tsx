@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 
 interface InstitutionLogoProps {
@@ -22,10 +22,14 @@ export const InstitutionLogo = ({ src, institutionName, abbreviation, size = 72,
   const resolvedSrc = src?.trim();
   const showImage = Boolean(resolvedSrc) && !failed;
 
+  useEffect(() => {
+    setFailed(false);
+  }, [resolvedSrc]);
+
   return (
     <div
       className={cn(
-        'relative flex shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-white text-slate-600',
+        'relative flex shrink-0 items-center justify-center overflow-hidden border border-slate-200 bg-white text-slate-600 shadow-sm',
         className,
       )}
       style={{ width: size, height: size, minWidth: size, minHeight: size, borderRadius: 16 }}

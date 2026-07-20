@@ -67,7 +67,7 @@ export const SchoolPendingApprovalPage = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" className="bg-slate-800 hover:bg-slate-700" onClick={() => void handleSessionExit(SCHOOL_SIGN_IN_PATH)}>
+            <Button type="button" className="bg-primary-700 hover:bg-primary-600" onClick={() => void handleSessionExit(SCHOOL_SIGN_IN_PATH)}>
               Sign In
             </Button>
             {hasSession ? (
@@ -135,7 +135,7 @@ export const SchoolPendingApprovalPage = () => {
                 <Button type="button" onClick={() => void handleSessionExit(SCHOOL_SIGN_IN_PATH)}>
                   Back to Sign In
                 </Button>
-                <Button type="button" className="bg-slate-800 hover:bg-slate-700" onClick={handleNavigateHome}>
+                <Button type="button" className="bg-primary-700 hover:bg-primary-600" onClick={handleNavigateHome}>
                   Go to Home
                 </Button>
                 <Button type="button" className="bg-rose-600 hover:bg-rose-500" onClick={() => void handleSessionExit(SCHOOL_SIGN_IN_PATH)}>
@@ -499,3 +499,6 @@ export const SchoolStudentDashboardPage = () => {
     </section>
   );
 };
+
+
+

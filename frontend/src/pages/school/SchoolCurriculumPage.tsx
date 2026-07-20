@@ -104,7 +104,7 @@ const ResourceActions = ({
       </Button>
     ) : null}
     {asset.docxAvailable ? (
-      <Button type="button" className="h-9 rounded-xl bg-slate-900 px-3 text-xs hover:bg-slate-800" onClick={() => onDownload(asset.id, 'DOCX')}>
+      <Button type="button" className="h-9 rounded-xl bg-primary-700 px-3 text-xs hover:bg-primary-700" onClick={() => onDownload(asset.id, 'DOCX')}>
         Download DOCX
       </Button>
     ) : null}
@@ -162,7 +162,7 @@ const ResourceTable = ({
                 </span>
               </td>
               <td className="px-4 py-4">
-                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${asset.badge === 'District Approved' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'}`}>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${asset.badge === 'District Approved' ? 'bg-primary-50 text-primary-700' : 'bg-amber-50 text-amber-700'}`}>
                   {asset.badge}
                 </span>
               </td>
@@ -656,7 +656,7 @@ export const TeacherCurriculumPage = ({ latestResources }: { latestResources?: C
                       </Button>
                       <Button
                         type="button"
-                        className="rounded-xl bg-slate-900 px-3 py-2 text-xs hover:bg-slate-800"
+                        className="rounded-xl bg-primary-700 px-3 py-2 text-xs hover:bg-primary-700"
                         disabled={generateLessonPlanMutation.isPending}
                         onClick={() => {
                           setLessonPlanError(null);
@@ -698,7 +698,7 @@ export const TeacherCurriculumPage = ({ latestResources }: { latestResources?: C
                             </Button>
                             <Button
                               type="button"
-                              className="rounded-xl bg-slate-900 px-3 py-2 text-xs hover:bg-slate-800"
+                              className="rounded-xl bg-primary-700 px-3 py-2 text-xs hover:bg-primary-700"
                               disabled={generateLessonPlanMutation.isPending}
                               onClick={() => {
                                 if (window.confirm('Regenerate and replace the existing lesson plan for this ATP topic?')) {
@@ -751,3 +751,7 @@ export const TeacherCurriculumPage = ({ latestResources }: { latestResources?: C
     </div>
   );
 };
+
+
+
+

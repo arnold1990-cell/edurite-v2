@@ -62,7 +62,7 @@ const SourceAudit = ({ logs }: { logs: UniversityProgrammesView['retrievalLogs']
           <div key={log.id} className="rounded-xl border border-slate-200 bg-white p-3">
             <p className="font-medium text-slate-900">{log.status}</p>
             <p className="mt-1">{log.message || 'No additional retrieval detail was recorded.'}</p>
-            {log.sourceUrl ? <a href={log.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-medium text-blue-700 hover:text-blue-600">{log.sourceUrl}</a> : null}
+            {log.sourceUrl ? <a href={log.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-medium text-primary-700 hover:text-primary-600">{log.sourceUrl}</a> : null}
           </div>
         ))}
       </div>
@@ -112,7 +112,7 @@ const HeaderCard = ({
           <div className="mt-4 flex flex-wrap gap-2">
             {institution.officialWebsite ? (
               <a href={institution.officialWebsite} target="_blank" rel="noreferrer">
-                <Button type="button" className="bg-slate-900 hover:bg-slate-800">
+                <Button type="button" className="bg-primary-600 hover:bg-primary-700">
                   <ExternalLink size={15} className="mr-2" />
                   Visit Official Website
                 </Button>
@@ -120,12 +120,12 @@ const HeaderCard = ({
             ) : null}
             {institution.officialProgrammesUrl ? (
               <a href={institution.officialProgrammesUrl} target="_blank" rel="noreferrer">
-                <Button type="button" className="bg-blue-600 hover:bg-blue-500">Open Programmes Page</Button>
+                <Button type="button" className="bg-blue-600 hover:bg-primary-500">Open Programmes Page</Button>
               </a>
             ) : null}
             {institution.officialAdmissionsUrl ? (
               <a href={institution.officialAdmissionsUrl} target="_blank" rel="noreferrer">
-                <Button type="button" className="bg-slate-700 hover:bg-slate-600">Open Admissions Page</Button>
+                <Button type="button" className="bg-primary-600 hover:bg-primary-700">Open Admissions Page</Button>
               </a>
             ) : null}
             {canRefresh ? (
@@ -245,7 +245,7 @@ export const StudentUniversityProgrammesPage = () => {
                   <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-slate-400">{programme.sourceLabel || 'Official source'}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <a href={programme.programmeUrl || programme.sourceUrl} target="_blank" rel="noreferrer">
-                      <Button type="button" className="bg-slate-900 hover:bg-slate-800">
+                      <Button type="button" className="bg-primary-600 hover:bg-primary-700">
                         <ExternalLink size={15} className="mr-2" />
                         View Official Programme
                       </Button>
@@ -260,10 +260,10 @@ export const StudentUniversityProgrammesPage = () => {
         <div className="space-y-4">
           <EmptyState title="Verified programmes are not available right now" message={query.data.message} />
           <div className="flex flex-wrap gap-2">
-            <Button type="button" className="bg-slate-900 hover:bg-slate-800" onClick={() => query.refetch()}>Retry</Button>
+            <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => query.refetch()}>Retry</Button>
             {query.data.institution.officialWebsite ? (
               <a href={query.data.institution.officialWebsite} target="_blank" rel="noreferrer">
-                <Button type="button" className="bg-blue-600 hover:bg-blue-500">Visit Official Website</Button>
+                <Button type="button" className="bg-blue-600 hover:bg-primary-500">Visit Official Website</Button>
               </a>
             ) : null}
           </div>
@@ -336,7 +336,7 @@ export const StudentUniversityAdmissionRequirementsPage = () => {
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <a href={requirement.sourceUrl} target="_blank" rel="noreferrer">
-                  <Button type="button" className="bg-slate-900 hover:bg-slate-800">
+                  <Button type="button" className="bg-primary-600 hover:bg-primary-700">
                     <ExternalLink size={15} className="mr-2" />
                     Open Official Source
                   </Button>
@@ -349,10 +349,10 @@ export const StudentUniversityAdmissionRequirementsPage = () => {
         <div className="space-y-4">
           <EmptyState title="Verified admission requirements are not available right now" message={query.data.message} />
           <div className="flex flex-wrap gap-2">
-            <Button type="button" className="bg-slate-900 hover:bg-slate-800" onClick={() => query.refetch()}>Retry</Button>
+            <Button type="button" className="bg-primary-600 hover:bg-primary-700" onClick={() => query.refetch()}>Retry</Button>
             {query.data.institution.officialWebsite ? (
               <a href={query.data.institution.officialWebsite} target="_blank" rel="noreferrer">
-                <Button type="button" className="bg-blue-600 hover:bg-blue-500">Visit Official Website</Button>
+                <Button type="button" className="bg-blue-600 hover:bg-primary-500">Visit Official Website</Button>
               </a>
             ) : null}
           </div>
@@ -363,3 +363,6 @@ export const StudentUniversityAdmissionRequirementsPage = () => {
     </section>
   );
 };
+
+
+

@@ -11,6 +11,19 @@ public interface RewardClaimRepository extends JpaRepository<RewardClaim, UUID> 
     List<RewardClaim> findTop20ByStudentIdOrderByClaimedAtDesc(UUID studentId);
 
     @Query("""
+            select (count(c) > 0) from RewardClaim c
+            where c.studentId = :studentId
+              and c.termCode = :termCode
+              and lower(c.rewardName) = lower(:rewardName)
+              and c.status in ('PENDING', 'APPROVED', 'FULFILLED')
+            """)
+    boolean existsActiveClaimForReward(
+            @Param("studentId") UUID studentId,
+            @Param("termCode") String termCode,
+            @Param("rewardName") String rewardName
+    );
+
+    @Query("""
             select coalesce(sum(c.claimedPoints), 0) from RewardClaim c
             where c.studentId = :studentId and c.status in ('PENDING', 'APPROVED', 'FULFILLED')
             """)

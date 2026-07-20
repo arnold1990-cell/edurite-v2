@@ -27,6 +27,7 @@ public class GamificationService {
 
     public static final String EVENT_LOGIN_DAILY = "LOGIN_DAILY";
     public static final String EVENT_TASK_COMPLETED = "TASK_COMPLETED";
+    private static final int CLAIM_COST = 500;
 
     private final CurrentUserService currentUserService;
     private final StudentProfileRepository studentProfileRepository;
@@ -94,7 +95,7 @@ public class GamificationService {
                 .findTop20ByStudentIdOrderByAwardedAtDesc(profile.getId())
                 .stream()
                 .map(item -> new GamificationSummaryDto.RecentPointEventDto(
-                        item.getEventType(),
+                        userFacingEventLabel(item.getEventType()),
                         item.getPoints(),
                         item.getAwardedAt().toString(),
                         item.getReferenceId()))
@@ -104,8 +105,8 @@ public class GamificationService {
                 .findTop20ByStudentIdOrderByClaimedAtDesc(profile.getId())
                 .stream()
                 .map(item -> new GamificationSummaryDto.RewardClaimDto(
-                        item.getRewardName(),
-                        item.getStatus(),
+                        normalizeDisplayText(item.getRewardName()),
+                        userFacingClaimStatus(item.getStatus()),
                         item.getClaimedPoints(),
                         item.getClaimedAt().toString()))
                 .toList();
@@ -133,22 +134,26 @@ public class GamificationService {
 
     @Transactional
     public RewardClaim claimReward(Principal principal, RewardClaimRequest request) {
-        StudentProfile profile = requireStudentProfile(principal);
+        StudentProfile profile = requireStudentProfileForUpdate(principal);
+        String rewardName = normalizeDisplayText(request.rewardName()).trim();
+        String termCode = currentTermCode();
+        if (rewardClaimRepository.existsActiveClaimForReward(profile.getId(), termCode, rewardName)) {
+            throw new ResourceConflictException("This reward has already been claimed for the current term.");
+        }
         long totalPoints = studentPointsLedgerRepository.sumPointsByStudentId(profile.getId());
         long reservedPoints = rewardClaimRepository.sumReservedPointsByStudentId(profile.getId());
         long availablePoints = Math.max(totalPoints - reservedPoints, 0);
-        int claimCost = 500;
-        if (availablePoints < claimCost) {
+        if (availablePoints < CLAIM_COST) {
             throw new ResourceConflictException("Not enough points to claim a reward yet.");
         }
 
         RewardClaim claim = new RewardClaim();
         claim.setStudentId(profile.getId());
-        claim.setTermCode(currentTermCode());
-        claim.setRewardName(request.rewardName().trim());
-        claim.setRewardDescription(request.rewardDescription());
+        claim.setTermCode(termCode);
+        claim.setRewardName(rewardName);
+        claim.setRewardDescription(normalizeDisplayText(request.rewardDescription()));
         claim.setStatus("PENDING");
-        claim.setClaimedPoints(claimCost);
+        claim.setClaimedPoints(CLAIM_COST);
         claim.setClaimedAt(OffsetDateTime.now());
         return rewardClaimRepository.save(claim);
     }
@@ -205,10 +210,65 @@ public class GamificationService {
                 .orElseThrow(() -> new ResourceConflictException("Student profile not found for this account."));
     }
 
+    private StudentProfile requireStudentProfileForUpdate(Principal principal) {
+        User user = currentUserService.requireUser(principal);
+        return studentProfileRepository.findByUserIdForUpdate(user.getId())
+                .orElseThrow(() -> new ResourceConflictException("Student profile not found for this account."));
+    }
+
     private String currentTermCode() {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         int quarter = ((today.getMonthValue() - 1) / 3) + 1;
         return today.getYear() + "-T" + quarter;
+    }
+
+    private String userFacingEventLabel(String eventType) {
+        String normalized = normalizeDisplayText(eventType).trim();
+        if (normalized.isBlank()) {
+            return "Activity recorded";
+        }
+        return switch (normalized) {
+            case EVENT_LOGIN_DAILY -> "Daily login";
+            case EVENT_TASK_COMPLETED -> "Task completed";
+            default -> titleCaseUnderscoreLabel(normalized);
+        };
+    }
+
+    private String userFacingClaimStatus(String status) {
+        String normalized = normalizeDisplayText(status).trim();
+        if (normalized.isBlank()) {
+            return "Pending";
+        }
+        return titleCaseUnderscoreLabel(normalized);
+    }
+
+    private String titleCaseUnderscoreLabel(String value) {
+        String[] parts = value.toLowerCase().split("[_\\s]+");
+        StringBuilder builder = new StringBuilder();
+        for (String part : parts) {
+            if (part.isBlank()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return builder.length() == 0 ? value : builder.toString();
+    }
+
+    private String normalizeDisplayText(String value) {
+        if (value == null || value.isBlank()) {
+            return value == null ? "" : value.trim();
+        }
+        return value
+                .replace("â€¢", "•")
+                .replace("â€“", "–")
+                .replace("â€”", "—")
+                .replace("â€™", "'")
+                .replace("ï¿½", "�")
+                .replace("\uFFFD", "•")
+                .trim();
     }
 }
 

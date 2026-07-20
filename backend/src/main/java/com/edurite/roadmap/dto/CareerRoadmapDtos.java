@@ -46,14 +46,23 @@ public final class CareerRoadmapDtos {
             String subjectName,
             Integer markPercentage,
             Integer level,
-            Integer apsPoints
+            Integer apsPoints,
+            boolean included,
+            String exclusionReason
     ) {}
 
     public record ApsCalculationResponse(
+            String source,
+            String status,
             String grade,
             String province,
             List<ApsSubjectResult> subjects,
-            Integer totalAps
+            Integer totalAps,
+            List<String> missingRequirements,
+            String calculationRule,
+            boolean lifeOrientationIncluded,
+            String resultSetLabel,
+            String resultSetId
     ) {}
 
     public record CareerRoadmapGenerateResponse(

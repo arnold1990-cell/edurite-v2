@@ -116,7 +116,7 @@ export const AccountChangePasswordPage = () => {
           : await accountService.changePasswordWithOtp(otpPayload);
         const normalizedAuth = normalizeAuthResponse(response.data);
         const successMessage = normalizedAuth.message || 'Password changed successfully.';
-        const rememberMe = localStorage.getItem('edurite_access_token') !== null;
+        const rememberMe = authStore.shouldPersistSession();
         if (import.meta.env.DEV) {
           console.info('[account/change-password] password change succeeded', {
             endpoint,

@@ -269,7 +269,7 @@ const SelectField = ({
   options: string[];
   placeholder: string;
 }) => (
-  <select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100">
+  <select value={value} onChange={(event) => onChange(event.target.value)} className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none focus:border-primary-300 focus:ring-4 focus:ring-blue-100">
     <option value="">{placeholder}</option>
     {options.map((option) => <option key={`${placeholder}-${option}`} value={option}>{option}</option>)}
   </select>
@@ -726,7 +726,7 @@ export const SchoolAdminPortalPage = () => {
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             Reports
           </Button>
-          <Button type="button" className="h-11 rounded-2xl bg-slate-900 hover:bg-slate-800" onClick={() => navigate('/school/career-readiness')}>
+          <Button type="button" className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-700" onClick={() => navigate('/school/career-readiness')}>
             <Sparkles className="mr-2 h-4 w-4" />
             Open Readiness
           </Button>
@@ -814,8 +814,8 @@ export const SchoolAdminPortalPage = () => {
   const renderAiInsights = () => (
     <SectionShell title="AI Insights" subtitle="Learner risk, APS interpretation, pathway gaps, bursary indicators, and recommended interventions.">
       {!aiQuery.data ? <LoadingGrid /> : !aiQuery.data.dataAvailable ? (
-        <div className="rounded-[32px] border border-dashed border-blue-200 bg-white px-8 py-16 text-center shadow-sm">
-          <Bot className="mx-auto h-12 w-12 text-blue-600" />
+        <div className="rounded-[32px] border border-dashed border-primary-200 bg-white px-8 py-16 text-center shadow-sm">
+          <Bot className="mx-auto h-12 w-12 text-primary-600" />
           <h3 className="mt-4 text-xl font-semibold text-slate-950">AI Insights Unavailable</h3>
           <p className="mx-auto mt-3 max-w-2xl text-sm text-slate-600">{aiQuery.data.emptyStateMessage || 'AI insights will appear once learner reports and academic data are available.'}</p>
         </div>
@@ -849,7 +849,7 @@ export const SchoolAdminPortalPage = () => {
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             Import Learners
           </Button>
-          <Button type="button" className="h-11 rounded-2xl bg-slate-900 hover:bg-slate-800" onClick={() => exportCredentials.mutate()} disabled={exportCredentials.isPending}>
+          <Button type="button" className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-700" onClick={() => exportCredentials.mutate()} disabled={exportCredentials.isPending}>
             {exportCredentials.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSpreadsheet className="mr-2 h-4 w-4" />}
             Export
           </Button>
@@ -876,7 +876,7 @@ export const SchoolAdminPortalPage = () => {
               <SelectField value={gradeFilter} onChange={(value) => { setGradeFilter(value); setLearnerPage(1); }} options={gradeOptions} placeholder="All grades" />
               <SelectField value={classFilter} onChange={(value) => { setClassFilter(value); setLearnerPage(1); }} options={classOptions} placeholder="All classes" />
               <SelectField value={readinessFilter} onChange={(value) => { setReadinessFilter(value); setLearnerPage(1); }} options={readinessOptions} placeholder="All readiness" />
-              <select value={careerGoalFilter} onChange={(event) => { setCareerGoalFilter(event.target.value); setLearnerPage(1); }} className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100">
+              <select value={careerGoalFilter} onChange={(event) => { setCareerGoalFilter(event.target.value); setLearnerPage(1); }} className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-[15px] text-slate-700 outline-none focus:border-primary-300 focus:ring-4 focus:ring-blue-100">
                 <option value="">All career goals</option>
                 <option value="set">Career goal set</option>
                 <option value="missing">Career goal missing</option>
@@ -940,7 +940,7 @@ export const SchoolAdminPortalPage = () => {
                       <td className="px-3 py-4"><QuickChip label={learner.reportUploadStatus || 'Pending'} tone={reportIsComplete(learner.reportUploadStatus) ? 'positive' : 'warning'} /></td>
                       <td className="px-4 py-4">
                         <div className="flex flex-wrap gap-2">
-                          <Button type="button" className="h-9 rounded-xl bg-slate-900 px-3 text-[13px] hover:bg-slate-800" onClick={() => openLearnerProfile(learner.learnerUserId)}>View Profile</Button>
+                          <Button type="button" className="h-9 rounded-xl bg-primary-700 px-3 text-[13px] hover:bg-primary-700" onClick={() => openLearnerProfile(learner.learnerUserId)}>View Profile</Button>
                           <Button type="button" className="h-9 rounded-xl bg-blue-600 px-3 text-[13px] hover:bg-blue-700" onClick={() => openLearnerAssignment(learner.learnerUserId)}>Assign Class</Button>
                           <Button type="button" className="h-9 rounded-xl bg-slate-100 px-3 text-[13px] text-slate-900 hover:bg-slate-200" onClick={() => navigate('/school/results')}>Results</Button>
                           <Button type="button" className="h-9 rounded-xl bg-amber-500 px-3 text-[13px] hover:bg-amber-600" onClick={() => openLearnerProfile(learner.learnerUserId)}>Readiness</Button>
@@ -996,7 +996,7 @@ export const SchoolAdminPortalPage = () => {
                       </div>
                     </div>
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                      <Button type="button" className="h-10 w-full rounded-xl bg-slate-900 px-3 text-[13px] hover:bg-slate-800" onClick={() => openLearnerProfile(learner.learnerUserId)}>View Profile</Button>
+                      <Button type="button" className="h-10 w-full rounded-xl bg-primary-700 px-3 text-[13px] hover:bg-primary-700" onClick={() => openLearnerProfile(learner.learnerUserId)}>View Profile</Button>
                       <Button type="button" className="h-10 w-full rounded-xl bg-blue-600 px-3 text-[13px] hover:bg-blue-700" onClick={() => openLearnerAssignment(learner.learnerUserId)}>Assign Class</Button>
                       <Button type="button" className="h-10 w-full rounded-xl bg-slate-100 px-3 text-[13px] text-slate-900 hover:bg-slate-200" onClick={() => navigate('/school/results')}>Results</Button>
                       <Button type="button" className="h-10 w-full rounded-xl bg-amber-500 px-3 text-[13px] hover:bg-amber-600" onClick={() => openLearnerProfile(learner.learnerUserId)}>Readiness</Button>
@@ -1009,7 +1009,7 @@ export const SchoolAdminPortalPage = () => {
               <p className="text-[14px] text-slate-500">Search, filter, and open a learner profile for readiness intelligence.</p>
               <div className="flex gap-2 self-start sm:self-auto">
                 <Button type="button" className="h-9 rounded-xl bg-slate-100 px-3 text-[13px] text-slate-900 hover:bg-slate-200" disabled={pagedLearners.currentPage <= 1} onClick={() => setLearnerPage((page) => Math.max(1, page - 1))}>Previous</Button>
-                <Button type="button" className="h-9 rounded-xl bg-slate-900 px-3 text-[13px] hover:bg-slate-800" disabled={pagedLearners.currentPage >= pagedLearners.totalPages} onClick={() => setLearnerPage((page) => Math.min(pagedLearners.totalPages, page + 1))}>Next</Button>
+                <Button type="button" className="h-9 rounded-xl bg-primary-700 px-3 text-[13px] hover:bg-primary-700" disabled={pagedLearners.currentPage >= pagedLearners.totalPages} onClick={() => setLearnerPage((page) => Math.min(pagedLearners.totalPages, page + 1))}>Next</Button>
               </div>
             </div>
           </TableShell>
@@ -1019,7 +1019,7 @@ export const SchoolAdminPortalPage = () => {
             <h3 className="text-[18px] font-semibold text-slate-950">Import Learners</h3>
             <p className="mt-2 text-[15px] leading-6 text-slate-600">Bulk import learners, including records without email addresses. EduRite will generate usernames and passwords where needed.</p>
             <input type="file" accept=".csv" onChange={(event) => setCsvFile(event.target.files?.[0] ?? null)} className="mt-4 block w-full text-[15px] text-slate-600" />
-            <Button type="button" className="mt-4 h-11 w-full rounded-2xl bg-slate-900 hover:bg-slate-800" disabled={!csvFile || importLearners.isPending} onClick={() => importLearners.mutate()}>
+            <Button type="button" className="mt-4 h-11 w-full rounded-2xl bg-primary-600 hover:bg-primary-700" disabled={!csvFile || importLearners.isPending} onClick={() => importLearners.mutate()}>
               {importLearners.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Import Learners
             </Button>
@@ -1040,7 +1040,7 @@ export const SchoolAdminPortalPage = () => {
                     <QuickChip label={severity} tone={alertSeverityTone(severity)} />
                   </div>
                   <p className="mt-2 text-[14px] leading-6 text-slate-600">{reason}</p>
-                  <Button type="button" className="mt-3 h-9 rounded-xl bg-slate-900 px-3 text-[13px] hover:bg-slate-800" onClick={() => openLearnerProfile(learner.learnerUserId)}>
+                  <Button type="button" className="mt-3 h-9 rounded-xl bg-primary-700 px-3 text-[13px] hover:bg-primary-700" onClick={() => openLearnerProfile(learner.learnerUserId)}>
                     View
                   </Button>
                 </article>
@@ -1171,7 +1171,7 @@ export const SchoolAdminPortalPage = () => {
     <SectionShell title="Career Readiness" subtitle="Track selected pathways, alignment to requirements, readiness gaps, and alternative pathway recommendations.">
       {!careerReadinessQuery.data ? <LoadingGrid /> : (
         <>
-          <div className="rounded-[30px] border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-5 shadow-sm">
+          <div className="rounded-[30px] border border-primary-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-5 shadow-sm">
             <p className="text-sm font-semibold text-slate-950">{careerReadinessQuery.data.headline}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -1192,7 +1192,7 @@ export const SchoolAdminPortalPage = () => {
     <SectionShell title="Courses & Study Pathways" subtitle="University, TVET, and alternative-pathway intelligence based on current learner readiness data.">
       {!coursesQuery.data ? <LoadingGrid /> : (
         <>
-          <div className="rounded-[30px] border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-5 shadow-sm">
+          <div className="rounded-[30px] border border-primary-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-5 shadow-sm">
             <p className="text-sm font-semibold text-slate-950">{coursesQuery.data.headline}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -1241,7 +1241,7 @@ export const SchoolAdminPortalPage = () => {
     <SectionShell title="Bursary Readiness" subtitle="Funding matches, missing bursary requirements, deadline alerts, and application-readiness support.">
       {!bursariesQuery.data ? <LoadingGrid /> : (
         <>
-          <div className="rounded-[30px] border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-5 shadow-sm">
+          <div className="rounded-[30px] border border-primary-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-5 shadow-sm">
             <p className="text-sm font-semibold text-slate-950">{bursariesQuery.data.headline}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -1279,7 +1279,7 @@ export const SchoolAdminPortalPage = () => {
     >
       {!interventionsQuery.data ? <LoadingGrid /> : (
         <>
-          <div className="rounded-[30px] border border-blue-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-5 shadow-sm">
+          <div className="rounded-[30px] border border-primary-100 bg-gradient-to-r from-blue-50 via-white to-emerald-50 p-5 shadow-sm">
             <p className="text-sm font-semibold text-slate-950">{interventionsQuery.data.headline}</p>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -1335,7 +1335,7 @@ export const SchoolAdminPortalPage = () => {
                   <p className="text-sm text-slate-500">{report.description}</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button type="button" className="h-9 rounded-xl bg-slate-900 px-3 text-xs hover:bg-slate-800" onClick={() => exportReport.mutate({ type: report.key, format: 'xlsx' })}>Excel / CSV</Button>
+                  <Button type="button" className="h-9 rounded-xl bg-primary-700 px-3 text-xs hover:bg-primary-700" onClick={() => exportReport.mutate({ type: report.key, format: 'xlsx' })}>Excel / CSV</Button>
                   <Button type="button" className="h-9 rounded-xl bg-blue-600 px-3 text-xs hover:bg-blue-700" onClick={() => exportReport.mutate({ type: report.key, format: 'pdf' })}>PDF</Button>
                 </div>
               </div>
@@ -1429,7 +1429,7 @@ export const SchoolAdminPortalPage = () => {
     <SectionShell
       title="Support Requests"
       subtitle="Capture school operations, technical, data, onboarding, and reporting support needs with clear priority."
-      actions={<Button type="button" className="h-11 rounded-2xl bg-slate-900 hover:bg-slate-800" onClick={() => setSupportOpen(true)}><LifeBuoy className="mr-2 h-4 w-4" />Create request</Button>}
+      actions={<Button type="button" className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-700" onClick={() => setSupportOpen(true)}><LifeBuoy className="mr-2 h-4 w-4" />Create request</Button>}
     >
       <TableShell title="Support request history">
         <div className="divide-y divide-slate-100">
@@ -1467,7 +1467,7 @@ export const SchoolAdminPortalPage = () => {
             <div><dt className="font-medium text-slate-900">Address</dt><dd>{settingsQuery.data?.address || 'Not set'}</dd></div>
             <div><dt className="font-medium text-slate-900">Roles</dt><dd>{settingsQuery.data?.activeRoles.join(', ') || 'No roles mapped'}</dd></div>
           </dl>
-          <Link to="/account/change-password" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-blue-700">
+          <Link to="/account/change-password" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-primary-700">
             Go to security / change password
             <ChevronRight className="h-4 w-4" />
           </Link>
@@ -1576,7 +1576,7 @@ export const SchoolAdminPortalPage = () => {
                       );
                     }
                     return (
-                      <button key={item.label} type="button" onClick={() => handleNavigate(item.section!)} className={`flex min-h-[44px] w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left text-[14px] transition ${active ? 'bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] text-white shadow-lg shadow-blue-950/30' : 'text-slate-200 hover:bg-white/10'}`}>
+                      <button key={item.label} type="button" onClick={() => handleNavigate(item.section!)} className={`flex min-h-[44px] w-full items-center gap-3 rounded-[14px] px-3 py-2.5 text-left text-[14px] transition ${active ? 'bg-[linear-gradient(135deg,#2563eb,#1d4ed8)] text-white shadow-lg shadow-[0_12px_28px_rgba(73,54,83,0.18)]' : 'text-slate-200 hover:bg-white/10'}`}>
                         <Icon className="h-4 w-4" />
                         <span className="flex-1">{item.label}</span>
                         {badge ? <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-[11px] font-semibold text-white">{badge}</span> : null}
@@ -1665,7 +1665,7 @@ export const SchoolAdminPortalPage = () => {
       <div className="fixed bottom-4 left-1/2 z-30 w-[calc(100%-1.5rem)] max-w-xl -translate-x-1/2 rounded-3xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur lg:hidden">
         <div className="grid grid-cols-3 gap-2">
           <Button type="button" className="h-11 rounded-2xl bg-blue-600 text-xs hover:bg-blue-700" onClick={() => setLearnerModalOpen(true)}>Add learner</Button>
-          <Button type="button" className="h-11 rounded-2xl bg-slate-900 text-xs hover:bg-slate-800" onClick={() => navigate('/school/announcements')}>Announce</Button>
+          <Button type="button" className="h-11 rounded-2xl bg-primary-700 text-xs hover:bg-primary-700" onClick={() => navigate('/school/announcements')}>Announce</Button>
           <Button type="button" className="h-11 rounded-2xl bg-emerald-600 text-xs hover:bg-emerald-700" onClick={() => navigate('/school/reports')}>Report</Button>
         </div>
       </div>
@@ -1680,7 +1680,7 @@ export const SchoolAdminPortalPage = () => {
           <aside className="absolute inset-y-0 right-0 w-full max-w-2xl overflow-y-auto bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Learner Intelligence Profile</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700">Learner Intelligence Profile</p>
                 <h3 className="mt-2 text-2xl font-semibold text-slate-950">{learnerProfileQuery.data?.learnerName || 'Loading learner'}</h3>
               </div>
               <button type="button" onClick={() => setSelectedLearnerId(null)} className="rounded-xl border border-slate-200 p-2 text-slate-600"><X className="h-4 w-4" /></button>
@@ -1732,7 +1732,7 @@ export const SchoolAdminPortalPage = () => {
                 <InsightList title="Activity Timeline" items={learnerProfileQuery.data.activityTimeline.map((item) => ({ title: item.title, detail: `${item.detail} | ${formatDate(item.occurredAt)}`, severity: 'neutral' }))} emptyMessage="No activity timeline yet." />
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" className="h-11 rounded-2xl bg-amber-500 hover:bg-amber-600" onClick={() => { setInterventionForm((state) => ({ ...state, learnerUserId: learnerProfileQuery.data.learnerUserId })); setInterventionOpen(true); }}>Create intervention</Button>
-                  <Button type="button" className="h-11 rounded-2xl bg-slate-900 hover:bg-slate-800" onClick={() => navigate('/school/reports')}>Generate report</Button>
+                  <Button type="button" className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-700" onClick={() => navigate('/school/reports')}>Generate report</Button>
                 </div>
               </div>
             )}
@@ -1746,7 +1746,7 @@ export const SchoolAdminPortalPage = () => {
           <aside className="absolute inset-y-0 right-0 w-full max-w-2xl overflow-y-auto bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Teacher Intelligence Profile</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700">Teacher Intelligence Profile</p>
                 <h3 className="mt-2 text-2xl font-semibold text-slate-950">{teacherDetailQuery.data?.summary.fullName || 'Loading teacher'}</h3>
               </div>
               <button type="button" onClick={() => setSelectedTeacherId(null)} className="rounded-xl border border-slate-200 p-2 text-slate-600"><X className="h-4 w-4" /></button>
@@ -1800,7 +1800,7 @@ export const SchoolAdminPortalPage = () => {
           <aside className="absolute inset-y-0 right-0 w-full max-w-2xl overflow-y-auto bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-700">Class Intelligence Profile</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-700">Class Intelligence Profile</p>
                 <h3 className="mt-2 text-2xl font-semibold text-slate-950">{classProfileQuery.data?.summary.grade} {classProfileQuery.data?.summary.className || 'Loading class'}</h3>
               </div>
               <button type="button" onClick={() => setSelectedClassId(null)} className="rounded-xl border border-slate-200 p-2 text-slate-600"><X className="h-4 w-4" /></button>
@@ -1833,8 +1833,8 @@ export const SchoolAdminPortalPage = () => {
                 <div className="grid gap-4 md:grid-cols-2">
                   <InsightList title="Interventions" items={classProfileQuery.data.interventions} emptyMessage="No interventions." />
                   {!classAiQuery.data || !classAiQuery.data.dataAvailable ? (
-                    <div className="rounded-[30px] border border-dashed border-blue-200 bg-white px-6 py-10 text-center shadow-sm">
-                      <Bot className="mx-auto h-10 w-10 text-blue-600" />
+                    <div className="rounded-[30px] border border-dashed border-primary-200 bg-white px-6 py-10 text-center shadow-sm">
+                      <Bot className="mx-auto h-10 w-10 text-primary-600" />
                       <p className="mt-3 text-sm text-slate-600">{classAiQuery.data?.emptyStateMessage || 'AI insights will appear as learner reports become available.'}</p>
                     </div>
                   ) : <InsightList title="AI Insights" items={classAiQuery.data.items} emptyMessage="No AI insights." />}
@@ -2031,7 +2031,7 @@ export const SchoolAdminPortalPage = () => {
                 <option value="TEACHERS">Teachers</option>
               </select>
               <Input value={announcementForm.title} onChange={(event) => setAnnouncementForm((state) => ({ ...state, title: event.target.value }))} placeholder="Announcement title" className="h-11 rounded-2xl" />
-              <textarea value={announcementForm.message} onChange={(event) => setAnnouncementForm((state) => ({ ...state, message: event.target.value }))} rows={6} className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-800 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" placeholder="Write the announcement message" />
+              <textarea value={announcementForm.message} onChange={(event) => setAnnouncementForm((state) => ({ ...state, message: event.target.value }))} rows={6} className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-800 outline-none focus:border-primary-300 focus:ring-4 focus:ring-blue-100" placeholder="Write the announcement message" />
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" className="h-11 rounded-2xl bg-slate-100 text-slate-900 hover:bg-slate-200" onClick={() => setAnnouncementOpen(false)}>Cancel</Button>
@@ -2064,11 +2064,11 @@ export const SchoolAdminPortalPage = () => {
                 <option value="HIGH">High</option>
               </select>
               <Input value={supportForm.title} onChange={(event) => setSupportForm((state) => ({ ...state, title: event.target.value }))} placeholder="Support request title" className="h-11 rounded-2xl" />
-              <textarea value={supportForm.message} onChange={(event) => setSupportForm((state) => ({ ...state, message: event.target.value }))} rows={6} className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-800 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" placeholder="Describe the support need" />
+              <textarea value={supportForm.message} onChange={(event) => setSupportForm((state) => ({ ...state, message: event.target.value }))} rows={6} className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-800 outline-none focus:border-primary-300 focus:ring-4 focus:ring-blue-100" placeholder="Describe the support need" />
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" className="h-11 rounded-2xl bg-slate-100 text-slate-900 hover:bg-slate-200" onClick={() => setSupportOpen(false)}>Cancel</Button>
-              <Button type="button" className="h-11 rounded-2xl bg-slate-900 hover:bg-slate-800" onClick={() => createSupportRequest.mutate()} disabled={createSupportRequest.isPending || !supportForm.title.trim() || !supportForm.message.trim()}>
+              <Button type="button" className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-700" onClick={() => createSupportRequest.mutate()} disabled={createSupportRequest.isPending || !supportForm.title.trim() || !supportForm.message.trim()}>
                 {createSupportRequest.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Submit request
               </Button>
@@ -2101,7 +2101,7 @@ export const SchoolAdminPortalPage = () => {
                 <option value="LOW">Low</option>
               </select>
               <Input value={interventionForm.followUpDate} onChange={(event) => setInterventionForm((state) => ({ ...state, followUpDate: event.target.value }))} type="date" className="h-11 rounded-2xl md:col-span-2" />
-              <textarea value={interventionForm.notes} onChange={(event) => setInterventionForm((state) => ({ ...state, notes: event.target.value }))} rows={6} className="md:col-span-2 w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-800 outline-none focus:border-blue-300 focus:ring-4 focus:ring-blue-100" placeholder="Intervention notes and actions" />
+              <textarea value={interventionForm.notes} onChange={(event) => setInterventionForm((state) => ({ ...state, notes: event.target.value }))} rows={6} className="md:col-span-2 w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-800 outline-none focus:border-primary-300 focus:ring-4 focus:ring-blue-100" placeholder="Intervention notes and actions" />
             </div>
             <div className="mt-6 flex justify-end gap-2">
               <Button type="button" className="h-11 rounded-2xl bg-slate-100 text-slate-900 hover:bg-slate-200" onClick={() => setInterventionOpen(false)}>Cancel</Button>
@@ -2116,4 +2116,8 @@ export const SchoolAdminPortalPage = () => {
     </div>
   );
 };
+
+
+
+
 

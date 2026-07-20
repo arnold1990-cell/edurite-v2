@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+﻿import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, FileBarChart2, GraduationCap, MessageSquare, Sparkles, Users } from 'lucide-react';
@@ -326,13 +326,13 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                     <p className="mt-1 text-sm text-slate-600">This week&apos;s curriculum, coverage status, and lesson-plan generation.</p>
                   </div>
                   {curriculumWidgetsQuery.data.thisWeeksCoverage ? (
-                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">{curriculumWidgetsQuery.data.thisWeeksCoverage.term} · Week {curriculumWidgetsQuery.data.thisWeeksCoverage.weekNumber}</span>
+                    <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700">{curriculumWidgetsQuery.data.thisWeeksCoverage.term} Â· Week {curriculumWidgetsQuery.data.thisWeeksCoverage.weekNumber}</span>
                   ) : null}
                 </div>
                 {curriculumWidgetsQuery.data.thisWeeksCoverage ? (
                   <div className="mt-4 space-y-4">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-sm font-semibold text-slate-900">{curriculumWidgetsQuery.data.thisWeeksCoverage.subject} · {curriculumWidgetsQuery.data.thisWeeksCoverage.grade}</p>
+                      <p className="text-sm font-semibold text-slate-900">{curriculumWidgetsQuery.data.thisWeeksCoverage.subject} Â· {curriculumWidgetsQuery.data.thisWeeksCoverage.grade}</p>
                       <p className="mt-2 text-xl font-semibold text-slate-900">{curriculumWidgetsQuery.data.thisWeeksCoverage.topic}</p>
                       <p className="mt-1 text-sm text-slate-600">{curriculumWidgetsQuery.data.thisWeeksCoverage.subtopic || 'District ATP guidance available for this week.'}</p>
                       <p className="mt-3 text-sm text-slate-700"><span className="font-semibold text-slate-900">Objectives:</span> {curriculumWidgetsQuery.data.thisWeeksCoverage.learningObjectives || 'No structured objectives mapped yet.'}</p>
@@ -342,13 +342,13 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                       <div className="mt-4 h-2 rounded-full bg-slate-100">
                         <div className="h-2 rounded-full bg-gradient-to-r from-[#0B5BFF] to-[#1E8BFF]" style={{ width: `${curriculumWidgetsQuery.data.thisWeeksCoverage.progressPercent}%` }} />
                       </div>
-                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-slate-500">{curriculumWidgetsQuery.data.thisWeeksCoverage.status.split('_').join(' ')} · {curriculumWidgetsQuery.data.thisWeeksCoverage.progressPercent}%</p>
+                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-slate-500">{curriculumWidgetsQuery.data.thisWeeksCoverage.status.split('_').join(' ')} Â· {curriculumWidgetsQuery.data.thisWeeksCoverage.progressPercent}%</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <Button type="button" onClick={() => updateCurriculumProgress.mutate({ weekPlanId: curriculumWidgetsQuery.data.thisWeeksCoverage!.weekPlanId, status: 'NOT_STARTED', completionPercent: 0 })} className="rounded-2xl bg-slate-200 px-4 py-2 text-slate-900 hover:bg-slate-300">Not Started</Button>
                       <Button type="button" onClick={() => updateCurriculumProgress.mutate({ weekPlanId: curriculumWidgetsQuery.data.thisWeeksCoverage!.weekPlanId, status: 'IN_PROGRESS', completionPercent: 60 })} className="rounded-2xl bg-amber-500 px-4 py-2 hover:bg-amber-600">In Progress</Button>
                       <Button type="button" onClick={() => updateCurriculumProgress.mutate({ weekPlanId: curriculumWidgetsQuery.data.thisWeeksCoverage!.weekPlanId, status: 'COMPLETED', completionPercent: 100 })} className="rounded-2xl bg-emerald-600 px-4 py-2 hover:bg-emerald-700">Completed</Button>
-                      <Button type="button" onClick={() => generateLessonPlan.mutate(curriculumWidgetsQuery.data.thisWeeksCoverage!.weekPlanId)} className="rounded-2xl bg-slate-900 px-4 py-2 hover:bg-slate-800">Generate Lesson Plan</Button>
+                      <Button type="button" onClick={() => generateLessonPlan.mutate(curriculumWidgetsQuery.data.thisWeeksCoverage!.weekPlanId)} className="rounded-2xl bg-primary-700 px-4 py-2 hover:bg-primary-700">Generate Lesson Plan</Button>
                     </div>
                     {generatedLessonPlan ? (
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
@@ -367,8 +367,8 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                     <p className="text-sm text-amber-700">No ATP item is mapped to this week yet, but published ATP calendar items are available below.</p>
                     {curriculumWidgetsQuery.data.visibleTopics.slice(0, 4).map((item) => (
                       <div key={item.weekPlanId} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-sm font-semibold text-slate-900">{item.subject} · {item.grade}</p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{item.term} · Week {item.weekNumber}</p>
+                        <p className="text-sm font-semibold text-slate-900">{item.subject} Â· {item.grade}</p>
+                        <p className="mt-1 text-xs uppercase tracking-[0.14em] text-slate-500">{item.term} Â· Week {item.weekNumber}</p>
                         <p className="mt-2 text-slate-900">{item.topic}</p>
                         <p className="mt-1 text-sm text-slate-600">{item.subtopic || item.learningObjectives || item.lessonFocus || 'Published ATP topic available.'}</p>
                       </div>
@@ -382,7 +382,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                     <h3 className="text-base font-semibold text-slate-900">District Resources</h3>
                     <p className="mt-1 text-sm text-slate-600">Latest district-approved resources relevant to this teacher.</p>
                   </div>
-                  <Button type="button" className="rounded-2xl bg-slate-900 px-4 py-2 hover:bg-slate-800" onClick={() => navigate('/teacher/curriculum')}>
+                  <Button type="button" className="rounded-2xl bg-primary-700 px-4 py-2 hover:bg-primary-700" onClick={() => navigate('/teacher/curriculum')}>
                     View Curriculum Resources
                   </Button>
                 </div>
@@ -390,7 +390,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                   {curriculumWidgetsQuery.data.districtResources.slice(0, 5).map((item) => (
                     <div key={item.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                       <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.subject} · {item.grade} · {item.badge}</p>
+                      <p className="mt-1 text-xs text-slate-500">{item.subject} Â· {item.grade} Â· {item.badge}</p>
                     </div>
                   ))}
                   {!curriculumWidgetsQuery.data.districtResources.length ? <p className="text-sm text-slate-500">No curriculum resources are available yet.</p> : null}
@@ -425,7 +425,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                       <p className="text-sm font-semibold text-slate-900">{item.learnerName}</p>
                       <span className="rounded-full bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">{item.status}</span>
                     </div>
-                    <p className="mt-1 text-xs text-slate-600">{item.supportType} · {item.priority}</p>
+                    <p className="mt-1 text-xs text-slate-600">{item.supportType} Â· {item.priority}</p>
                     <p className="mt-2 text-sm text-slate-700">{item.notes}</p>
                   </div>
                 ))}
@@ -452,7 +452,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <h3 className="text-lg font-semibold text-slate-900">{activeLearnerProfile.learnerName}</h3>
-                    <p className="text-sm text-slate-500">{activeLearnerProfile.grade || 'N/A'} {activeLearnerProfile.className || ''} · {activeLearnerProfile.teacherName || 'Unassigned'}</p>
+                    <p className="text-sm text-slate-500">{activeLearnerProfile.grade || 'N/A'} {activeLearnerProfile.className || ''} Â· {activeLearnerProfile.teacherName || 'Unassigned'}</p>
                   </div>
                   <div className="flex gap-2">
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700">APS {activeLearnerProfile.apsPoints}</span>
@@ -488,7 +488,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                             <p className="text-sm font-semibold text-slate-900">{course.name}</p>
                             <span className={`rounded-full px-2 py-1 text-[11px] font-medium ${course.eligible ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{course.eligible ? 'Eligible' : 'Gap'}</span>
                           </div>
-                          <p className="mt-1 text-xs text-slate-500">{course.level || 'Pathway'} · {course.reason}</p>
+                          <p className="mt-1 text-xs text-slate-500">{course.level || 'Pathway'} Â· {course.reason}</p>
                         </div>
                       ))}
                       {!activeLearnerProfile.courseEligibility.length ? <EmptyListState message="No course pathways calculated yet." /> : null}
@@ -500,7 +500,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                       {activeLearnerProfile.bursaryMatches.map((match) => (
                         <div key={`${match.title}-${match.provider || 'provider'}`} className="rounded-xl border border-slate-200 bg-white p-3">
                           <p className="text-sm font-semibold text-slate-900">{match.title}</p>
-                          <p className="mt-1 text-xs text-slate-500">{match.provider || 'Funding provider'} · Deadline {formatDate(match.deadline)}</p>
+                          <p className="mt-1 text-xs text-slate-500">{match.provider || 'Funding provider'} Â· Deadline {formatDate(match.deadline)}</p>
                           <p className="mt-1 text-xs text-slate-600">{match.missingRequirements || 'No major missing requirement flagged.'}</p>
                         </div>
                       ))}
@@ -558,7 +558,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                       <input type="checkbox" checked={learnerForm.popiaConsentAccepted} onChange={(event) => setLearnerForm((state) => ({ ...state, popiaConsentAccepted: event.target.checked }))} />
                       POPIA consent captured
                     </label>
-                    <Button type="button" disabled={createLearner.isPending} onClick={() => createLearner.mutate()} className="h-11 rounded-2xl bg-[#0B5BFF] hover:bg-[#0849cb]">
+                    <Button type="button" disabled={createLearner.isPending} onClick={() => createLearner.mutate()} className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-500">
                       {createLearner.isPending ? 'Saving...' : 'Create learner'}
                     </Button>
                   </div>
@@ -567,7 +567,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                 <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
                   <h3 className="text-base font-semibold text-slate-900">Bulk upload learners by CSV</h3>
                   <input type="file" accept=".csv" onChange={(event) => setCsvFile(event.target.files?.[0] ?? null)} className="mt-4 block w-full text-sm text-slate-600" />
-                  <Button type="button" disabled={!csvFile || bulkUpload.isPending} onClick={() => bulkUpload.mutate()} className="mt-4 h-11 rounded-2xl bg-slate-900 hover:bg-slate-800">
+                  <Button type="button" disabled={!csvFile || bulkUpload.isPending} onClick={() => bulkUpload.mutate()} className="mt-4 h-11 rounded-2xl bg-primary-600 hover:bg-primary-700">
                     {bulkUpload.isPending ? 'Uploading...' : 'Upload CSV'}
                   </Button>
                 </section>
@@ -668,7 +668,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                     <span className="block text-sm font-semibold text-slate-900">{learner.learnerName}</span>
                     <span className="block text-xs text-slate-500">{learner.careerGoal || 'No career goal set'}</span>
                   </span>
-                  <span className="rounded-full bg-slate-900 px-3 py-1 text-xs font-medium text-white">APS {learner.apsPoints}</span>
+                  <span className="rounded-full bg-primary-700 px-3 py-1 text-xs font-medium text-white">APS {learner.apsPoints}</span>
                 </button>
               ))}
             </div>
@@ -739,20 +739,20 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{item.learnerName}</p>
-                        <p className="mt-1 text-xs text-slate-500">{item.supportType} · {item.priority} · Assigned by {item.assignedBy}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.supportType} Â· {item.priority} Â· Assigned by {item.assignedBy}</p>
                       </div>
                       <div className="flex gap-2">
                         {mode === 'school' ? (
                           <>
                             <Button type="button" className="h-9 rounded-xl bg-emerald-600 px-3 text-xs hover:bg-emerald-700" onClick={() => updateIntervention.mutate({ interventionId: item.interventionId, status: 'IN_PROGRESS', notes: item.notes, followUpDate: item.followUpDate ?? undefined })}>In Progress</Button>
-                            <Button type="button" className="h-9 rounded-xl bg-slate-900 px-3 text-xs hover:bg-slate-800" onClick={() => updateIntervention.mutate({ interventionId: item.interventionId, status: 'CLOSED', notes: item.notes, followUpDate: item.followUpDate ?? undefined })}>Close</Button>
+                            <Button type="button" className="h-9 rounded-xl bg-primary-700 px-3 text-xs hover:bg-primary-700" onClick={() => updateIntervention.mutate({ interventionId: item.interventionId, status: 'CLOSED', notes: item.notes, followUpDate: item.followUpDate ?? undefined })}>Close</Button>
                           </>
                         ) : null}
                         <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">{item.status}</span>
                       </div>
                     </div>
                     <p className="mt-3 text-sm text-slate-700">{item.notes}</p>
-                    <p className="mt-2 text-xs text-slate-500">Follow-up: {formatDate(item.followUpDate)} · Updated {new Date(item.updatedAt).toLocaleString()}</p>
+                    <p className="mt-2 text-xs text-slate-500">Follow-up: {formatDate(item.followUpDate)} Â· Updated {new Date(item.updatedAt).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -773,7 +773,7 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
               </select>
               <Input value={interventionForm.followUpDate} onChange={(event) => setInterventionForm((state) => ({ ...state, followUpDate: event.target.value }))} type="date" className="h-11 rounded-2xl" />
               <textarea value={interventionForm.notes} onChange={(event) => setInterventionForm((state) => ({ ...state, notes: event.target.value }))} rows={5} className="w-full rounded-2xl border border-slate-200 px-3 py-3 text-sm text-slate-800 outline-none focus:border-primary-300 focus:ring-4 focus:ring-primary-100" placeholder="Teacher notes and intervention plan" />
-              <Button type="button" disabled={createIntervention.isPending || !interventionForm.learnerUserId || !interventionForm.notes.trim()} onClick={() => createIntervention.mutate()} className="h-11 rounded-2xl bg-[#0B5BFF] hover:bg-[#0849cb]">
+              <Button type="button" disabled={createIntervention.isPending || !interventionForm.learnerUserId || !interventionForm.notes.trim()} onClick={() => createIntervention.mutate()} className="h-11 rounded-2xl bg-primary-600 hover:bg-primary-500">
                 {createIntervention.isPending ? 'Saving...' : 'Log intervention'}
               </Button>
             </div>
@@ -794,8 +794,8 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
                 <div key={report.key} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                   <span className="text-sm font-medium text-slate-800">{report.label}</span>
                   <div className="flex gap-2">
-                    <Button type="button" className="h-9 rounded-xl bg-slate-900 px-3 text-xs hover:bg-slate-800" onClick={() => exportReport.mutate({ type: report.key, format: 'csv' })}>CSV</Button>
-                    <Button type="button" className="h-9 rounded-xl bg-[#0B5BFF] px-3 text-xs hover:bg-[#0849cb]" onClick={() => exportReport.mutate({ type: report.key, format: 'pdf' })}>PDF</Button>
+                    <Button type="button" className="h-9 rounded-xl bg-primary-700 px-3 text-xs hover:bg-primary-700" onClick={() => exportReport.mutate({ type: report.key, format: 'csv' })}>CSV</Button>
+                    <Button type="button" className="h-9 rounded-xl bg-primary-600 px-3 text-xs hover:bg-primary-500" onClick={() => exportReport.mutate({ type: report.key, format: 'pdf' })}>PDF</Button>
                   </div>
                 </div>
               ))}
@@ -849,3 +849,9 @@ const SchoolPortalContent = ({ mode }: { mode: PortalMode }) => {
 
 export const SchoolAdminPortalPage = () => <SchoolPortalContent mode="school" />;
 export const TeacherPortalPage = () => <SchoolPortalContent mode="teacher" />;
+
+
+
+
+
+
