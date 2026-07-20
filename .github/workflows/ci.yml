@@ -2,19 +2,21 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches:
+      - "**"
   pull_request:
 
 jobs:
   backend:
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16
         env:
           POSTGRES_DB: edurite
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: edurite_ci_password
+          POSTGRES_PASSWORD: Crt@Ailsa
         ports:
           - 5432:5432
         options: >-
@@ -22,6 +24,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+
       redis:
         image: redis:7
         ports:
@@ -31,13 +34,18 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
           cache: maven
+
       - name: Build backend
         working-directory: backend
         env:
@@ -45,50 +53,120 @@ jobs:
           EDURITE_TEST_DB_USERNAME: postgres
           EDURITE_TEST_DB_PASSWORD: edurite_ci_password
         run: mvn -B clean verify
+
       - name: Print backend test reports
         if: failure()
         run: |
-          find backend/target/surefire-reports -type f -name "*.txt" -print -exec cat {} \;
+          find backend/target/surefire-reports \
+            -type f \
+            -name "*.txt" \
+            -print \
+            -exec cat {} \; || true
 
   frontend:
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: frontend
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+
       - name: Install frontend dependencies
         run: npm ci
+
       - name: Lint frontend
         run: npm run lint
+
       - name: Build frontend
         run: npm run build
+
       - name: Verify built assets
         run: npm run check:dist
+
       - name: Start Vite preview
         run: |
-          npm run preview -- --host 127.0.0.1 --port 4173 > ../frontend-preview.log 2>&1 &
+          npm run preview -- --host 127.0.0.1 --port 4173 \
+            > ../frontend-preview.log 2>&1 &
           echo $! > ../frontend-preview.pid
+
       - name: Verify preview routes and assets
         run: npm run check:served-build -- http://127.0.0.1:4173
+
       - name: Verify Docker Nginx serves the built frontend
         working-directory: .
         run: |
+          set -euo pipefail
+
           docker build -t edurite-frontend-ci ./frontend
-          docker run -d --rm -p 8088:80 --name edurite-frontend-ci edurite-frontend-ci
-          node ./frontend/scripts/verify-served-build.mjs http://127.0.0.1:8088
+
+          CONTAINER_ID=$(docker run -d \
+            --name edurite-frontend-ci \
+            -p 8088:80 \
+            edurite-frontend-ci)
+
+          echo "Started container: $CONTAINER_ID"
+          echo "Waiting for Nginx on http://127.0.0.1:8088"
+
+          READY=false
+
+          for i in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:8088/ > /dev/null; then
+              echo "Nginx became ready after ${i} second(s)."
+              READY=true
+              break
+            fi
+
+            if ! docker inspect \
+              --format='{{.State.Running}}' \
+              edurite-frontend-ci 2>/dev/null | grep -q true; then
+              echo "The frontend container stopped unexpectedly."
+              break
+            fi
+
+            sleep 1
+          done
+
+          if [ "$READY" != "true" ]; then
+            echo "Nginx did not become ready."
+            docker logs edurite-frontend-ci || true
+            docker ps -a || true
+            exit 1
+          fi
+
+          if ! node ./frontend/scripts/verify-served-build.mjs \
+            http://127.0.0.1:8088; then
+            echo "Frontend verification failed."
+            docker logs edurite-frontend-ci || true
+            docker ps -a || true
+            exit 1
+          fi
+
       - name: Print frontend preview log
         if: failure()
         working-directory: .
-        run: cat frontend-preview.log || true
+        run: |
+          cat frontend-preview.log || true
+          docker logs edurite-frontend-ci || true
+          docker ps -a || true
+
       - name: Stop frontend preview and Docker container
         if: always()
         working-directory: .
         run: |
-          if [ -f frontend-preview.pid ]; then kill $(cat frontend-preview.pid) || true; fi
+          if [ -f frontend-preview.pid ]; then
+            kill "$(cat frontend-preview.pid)" || true
+          fi
+
           docker stop edurite-frontend-ci || true
+          docker rm edurite-frontend-ci || true
