@@ -17,7 +17,7 @@ export const StudentUniversitiesPage = () => {
   const [facultyFilter, setFacultyFilter] = useState('ALL');
 
   const institutions = useAppQuery<Institution[]>({ queryKey: ['student', 'institutions'], queryFn: () => institutionService.list() });
-  const allUniversities = useMemo(() => buildMergedInstitutionList(institutions.data ?? [], isUniversityEntry).map((item) => resolveInstitutionDisplay(item)).filter((item) => item.isActive !== false), [institutions.data]);
+  const allUniversities = useMemo(() => buildMergedInstitutionList(institutions.data ?? [], isUniversityEntry).map((item) => resolveInstitutionDisplay(item)).filter((item) => item.isActive ?? true), [institutions.data]);
   const provinceOptions = useMemo(() => Array.from(new Set(allUniversities.map((item) => item.province).filter(Boolean))).sort(), [allUniversities]);
   const typeOptions = useMemo(() => Array.from(new Set(allUniversities.map((item) => item.institutionType).filter(Boolean))).sort(), [allUniversities]);
   const facultyOptions = useMemo(() => Array.from(new Set(allUniversities.flatMap((item) => item.faculties ?? []))).sort(), [allUniversities]);

@@ -23,6 +23,10 @@ if (assetPaths.length === 0) {
   throw new Error('Built index.html does not reference any /assets files.');
 }
 
+if (assetPaths.some((assetPath) => assetPath === '/assets/main.js')) {
+  throw new Error('Built index.html still references the legacy /assets/main.js entrypoint instead of a Vite-generated hashed asset.');
+}
+
 for (const assetPath of assetPaths) {
   const relativeAssetPath = assetPath.replace(/^\//, '').replace(/\//g, path.sep);
   const fullAssetPath = path.join(distRoot, relativeAssetPath.replace(/^assets[\\/]/, `assets${path.sep}`));

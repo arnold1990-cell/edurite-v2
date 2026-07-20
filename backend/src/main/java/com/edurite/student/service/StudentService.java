@@ -25,7 +25,6 @@ import com.edurite.student.repository.SavedCareerRepository;
 import com.edurite.student.repository.StudentProfileRepository;
 import com.edurite.student.repository.StudentSavedProfileRepository;
 import com.edurite.subscription.entity.PlanType;
-import com.edurite.subscription.repository.SubscriptionRepository;
 import com.edurite.subscription.service.StudentPlanAccessService;
 import com.edurite.upload.service.StorageService;
 import com.edurite.user.entity.User;
@@ -48,7 +47,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-// @Service marks a class that contains business logic.
 @Service
 /**
  * This class named StudentService is part of the Spring Boot application.
@@ -132,7 +130,6 @@ public class StudentService {
     private final SavedBursaryRepository savedBursaryRepository;
     private final ApplicationRepository applicationRepository;
     private final UserNotificationRepository userNotificationRepository;
-    private final SubscriptionRepository subscriptionRepository;
     private final BursaryRepository bursaryRepository;
     private final GamificationService gamificationService;
     private final PsychometricService psychometricService;
@@ -149,7 +146,6 @@ public class StudentService {
             SavedBursaryRepository savedBursaryRepository,
             ApplicationRepository applicationRepository,
             UserNotificationRepository userNotificationRepository,
-            SubscriptionRepository subscriptionRepository,
             BursaryRepository bursaryRepository,
             GamificationService gamificationService,
             PsychometricService psychometricService,
@@ -165,7 +161,6 @@ public class StudentService {
         this.savedBursaryRepository = savedBursaryRepository;
         this.applicationRepository = applicationRepository;
         this.userNotificationRepository = userNotificationRepository;
-        this.subscriptionRepository = subscriptionRepository;
         this.bursaryRepository = bursaryRepository;
         this.gamificationService = gamificationService;
         this.psychometricService = psychometricService;
@@ -294,7 +289,6 @@ public class StudentService {
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = repository.findByUserId(user.getId()).orElseGet(() -> createDefault(user));
         profile = syncProfileCompletion(profile);
-        var subscription = subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId());
         int profileCompleteness = studentProfileCompletionService.calculateCompleteness(profile);
         StudentPlanAccessService.StudentPlanAccess planAccess = studentPlanAccessService.resolveByUserId(user.getId());
         PlanType planType = planAccess.premium() ? PlanType.PREMIUM : PlanType.BASIC;
@@ -592,10 +586,6 @@ public class StudentService {
      */
     private StudentSettingsDto toSettingsDto(StudentProfile profile) {
         return new StudentSettingsDto(profile.isInAppNotificationsEnabled(), profile.isEmailNotificationsEnabled(), profile.isSmsNotificationsEnabled());
-    }
-
-    private PlanType normalizePlanType(String planCode) {
-        return PlanType.fromPlanCode(planCode);
     }
 
     private String normalizeSubscriptionPlanCode(String planCode) {

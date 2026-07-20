@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback/States';
 import { schoolService, type CurriculumAsset, type CurriculumResourceFilters, type TeacherCoverageItem, type TeacherLessonPlanResponse } from '@/services/schoolService';
 import { AdminCard, AdminMetricCard, AdminPageHeader, AdminPageLayout } from '@/components/school/admin/AdminUi';
+import { getErrorMessage } from '@/lib/errors';
 
 type SchoolTab = 'district-atps' | 'syllabuses' | 'lesson-plans' | 'school-uploads';
 type TeacherTab = 'district-atps' | 'syllabuses' | 'lesson-plans' | 'weekly-atp';
@@ -480,7 +481,7 @@ export const TeacherCurriculumPage = ({ latestResources }: { latestResources?: C
       await Promise.all([resourcesQuery.refetch(), widgetsQuery.refetch()]);
     },
     onError: (error) => {
-      setLessonPlanError(error instanceof Error ? error.message : 'Unable to create the lesson plan from this ATP topic.');
+      setLessonPlanError(getErrorMessage(error));
     },
   });
 

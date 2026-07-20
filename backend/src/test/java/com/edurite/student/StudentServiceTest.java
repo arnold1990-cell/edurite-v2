@@ -20,8 +20,6 @@ import com.edurite.student.repository.StudentProfileRepository;
 import com.edurite.student.repository.StudentSavedProfileRepository;
 import com.edurite.student.service.StudentProfileCompletionService;
 import com.edurite.student.service.StudentService;
-import com.edurite.subscription.entity.SubscriptionRecord;
-import com.edurite.subscription.repository.SubscriptionRepository;
 import com.edurite.subscription.service.StudentPlanAccessService;
 import com.edurite.upload.service.StorageService;
 import com.edurite.user.entity.User;
@@ -66,8 +64,6 @@ class StudentServiceTest {
     @Mock
     UserNotificationRepository userNotificationRepository;
     @Mock
-    SubscriptionRepository subscriptionRepository;
-    @Mock
     BursaryRepository bursaryRepository;
     @Mock
     GamificationService gamificationService;
@@ -93,7 +89,6 @@ class StudentServiceTest {
                 savedBursaryRepository,
                 applicationRepository,
                 userNotificationRepository,
-                subscriptionRepository,
                 bursaryRepository,
                 gamificationService,
                 psychometricService,
@@ -120,10 +115,6 @@ class StudentServiceTest {
         profile.setId(UUID.randomUUID());
         profile.setUserId(user.getId());
         when(profileRepository.findByUserId(user.getId())).thenReturn(Optional.of(profile));
-
-        SubscriptionRecord subscription = new SubscriptionRecord();
-        subscription.setPlanCode(null);
-        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(subscription));
         when(savedCareerRepository.countByStudentId(profile.getId())).thenReturn(0L);
         when(savedBursaryRepository.countByStudentId(profile.getId())).thenReturn(0L);
         when(applicationRepository.countByStudentId(profile.getId())).thenReturn(0L);

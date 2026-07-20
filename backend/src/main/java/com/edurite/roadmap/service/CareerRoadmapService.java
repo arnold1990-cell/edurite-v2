@@ -42,11 +42,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -155,7 +155,7 @@ public class CareerRoadmapService {
                 base.overview(),
                 mergeRequiredSubjects(base, universityRequirements),
                 mergeRecommendedSubjects(base),
-                ensurePathway(base.universityPathway(), legacy == null ? null : legacy.getStudyPath(), "University pathway"),
+                ensurePathway(base.universityPathway(), legacy == null ? null : legacy.getStudyPath()),
                 ensureProfessionalPathway(base.professionalPathway(), request.careerName()),
                 ensureTimeline(base.roadmapTimeline()),
                 universityRequirements,
@@ -543,14 +543,14 @@ public class CareerRoadmapService {
         return base.recommendedSubjects() == null ? List.of() : base.recommendedSubjects();
     }
 
-    private List<PathwayStep> ensurePathway(List<PathwayStep> steps, String fallbackText, String fallbackTitle) {
+    private List<PathwayStep> ensurePathway(List<PathwayStep> steps, String fallbackText) {
         if (steps != null && !steps.isEmpty()) {
             return steps;
         }
         if (fallbackText == null || fallbackText.isBlank()) {
             return List.of();
         }
-        return List.of(new PathwayStep(fallbackTitle, fallbackText.trim()));
+        return List.of(new PathwayStep("University pathway", fallbackText.trim()));
     }
 
     private List<PathwayStep> ensureProfessionalPathway(List<PathwayStep> steps, String careerName) {
@@ -613,9 +613,9 @@ public class CareerRoadmapService {
                         "Varies by employer, experience, and specialisation.",
                         ""
                 ),
-                splitSubjects(legacy == null ? null : legacy.getRequiredSubjects(), true),
+                splitSubjects(legacy == null ? null : legacy.getRequiredSubjects()),
                 List.of(),
-                ensurePathway(List.of(), legacy == null ? null : legacy.getStudyPath(), "University pathway"),
+                ensurePathway(List.of(), legacy == null ? null : legacy.getStudyPath()),
                 List.of(),
                 List.of(),
                 List.of(),
@@ -626,12 +626,12 @@ public class CareerRoadmapService {
         );
     }
 
-    private List<SubjectRequirement> splitSubjects(String value, boolean required) {
+    private List<SubjectRequirement> splitSubjects(String value) {
         if (value == null || value.isBlank()) {
             return List.of();
         }
         return splitText(value).stream()
-                .map(item -> new SubjectRequirement(item, null, "", "", required, ""))
+                .map(item -> new SubjectRequirement(item, null, "", "", true, ""))
                 .toList();
     }
 
@@ -639,7 +639,7 @@ public class CareerRoadmapService {
         if (value == null || value.isBlank()) {
             return List.of();
         }
-        return List.of(value.split(",")).stream()
+        return Stream.of(value.split(","))
                 .map(String::trim)
                 .filter(item -> !item.isBlank())
                 .toList();

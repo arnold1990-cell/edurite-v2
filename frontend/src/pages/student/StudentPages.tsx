@@ -21,7 +21,7 @@ import { accountService } from '@/services/accountService';
 import { featureModulesService } from '@/services/featureModulesService';
 import { jobsService } from '@/services/jobsService';
 import { schoolService } from '@/services/schoolService';
-import { formatRewardClaimSummary, formatRewardEventSummary, getRewardClaimState, normalizeRewardText, REWARD_CLAIM_COST } from '@/pages/student/rewards.utils';
+import { formatRewardClaimSummary, formatRewardEventSummary, getRewardClaimState, REWARD_CLAIM_COST } from '@/pages/student/rewards.utils';
 import { AlertTriangle, Bell, BookOpen, Brain, BriefcaseBusiness, CheckCheck, CheckCircle2, CircleDollarSign, Clock3, FileText, FileUp, GraduationCap, PlayCircle, Settings, Sparkles, Target, UserCircle2, Video, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -1180,7 +1180,7 @@ export const StudentProfilePage = () => {
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">Student profile summary</p>
             <h2 className="text-2xl font-semibold text-slate-900">{`${value('firstName')} ${value('lastName')}`.trim() || 'Your Profile'}</h2>
-            <p className="text-sm text-slate-600">{value('selectedGrade') || 'Grade not selected yet'}{value('qualificationLevel') ? ` â€¢ ${value('qualificationLevel')}` : ''}</p>
+              <p className="text-sm text-slate-600">{value('selectedGrade') || 'Grade not selected yet'}{value('qualificationLevel') ? ` • ${value('qualificationLevel')}` : ''}</p>
           </div>
         </div>
         <div className="rounded-xl border border-primary-100 bg-white/90 p-3 text-sm shadow-sm">
@@ -1403,7 +1403,7 @@ export const StudentProfilePage = () => {
                 <p className="font-medium text-slate-900">{saved.name}</p>
                 <p className="text-xs text-slate-500">Updated {new Date(saved.updatedAt).toLocaleString()}</p>
                 {gradeLabel ? <p className="mt-1 text-xs font-semibold text-primary-700">{gradeLabel}</p> : null}
-                {subjectSummary.length ? <p className="mt-1 text-xs text-slate-600">{subjectSummary.join(' â€¢ ')}</p> : null}
+            {subjectSummary.length ? <p className="mt-1 text-xs text-slate-600">{subjectSummary.join(' • ')}</p> : null}
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => applySavedProfile.mutate(saved.id)} disabled={applySavedProfile.isPending || deleteSavedProfile.isPending}>
@@ -1987,7 +1987,7 @@ export const StudentApplicationsPage = () => {
   return <Section title="Bursary Finder">
     <div className="rounded border p-3">
       <h3 className="font-semibold mb-2">AI Recommended Bursaries</h3>
-      {(recommendations.data ?? []).slice(0, 3).map((item) => <p key={item.externalId}>â€¢ {item.title} ({item.relevanceScore}%)</p>)}
+                {(recommendations.data ?? []).slice(0, 3).map((item) => <p key={item.externalId}>• {item.title} ({item.relevanceScore}%)</p>)}
       {!((recommendations.data ?? []).length) && <p className="text-sm text-slate-500">No AI bursary suggestions yet. Complete your profile for better matches.</p>}
     </div>
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2">

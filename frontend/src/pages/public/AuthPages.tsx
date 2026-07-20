@@ -194,9 +194,9 @@ const getResetPasswordLoginPath = (role: AuthRole) => role === 'COMPANY'
 
 const passwordRequirements = [
   'At least 8 characters',
-  'One uppercase letter (Aâ€“Z)',
-  'One lowercase letter (aâ€“z)',
-  'One number (0â€“9)',
+      'One uppercase letter (A–Z)',
+      'One lowercase letter (a–z)',
+      'One number (0–9)',
   'One special character (!@#$%^&*)',
 ];
 

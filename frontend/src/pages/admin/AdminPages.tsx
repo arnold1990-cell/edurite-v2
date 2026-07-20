@@ -8,6 +8,7 @@ import { DataTable } from '@/components/tables/DataTable';
 import { MetricCard } from '@/components/cards/MetricCard';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback/States';
 import { useAppQuery } from '@/hooks/useAppQuery';
+import { getErrorMessage } from '@/lib/errors';
 import { adminService, type AdminAnalytics, type AdminBulkUploadResult, type AdminBursary, type AdminCompany, type AdminDistrictManagementResponse, type AdminPlatformSettings, type AdminUser } from '@/services/adminService';
 import { notificationService } from '@/services/notificationService';
 import type { ApiError } from '@/types';
@@ -729,7 +730,7 @@ export const AdminDistrictManagementPage = () => {
           </label>
           <div className="md:col-span-2 flex items-center gap-3">
             <Button type="submit" disabled={createDistrict.isPending}>{createDistrict.isPending ? 'Creating District...' : 'Create District'}</Button>
-            {createDistrict.isError ? <span className="text-sm text-red-600">{createDistrict.error instanceof Error ? createDistrict.error.message : 'Unable to create district.'}</span> : null}
+            {createDistrict.isError ? <span className="text-sm text-red-600">{getErrorMessage(createDistrict.error) || 'Unable to create district.'}</span> : null}
             {Object.values(errors)[0]?.message ? <span className="text-sm text-red-600">{String(Object.values(errors)[0]?.message ?? '')}</span> : null}
           </div>
         </form>
@@ -827,7 +828,7 @@ export const AdminDistrictManagementPage = () => {
             </label>
             <div className="md:col-span-2 flex items-center gap-3">
               <Button type="submit" disabled={updateDistrict.isPending}>{updateDistrict.isPending ? 'Saving...' : 'Save District'}</Button>
-              {updateDistrict.isError ? <span className="text-sm text-red-600">{updateDistrict.error instanceof Error ? updateDistrict.error.message : 'Unable to update district.'}</span> : null}
+              {updateDistrict.isError ? <span className="text-sm text-red-600">{getErrorMessage(updateDistrict.error) || 'Unable to update district.'}</span> : null}
             </div>
           </form>
         </div>

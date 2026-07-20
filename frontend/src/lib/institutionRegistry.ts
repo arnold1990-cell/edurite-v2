@@ -41,7 +41,16 @@ type InstitutionLike = {
 };
 
 const manifest = logoManifest as LogoManifestRecord[];
-const assetModules = import.meta.glob('../assets/institutions/**/*.{svg,png,jpg,jpeg,webp}', { eager: true, import: 'default' }) as Record<string, string>;
+const assetModules = import.meta.glob(
+  [
+    '../assets/institutions/**/*.svg',
+    '../assets/institutions/**/*.png',
+    '../assets/institutions/**/*.jpg',
+    '../assets/institutions/**/*.jpeg',
+    '../assets/institutions/**/*.webp',
+  ],
+  { eager: true, import: 'default' },
+) as Record<string, string>;
 const normalizedAssets = new Map<string, string>(Object.entries(assetModules).map(([key, value]) => [key.replace('../assets/institutions/', '').replace(/\\/g, '/').toLowerCase(), value]));
 const normalize = (value?: string | null) => (value ?? '').trim().toLowerCase();
 const deriveInitials = (name?: string | null) => {

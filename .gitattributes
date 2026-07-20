@@ -2,8 +2,10 @@
 *.yml text
 *.yaml text
 *.sql text
-*.java text
-*.ts text
-*.tsx text
-*.json text
+*.java text working-tree-encoding=UTF-8
+*.ts text working-tree-encoding=UTF-8
+*.tsx text working-tree-encoding=UTF-8
+*.js text working-tree-encoding=UTF-8
+*.jsx text working-tree-encoding=UTF-8
+*.json text working-tree-encoding=UTF-8
 *.sh text eol=lf

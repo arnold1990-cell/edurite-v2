@@ -60,7 +60,7 @@ public class GamificationService {
             return;
         }
         String termCode = currentTermCode();
-        if (!canAwardEvent(profile.getId(), EVENT_LOGIN_DAILY, termCode)) {
+        if (isAwardBlocked(profile.getId(), EVENT_LOGIN_DAILY, termCode)) {
             return;
         }
         int points = resolvePointsForEvent(EVENT_LOGIN_DAILY, 5);
@@ -77,7 +77,7 @@ public class GamificationService {
             return;
         }
         String termCode = currentTermCode();
-        if (!canAwardEvent(profile.getId(), EVENT_TASK_COMPLETED, termCode)) {
+        if (isAwardBlocked(profile.getId(), EVENT_TASK_COMPLETED, termCode)) {
             return;
         }
         int points = resolvePointsForEvent(EVENT_TASK_COMPLETED, 15);
@@ -176,18 +176,18 @@ public class GamificationService {
                 .orElse(fallbackPoints);
     }
 
-    private boolean canAwardEvent(UUID studentId, String eventType, String termCode) {
+    private boolean isAwardBlocked(UUID studentId, String eventType, String termCode) {
         return rewardRuleRepository.findByCode(eventType)
                 .filter(this::isRuleApplicableToday)
                 .map(rule -> {
                     Integer maxPerTerm = rule.getMaxPerTerm();
                     if (maxPerTerm == null || maxPerTerm <= 0) {
-                        return true;
+                        return false;
                     }
                     long awardedCount = studentPointsLedgerRepository.countByStudentIdAndEventTypeAndTermCode(studentId, eventType, termCode);
-                    return awardedCount < maxPerTerm;
+                    return awardedCount >= maxPerTerm;
                 })
-                .orElse(true);
+                .orElse(false);
     }
 
     private boolean isRuleApplicableToday(RewardRule rule) {
@@ -249,12 +249,12 @@ public class GamificationService {
             if (part.isBlank()) {
                 continue;
             }
-            if (builder.length() > 0) {
+            if (!builder.isEmpty()) {
                 builder.append(' ');
             }
             builder.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
         }
-        return builder.length() == 0 ? value : builder.toString();
+        return builder.isEmpty() ? value : builder.toString();
     }
 
     private String normalizeDisplayText(String value) {

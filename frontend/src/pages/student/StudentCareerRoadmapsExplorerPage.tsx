@@ -21,7 +21,6 @@ import type {
   CareerRoadmapSubjectRequirement,
   PaginatedResponse,
   SavedCareerRoadmap,
-  StudentProfile,
 } from '@/types';
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -286,6 +285,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
     setActiveSource('MANUAL');
     setGenerated(null);
     setGeneratedFingerprint('');
+    setActionFeedback(null);
   };
 
   const switchToProfile = () => {
@@ -404,10 +404,8 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                   Link to My Profile
                 </Button>
                 <Button type="button" className="bg-slate-700 hover:bg-slate-600" onClick={() => {
-                  setActiveSource('MANUAL');
+                  switchToManual();
                   setManualSubjects((currentRows) => [...currentRows, createSubjectRow()]);
-                  setGenerated(null);
-                  setGeneratedFingerprint('');
                 }}>Add Subject</Button>
               </div>
             </div>
@@ -440,17 +438,13 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                     return <tr key={row.id}>
                       <td className="px-4 py-3">
                         <input list="career-roadmap-subjects" className="w-full rounded-lg border border-slate-300 px-3 py-2" value={row.subjectName} onChange={(event) => {
-                          setActiveSource('MANUAL');
-                          setGenerated(null);
-                          setGeneratedFingerprint('');
+                          switchToManual();
                           setManualSubjects((currentRows) => currentRows.map((item) => item.id === row.id ? { ...item, subjectName: event.target.value } : item));
                         }} placeholder="Subject name" disabled={activeSource === 'PROFILE'} />
                       </td>
                       <td className="px-4 py-3">
                         <Input type="number" min={0} max={100} value={row.markPercentage} onChange={(event) => {
-                          setActiveSource('MANUAL');
-                          setGenerated(null);
-                          setGeneratedFingerprint('');
+                          switchToManual();
                           setManualSubjects((currentRows) => currentRows.map((item) => item.id === row.id ? { ...item, markPercentage: event.target.value } : item));
                         }} placeholder="" disabled={activeSource === 'PROFILE'} />
                       </td>
@@ -460,9 +454,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
                       <td className="px-4 py-3 text-slate-700">{normalized?.subjectName ? aps : '--'}</td>
                       <td className="px-4 py-3">
                         <button type="button" className="text-sm font-medium text-red-600 hover:text-red-500 disabled:cursor-not-allowed disabled:text-slate-400" onClick={() => {
-                          setActiveSource('MANUAL');
-                          setGenerated(null);
-                          setGeneratedFingerprint('');
+                          switchToManual();
                           setManualSubjects((currentRows) => currentRows.filter((item) => item.id !== row.id));
                         }} disabled={activeSource === 'PROFILE'}>Remove</button>
                       </td>

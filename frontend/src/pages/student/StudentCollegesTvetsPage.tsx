@@ -19,7 +19,7 @@ export const StudentCollegesTvetsPage = () => {
   const [provinceFilter, setProvinceFilter] = useState<'ALL' | string>('ALL');
 
   const institutions = useAppQuery<Institution[]>({ queryKey: ['student', 'institutions', 'colleges-tvets'], queryFn: () => institutionService.list() });
-  const merged = useMemo(() => buildMergedInstitutionList(institutions.data ?? [], (item) => isTvetEntry(item) || isPrivateEntry(item) || isOnlineEntry(item)).map((item) => resolveInstitutionDisplay(item)).filter((item) => item.isActive !== false), [institutions.data]);
+  const merged = useMemo(() => buildMergedInstitutionList(institutions.data ?? [], (item) => isTvetEntry(item) || isPrivateEntry(item) || isOnlineEntry(item)).map((item) => resolveInstitutionDisplay(item)).filter((item) => item.isActive ?? true), [institutions.data]);
   const activeInstitutions = useMemo(() => merged.filter((item) => matchesTab(activeTab, item as Institution)), [activeTab, merged]);
 
   const provinceOptions = useMemo(() => {

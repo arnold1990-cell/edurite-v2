@@ -7,6 +7,7 @@ import { CompactDataTable, DashboardKpiCard, DashboardSectionCard, DashboardShel
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAppQuery } from '@/hooks/useAppQuery';
+import { getErrorMessage } from '@/lib/errors';
 import {
   districtService,
   type DistrictCurriculumAsset,
@@ -93,7 +94,7 @@ const InsightList = ({ title, items, icon: Icon }: { title: string; items: Distr
 
 const DataShell = ({ isLoading, error, children }: { isLoading: boolean; error: unknown; children: React.ReactNode }) => {
   if (isLoading) return <LoadingState message="Loading district data..." detail="Preparing live district analytics and school intelligence." />;
-  if (error) return <ErrorState message={error instanceof Error ? error.message : 'Unable to load district data.'} />;
+  if (error) return <ErrorState message={getErrorMessage(error)} />;
   return <>{children}</>;
 };
 
@@ -187,7 +188,7 @@ export const DistrictDashboardPage = () => {
               <div className="mt-4 space-y-3">
                 {query.data.recentSupportRequests.length ? query.data.recentSupportRequests.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <p className="text-sm font-semibold text-slate-900">{item.schoolName} â€¢ {item.title}</p>
+                    <p className="text-sm font-semibold text-slate-900">{item.schoolName} • {item.title}</p>
                     <p className="mt-1 text-sm text-slate-600">{item.message}</p>
                   </div>
                 )) : <EmptyState title="Support requests" message="No school support requests are open." />}
@@ -389,7 +390,7 @@ export const DistrictSchoolsPage = () => {
                     {exporting === 'xlsx' ? 'Exporting Excel...' : 'Export Excel'}
                   </Button>
                 </div>
-            <p className="mt-3 text-sm text-slate-600">{detailQuery.data.district || 'District not set'} â€¢ {detailQuery.data.province || 'Province not set'} â€¢ {detailQuery.data.contactEmail || 'No contact email'}</p>
+              <p className="mt-3 text-sm text-slate-600">{detailQuery.data.district || 'District not set'} • {detailQuery.data.province || 'Province not set'} • {detailQuery.data.contactEmail || 'No contact email'}</p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -670,7 +671,7 @@ export const DistrictInterventionsPage = () => {
                 {interventionsQuery.data.items.length ? interventionsQuery.data.items.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
                     <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-                    <p className="mt-1 text-sm text-slate-600">{item.schoolName || 'District-wide'} â€¢ {item.category} â€¢ {item.priority}</p>
+                  <p className="mt-1 text-sm text-slate-600">{item.schoolName || 'District-wide'} • {item.category} • {item.priority}</p>
                     <p className="mt-2 text-sm text-slate-600">{item.notes}</p>
                   </div>
                 )) : <EmptyState title="Interventions" message="No district interventions have been opened yet." />}
@@ -723,7 +724,7 @@ export const DistrictInterventionsPage = () => {
                 </div>
                 <Input type="date" value={form.followUpDate} onChange={(event) => setForm((current) => ({ ...current, followUpDate: event.target.value }))} className="rounded-2xl border-slate-200 bg-slate-50 py-3" />
                 <textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} className="min-h-32 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300" placeholder="Intervention notes" required />
-                {createMutation.error ? <ErrorState message={createMutation.error instanceof Error ? createMutation.error.message : 'Unable to create intervention.'} /> : null}
+                {createMutation.error ? <ErrorState message={getErrorMessage(createMutation.error)} /> : null}
                 <Button type="submit" disabled={createMutation.isPending} className="rounded-2xl px-5 py-3">
                   {createMutation.isPending ? 'Creating intervention...' : 'Create intervention'}
                 </Button>
@@ -811,7 +812,7 @@ export const DistrictSettingsPage = () => {
                 </select>
                 <Input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className="rounded-2xl border-slate-200 bg-slate-50 py-3" placeholder="Announcement title" required />
                 <textarea value={form.message} onChange={(event) => setForm((current) => ({ ...current, message: event.target.value }))} className="min-h-28 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300" placeholder="Message to schools" required />
-                {createMutation.error ? <ErrorState message={createMutation.error instanceof Error ? createMutation.error.message : 'Unable to send announcement.'} /> : null}
+                {createMutation.error ? <ErrorState message={getErrorMessage(createMutation.error)} /> : null}
                 <Button type="submit" disabled={createMutation.isPending} className="rounded-2xl px-5 py-3">
                   {createMutation.isPending ? 'Sending announcement...' : 'Send announcement'}
                 </Button>
@@ -828,7 +829,7 @@ export const DistrictSettingsPage = () => {
               <div className="mt-4 space-y-3">
                 {settingsQuery.data.supportRequests.length ? settingsQuery.data.supportRequests.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <p className="text-sm font-semibold text-slate-900">{item.schoolName} â€¢ {item.title}</p>
+                    <p className="text-sm font-semibold text-slate-900">{item.schoolName} • {item.title}</p>
                     <p className="mt-1 text-sm text-slate-600">{item.message}</p>
                   </div>
                 )) : <EmptyState title="Support requests" message="No support requests are waiting." />}
@@ -950,7 +951,7 @@ export const DistrictCurriculumManagementPage = () => {
       await complianceQuery.refetch();
     },
     onError: (error) => {
-      setFormError(error instanceof Error ? error.message : 'Unable to save curriculum asset.');
+      setFormError(getErrorMessage(error));
     },
   });
   const archiveMutation = useMutation({
@@ -1142,7 +1143,7 @@ export const DistrictCurriculumManagementPage = () => {
           syncTitleFromFile(file);
         }} /></label>
         <textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} className="min-h-28 rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-300 md:col-span-2" placeholder="Description or notes" />
-        {formError || upsertMutation.error ? <div className="md:col-span-2"><ErrorState message={formError ?? (upsertMutation.error instanceof Error ? upsertMutation.error.message : 'Unable to save curriculum asset.')} /></div> : null}
+        {formError || upsertMutation.error ? <div className="md:col-span-2"><ErrorState message={formError ?? getErrorMessage(upsertMutation.error)} /></div> : null}
         <div className="md:col-span-2">
           <Button type="submit" disabled={upsertMutation.isPending} className="rounded-2xl px-5 py-3">
             {upsertMutation.isPending ? 'Saving curriculum content...' : editingAssetId ? 'Save changes' : 'Upload official content'}

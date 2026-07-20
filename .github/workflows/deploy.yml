@@ -137,6 +137,20 @@ jobs:
             echo "==> Container status after startup"
             docker compose ps || true
 
+            echo "==> Verifying frontend bundle is a fresh Vite build"
+            if docker exec edurite-frontend test -f /usr/share/nginx/html/assets/main.js; then
+              echo "ERROR: Legacy /assets/main.js is still present in the deployed frontend image."
+              exit 1
+            fi
+            if docker exec edurite-frontend sh -lc 'grep -R "import.meta.glob" /usr/share/nginx/html/assets >/dev/null'; then
+              echo "ERROR: Deployed frontend assets still contain import.meta.glob."
+              exit 1
+            fi
+            if ! curl -fsS http://localhost:5173/ | grep -Eq '/assets/index-[^"]+\\.js'; then
+              echo "ERROR: Frontend HTML is not serving a Vite hashed JavaScript asset."
+              exit 1
+            fi
+
             echo "==> Waiting for backend health"
             for i in $(seq 1 30); do
               if curl -fsS http://localhost:8080/actuator/health; then

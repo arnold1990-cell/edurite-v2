@@ -1027,7 +1027,7 @@ export const SubjectManagementPanel = () => {
                 const rates = filteredSubjects
                   .map((subject) => subjectMetrics.insights.find((entry) => entry.subjectId === subject.id)?.passRate ?? null)
                   .filter((value): value is number => value != null);
-                if (!rates.length) return 'â€”';
+  if (!rates.length) return '—';
                 return `${Math.round(rates.reduce((sum, value) => sum + value, 0) / rates.length)}%`;
               })()}
             </p>
