@@ -404,10 +404,9 @@ public class AuthService {
                 "Your registration was submitted to " + district.getDistrictName() + " and is awaiting district approval."
         );
 
-        return new RegistrationResponse(
-                "School registration submitted successfully. You can sign in and track district approval.",
-                user.getEmail(),
-                false
+        return buildAuthenticatedRegistrationResponse(
+                user,
+                "School registration submitted successfully. You are signed in and can track district approval."
         );
     }
 
@@ -656,34 +655,53 @@ public class AuthService {
 
     private RegistrationResponse buildRegistrationResponse(User user) {
         if (!isOtpRequired()) {
-            return new RegistrationResponse("Account created successfully. You can sign in now.", user.getEmail(), false);
+            return buildAuthenticatedRegistrationResponse(user, "Account created successfully.");
         }
 
         String normalizedPhone = normalizePhoneNumber(user.getPhoneNumber());
 
         if (normalizedPhone == null) {
-            return new RegistrationResponse(
-                    "Account created, but no phone number is registered for OTP verification. Contact support.",
-                    user.getEmail(),
-                    true
+            return buildPendingVerificationRegistrationResponse(
+                    user,
+                    "Account created, but no phone number is registered for OTP verification. Contact support."
             );
         }
 
         try {
             otpService.sendVerificationOtp(normalizedPhone);
-            return new RegistrationResponse(
-                    "Account created successfully. Verify your phone number using OTP before signing in.",
-                    user.getEmail(),
-                    true
+            return buildPendingVerificationRegistrationResponse(
+                    user,
+                    "Account created successfully. Verify your phone number using OTP before signing in."
             );
         } catch (RuntimeException ex) {
             log.warn("[auth] registration otp dispatch failed phone={} reason={}", normalizedPhone, ex.getMessage());
-            return new RegistrationResponse(
-                    "Account created, but we could not send OTP right now. Please use resend OTP to verify your phone number.",
-                    user.getEmail(),
-                    true
+            return buildPendingVerificationRegistrationResponse(
+                    user,
+                    "Account created, but we could not send OTP right now. Please use resend OTP to verify your phone number."
             );
         }
+    }
+
+    private RegistrationResponse buildAuthenticatedRegistrationResponse(User user, String message) {
+        AuthResponse session = issueAuthResponse(user, message);
+        return new RegistrationResponse(
+                message,
+                user.getEmail(),
+                false,
+                session.accessToken(),
+                session.refreshToken(),
+                session.tokenType(),
+                session.accessTokenExpiresIn(),
+                session.role(),
+                session.primaryRole(),
+                session.approvalStatus(),
+                session.mustChangePassword(),
+                session.user()
+        );
+    }
+
+    private RegistrationResponse buildPendingVerificationRegistrationResponse(User user, String message) {
+        return new RegistrationResponse(message, user.getEmail(), true);
     }
 
     private User createUser(

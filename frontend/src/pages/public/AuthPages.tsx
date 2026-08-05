@@ -8,6 +8,7 @@ import { PopiaConsentCheckbox } from '@/components/forms/PopiaConsentCheckbox';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { ErrorState, LoadingState } from '@/components/feedback/States';
+import { authStore } from '@/features/auth/authStore';
 import { getCompanyPathForApprovalStatus, getDashboardPathForRole, getDashboardPathForUser, isAuthorizedPathForRole, resolvePrimaryRole } from '@/features/auth/roleUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { authService } from '@/services/authService';
@@ -23,11 +24,6 @@ type LoginFormValues = {
   emisNumber: string;
   password: string;
   rememberMe: boolean;
-};
-
-type DemoCredential = {
-  username: string;
-  password: string;
 };
 
 type SelectedPortal = 'STUDENT' | 'SCHOOL' | 'COMPANY' | 'ADMIN';
@@ -295,28 +291,7 @@ const loginPathForSelection = (selection: SelectedRoleOption): string => {
   return '/auth/login';
 };
 
-const demoCredentialsByRole: Record<'STUDENT' | 'TEACHER' | 'SCHOOL_ADMIN' | 'DISTRICT_ADMIN' | 'PLATFORM_ADMIN', DemoCredential> = {
-  STUDENT: {
-    username: 'arnoldmadaz@gmail.com',
-    password: 'Student@123',
-  },
-  TEACHER: {
-    username: 'teacher@edurite.com',
-    password: 'Teacher@123',
-  },
-  SCHOOL_ADMIN: {
-    username: 'EduRite / 99999999',
-    password: 'Admin@123',
-  },
-  DISTRICT_ADMIN: {
-    username: 'districtadmin@edurite.com',
-    password: 'DistrictAdmin@123',
-  },
-  PLATFORM_ADMIN: {
-    username: 'admin@edurite.com',
-    password: 'Admin@123',
-  },
-};
+const EMPTY_LOGIN_FORM: LoginFormValues = { email: '', schoolName: '', emisNumber: '', password: '', rememberMe: false };
 
 const GoogleAuthSection = ({
   enabled,
@@ -725,7 +700,7 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
   const location = useLocation();
   const from = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
   const [serverError, setServerError] = useState<string | null>(null);
-  const [form, setForm] = useState<LoginFormValues>({ email: '', schoolName: '', emisNumber: '', password: '', rememberMe: true });
+  const [form, setForm] = useState<LoginFormValues>(EMPTY_LOGIN_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
@@ -1108,7 +1083,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
   const location = useLocation();
   const from = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
   const [serverError, setServerError] = useState<string | null>(null);
-  const [form, setForm] = useState<LoginFormValues>({ email: '', schoolName: '', emisNumber: '', password: '', rememberMe: true });
+  const [form, setForm] = useState<LoginFormValues>(EMPTY_LOGIN_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -1223,34 +1198,9 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
   }, [googleClientConfigured, googleClientLooksValid, googleSectionEnabled]);
 
   useEffect(() => {
-    if (selectedRole === 'SCHOOL_ADMIN') {
-      setForm((current) => ({
-        ...current,
-        email: '',
-        schoolName: '',
-        emisNumber: '',
-        password: '',
-      }));
-      return;
-    }
-
-    const demoCredentials = demoCredentialsByRole[
-      selectedRole === 'PLATFORM_ADMIN'
-        ? 'PLATFORM_ADMIN'
-        : selectedRole === 'DISTRICT_ADMIN'
-          ? 'DISTRICT_ADMIN'
-          : selectedRole === 'TEACHER'
-            ? 'TEACHER'
-            : 'STUDENT'
-    ];
-
-    setForm((current) => ({
-      ...current,
-      email: demoCredentials.username,
-      schoolName: '',
-      emisNumber: '',
-      password: demoCredentials.password,
-    }));
+    authStore.clearLegacyCredentials();
+    setShowPassword(false);
+    setForm(EMPTY_LOGIN_FORM);
   }, [selectedRole]);
 
   useEffect(() => {
@@ -1621,6 +1571,7 @@ export const LoginPage = () => {
 
 export const RegisterStudentPage = () => {
   const navigate = useNavigate();
+  const { registerStudent } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -1661,7 +1612,7 @@ export const RegisterStudentPage = () => {
             }
 
             try {
-              const response = await authService.registerStudent({
+              const response = await registerStudent({
                 fullName: `${firstName} ${lastName}`.trim(),
                 firstName,
                 lastName,
@@ -1683,10 +1634,7 @@ export const RegisterStudentPage = () => {
                 });
                 return;
               }
-              navigate('/auth/login', {
-                replace: true,
-                state: { registrationMessage: response.message },
-              });
+              navigate(getDashboardPathForUser(response.user) ?? '/student/dashboard', { replace: true });
             } catch (error) {
               setServerError(error instanceof Error ? error.message : 'Unable to create your account.');
             } finally {
@@ -1763,6 +1711,7 @@ export const RegisterStudentPage = () => {
 
 export const RegisterSchoolPage = () => {
   const navigate = useNavigate();
+  const { registerSchool } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const [districts, setDistricts] = useState<LocationOption[]>([]);
   const [circuits, setCircuits] = useState<LocationOption[]>([]);
@@ -1862,11 +1811,8 @@ export const RegisterSchoolPage = () => {
                 setServerError('Password and confirm password must match.');
                 return;
               }
-              const response = await authService.registerSchool(data);
-              navigate('/school/login', {
-                replace: true,
-                state: { registrationMessage: response.message },
-              });
+              const response = await registerSchool(data);
+              navigate(getDashboardPathForUser(response.user) ?? '/school/dashboard', { replace: true });
             } catch (error) {
               setServerError(error instanceof Error ? error.message : 'Unable to create school registration request.');
             }
@@ -1926,6 +1872,7 @@ export const RegisterSchoolPage = () => {
 
 export const RegisterCompanyPage = () => {
   const navigate = useNavigate();
+  const { registerCompany } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { isSubmitting } } = useForm<CompanyRegisterPayload>({
     defaultValues: {
@@ -1955,7 +1902,7 @@ export const RegisterCompanyPage = () => {
         <form className="mt-6 grid gap-3.5 sm:grid-cols-2" onSubmit={handleSubmit(async (data) => {
           try {
             setServerError(null);
-            const response = await authService.registerCompany({ ...data, consentVersion: data.consentVersion || POPIA_CONSENT_VERSION });
+            const response = await registerCompany({ ...data, consentVersion: data.consentVersion || POPIA_CONSENT_VERSION });
             if (response.verificationRequired) {
               navigate(`/auth/verify-otp/notice?phone=${encodeURIComponent(data.mobileNumber)}&role=COMPANY`, {
                 replace: true,
@@ -1963,10 +1910,7 @@ export const RegisterCompanyPage = () => {
               });
               return;
             }
-            navigate('/company/login', {
-              replace: true,
-              state: { registrationMessage: response.message },
-            });
+            navigate(getDashboardPathForUser(response.user) ?? '/company/dashboard', { replace: true });
           } catch (error) {
             setServerError(error instanceof Error ? error.message : 'Unable to create company account.');
           }

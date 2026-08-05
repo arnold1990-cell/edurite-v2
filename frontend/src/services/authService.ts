@@ -100,6 +100,24 @@ export const normalizeAuthResponse = (payload: AuthResponseRaw): AuthResponse =>
   };
 };
 
+const normalizeRegistrationResponse = (payload: RegistrationResponse): RegistrationResponse => {
+  if (payload.accessToken && payload.user) {
+    const session = normalizeAuthResponse(payload as AuthResponseRaw);
+    return {
+      ...payload,
+      ...session,
+      email: payload.email || session.user.email,
+      verificationRequired: payload.verificationRequired,
+      message: payload.message,
+    };
+  }
+
+  return {
+    ...payload,
+    email: payload.email || payload.user?.email || '',
+  };
+};
+
 export const authService = {
   me: () => apiClient.get<AuthResponseRaw>('/auth/me').then((response) => normalizeAuthResponse(response.data)),
   login: (payload: { email?: string; schoolName?: string; emisNumber?: string; password: string }) => {
@@ -115,9 +133,9 @@ export const authService = {
     authStore.clear();
     return apiClient.post<AuthResponseRaw>('/auth/google', { idToken, role }).then((response) => normalizeAuthResponse(response.data));
   },
-  registerStudent: (payload: StudentRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/student', payload).then((r) => r.data),
-  registerCompany: (payload: CompanyRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/company', payload).then((r) => r.data),
-  registerSchool: (payload: SchoolRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/school', payload).then((r) => r.data),
+  registerStudent: (payload: StudentRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/student', payload).then((r) => normalizeRegistrationResponse(r.data)),
+  registerCompany: (payload: CompanyRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/company', payload).then((r) => normalizeRegistrationResponse(r.data)),
+  registerSchool: (payload: SchoolRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/school', payload).then((r) => normalizeRegistrationResponse(r.data)),
   verifyOtp: (payload: { phoneNumber: string; code: string }) => apiClient.post<VerificationStatusResponse>('/auth/verify-otp', payload).then((r) => r.data),
   resendVerificationOtp: (payload: { phoneNumber: string }) => apiClient.post<VerificationStatusResponse>('/auth/resend-verification-otp', payload).then((r) => r.data),
   requestForgotPasswordOtp: (payload: { accountIdentifier?: string; phoneNumber?: string }) => apiClient.post<VerificationStatusResponse>('/auth/forgot-password/request-otp', payload).then((r) => r.data),

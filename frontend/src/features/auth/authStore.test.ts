@@ -53,6 +53,33 @@ describe('authStore', () => {
     expect(authStore.shouldPersistSession()).toBe(false);
   });
 
+  it('removes legacy saved login credential keys during startup cleanup', async () => {
+    const local = createMockStorage({
+      savedUsername: 'legacy-user',
+      savedEmail: 'legacy@example.com',
+      savedPassword: 'legacy-secret',
+      rememberMe: 'true',
+      loginCredentials: '{\"email\":\"legacy@example.com\"}',
+      demoUser: 'demo',
+      seededUser: 'seeded',
+      edurite_access_token: 'access-token',
+    });
+    const session = createMockStorage({ savedUsername: 'legacy-session-user' });
+    setWindow(() => local.storage, () => session.storage);
+
+    const { authStore } = await import('@/features/auth/authStore');
+
+    expect(authStore.getAccessToken()).toBe('access-token');
+    expect(local.entries.has('savedUsername')).toBe(false);
+    expect(local.entries.has('savedEmail')).toBe(false);
+    expect(local.entries.has('savedPassword')).toBe(false);
+    expect(local.entries.has('rememberMe')).toBe(false);
+    expect(local.entries.has('loginCredentials')).toBe(false);
+    expect(local.entries.has('demoUser')).toBe(false);
+    expect(local.entries.has('seededUser')).toBe(false);
+    expect(session.entries.has('savedUsername')).toBe(false);
+  });
+
   it('clears only malformed stored user data and preserves valid tokens for recovery', async () => {
     const local = createMockStorage({
       edurite_access_token: 'access-token',

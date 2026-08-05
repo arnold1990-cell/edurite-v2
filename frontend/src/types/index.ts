@@ -18,7 +18,7 @@ export interface User { id: string; email: string; username?: string; fullName?:
 export interface AuthResponse { accessToken: string; refreshToken?: string; tokenType?: string; accessTokenExpiresIn?: number; role?: string; primaryRole?: string; mustChangePassword?: boolean; message?: string; user: User; }
 export interface AuthResponseRaw { accessToken?: string; refreshToken?: string; tokenType?: string; accessTokenExpiresIn?: number; role?: string; primaryRole?: string; approvalStatus?: string; mustChangePassword?: boolean; message?: string; roles?: string[]; user?: Partial<User> & { username?: string; role?: string; primaryRole?: string; approvalStatus?: string; mustChangePassword?: boolean; roles?: string[]; verified?: boolean; planType?: PlanType; profileCompleted?: boolean; profileCompleteness?: number }; }
 export interface VerificationStatusResponse { message: string; }
-export interface RegistrationResponse { message: string; email: string; verificationRequired: boolean; }
+export interface RegistrationResponse extends Partial<AuthResponse> { message: string; email: string; verificationRequired: boolean; }
 
 export interface StudentRegisterPayload { fullName?: string; firstName?: string; lastName?: string; email: string; password: string; interests?: string; location?: string; phone: string; dateOfBirth?: string; gender?: string; qualificationLevel?: string; popiaConsentAccepted: boolean; consentVersion: string; }
 export interface CompanyRegisterPayload { companyName: string; registrationNumber: string; industry?: string; officialEmail: string; mobileNumber: string; contactPersonName: string; address?: string; website?: string; description?: string; popiaConsentAccepted: boolean; consentVersion: string; password: string; }

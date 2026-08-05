@@ -211,6 +211,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (isUnauthorizedApiError(error)) {
           clearSessionScopedClientState();
           authStore.clear();
+          authStore.clearLegacyCredentials();
           setUser(null);
         } else if (import.meta.env.DEV) {
           console.error('[auth] startup session restore failed', error);
@@ -281,6 +282,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return normalizedUser;
   };
 
+  const finalizeRegistration = useCallback((response: RegistrationResponse) => {
+    if (!response.verificationRequired && response.accessToken && response.user) {
+      clearSessionScopedClientState();
+      authStore.clear();
+      authStore.clearLegacyCredentials();
+      setUser(null);
+      setSession({
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        user: response.user,
+      }, { rememberMe: false });
+    }
+    return response;
+  }, [clearSessionScopedClientState]);
+
   const value = useMemo<AuthContextType>(
     () => ({
       user,
@@ -289,9 +305,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isAuthenticated: Boolean(authStore.getAccessToken() && user),
       login: async (payload, options) => setSession(await authService.login(payload), options),
       loginWithGoogle: async (idToken, role, options) => setSession(await authService.googleSignIn(idToken, role), options),
-      registerStudent: async (payload) => authService.registerStudent(payload),
-      registerCompany: async (payload) => authService.registerCompany(payload),
-      registerSchool: async (payload) => authService.registerSchool(payload),
+      registerStudent: async (payload) => finalizeRegistration(await authService.registerStudent(payload)),
+      registerCompany: async (payload) => finalizeRegistration(await authService.registerCompany(payload)),
+      registerSchool: async (payload) => finalizeRegistration(await authService.registerSchool(payload)),
       syncStudentProfileState,
       logout: async () => {
         try {
@@ -299,13 +315,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         } finally {
           clearSessionScopedClientState();
           authStore.clear();
+          authStore.clearLegacyCredentials();
           setUser(null);
         }
       },
       hasRole: (role) => getNormalizedUserRoles(user).includes(`ROLE_${role}`),
       getPrimaryRole: () => resolvePrimaryRole(user),
     }),
-    [clearSessionScopedClientState, isHydrated, isStudentProfileStatusSyncing, user],
+    [clearSessionScopedClientState, finalizeRegistration, isHydrated, isStudentProfileStatusSyncing, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

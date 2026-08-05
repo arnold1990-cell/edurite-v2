@@ -3,6 +3,15 @@ const REFRESH_TOKEN_KEY = 'edurite_refresh_token';
 const USER_KEY = 'edurite_user';
 const STORAGE_KEY_PREFIX = 'edurite_';
 const warnedStorageKeys = new Set<string>();
+const LEGACY_CREDENTIAL_KEYS = [
+  'savedUsername',
+  'savedEmail',
+  'savedPassword',
+  'rememberMe',
+  'loginCredentials',
+  'demoUser',
+  'seededUser',
+];
 
 const createMemoryStorage = (): Storage => {
   const memory = new Map<string, string>();
@@ -57,9 +66,15 @@ const withStorage = <T>(operation: () => T, fallback: T, label: string): T => {
 };
 
 const getFromStorage = (key: string) => getStorages()
-  .map((storage, index) => withStorage(() => storage.getItem(key), null, index === 0 ? 'localStorage' : 'sessionStorage'))
+  .map((storage, index) => withStorage(() => storage.getItem(key), null, index == 0 ? 'localStorage' : 'sessionStorage'))
   .find((value) => value !== null) ?? null;
 const hasInStorage = (storage: Storage, key: string) => withStorage(() => storage.getItem(key) !== null, false, 'storage');
+const removeKeyFromStorage = (storage: Storage, key: string) => {
+  withStorage(() => {
+    storage.removeItem(key);
+    return null;
+  }, null, 'storage');
+};
 const removeManagedKeys = (storage: Storage) => {
   const keysToRemove: string[] = [];
   const length = withStorage(() => storage.length, 0, 'storage');
@@ -70,10 +85,16 @@ const removeManagedKeys = (storage: Storage) => {
     }
   }
   keysToRemove.forEach((key) => {
-    withStorage(() => {
-      storage.removeItem(key);
-      return null;
-    }, null, 'storage');
+    removeKeyFromStorage(storage, key);
+  });
+};
+
+const clearLegacyCredentialCookies = () => {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  LEGACY_CREDENTIAL_KEYS.forEach((key) => {
+    document.cookie = `${key}=; Max-Age=0; path=/; SameSite=Lax`;
   });
 };
 
@@ -119,10 +140,7 @@ export const authStore = {
       }, null, rememberMe ? 'sessionStorage' : 'localStorage');
     } else {
       getStorages().forEach((storage) => {
-        withStorage(() => {
-          storage.removeItem(REFRESH_TOKEN_KEY);
-          return null;
-        }, null, 'storage');
+        removeKeyFromStorage(storage, REFRESH_TOKEN_KEY);
       });
     }
   },
@@ -145,11 +163,16 @@ export const authStore = {
   },
   clearUser: () => {
     getStorages().forEach((storage) => {
-      withStorage(() => {
-        storage.removeItem(USER_KEY);
-        return null;
-      }, null, 'storage');
+      removeKeyFromStorage(storage, USER_KEY);
     });
+  },
+  clearLegacyCredentials: () => {
+    getStorages().forEach((storage) => {
+      LEGACY_CREDENTIAL_KEYS.forEach((key) => {
+        removeKeyFromStorage(storage, key);
+      });
+    });
+    clearLegacyCredentialCookies();
   },
   debugSnapshot: () => {
     const local = resolveStorage('localStorage');
@@ -176,3 +199,5 @@ export const authStore = {
     }
   },
 };
+
+authStore.clearLegacyCredentials();
