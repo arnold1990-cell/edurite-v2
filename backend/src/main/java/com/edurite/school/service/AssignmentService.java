@@ -45,8 +45,11 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
@@ -767,16 +770,28 @@ public class AssignmentService {
     @Transactional(readOnly = true)
     public SchoolPortalDtos.ProgressSummaryResponse teacherProgress(UUID schoolId, UUID teacherUserId) {
         List<SchoolTask> tasks = schoolTaskRepository.findBySchoolIdAndTeacherUserId(schoolId, teacherUserId);
+        if (tasks.isEmpty()) {
+            return new SchoolPortalDtos.ProgressSummaryResponse(0, 0, 0, 0);
+        }
+        Set<UUID> classIds = tasks.stream().map(SchoolTask::getClassId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<UUID> subjectIds = tasks.stream().map(SchoolTask::getSubjectId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<String, Long> expectedByClassSubject = learnerEnrollmentRepository
+                .findBySchoolIdAndClassIdInAndSubjectIdInAndActiveTrue(schoolId, classIds, subjectIds)
+                .stream()
+                .collect(Collectors.groupingBy(enrollment -> subjectScopeKey(enrollment.getClassId(), enrollment.getSubjectId()), Collectors.counting()));
+        Map<UUID, List<TaskSubmission>> submissionsByTask = taskSubmissionRepository.findByTaskIdIn(tasks.stream().map(SchoolTask::getId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.groupingBy(TaskSubmission::getTaskId));
         long totalTasks = tasks.size();
         long submitted = 0;
         long late = 0;
         long missing = 0;
         for (SchoolTask task : tasks) {
-            List<LearnerEnrollment> expected = learnerEnrollmentRepository.findBySchoolIdAndClassIdAndSubjectIdAndActiveTrue(schoolId, task.getClassId(), task.getSubjectId());
-            List<TaskSubmission> taskSubs = taskSubmissionRepository.findByTaskId(task.getId());
+            long expected = expectedByClassSubject.getOrDefault(subjectScopeKey(task.getClassId(), task.getSubjectId()), 0L);
+            List<TaskSubmission> taskSubs = submissionsByTask.getOrDefault(task.getId(), List.of());
             submitted += taskSubs.size();
             late += taskSubs.stream().filter(TaskSubmission::isLate).count();
-            long diff = expected.size() - taskSubs.size();
+            long diff = expected - taskSubs.size();
             if (diff > 0) {
                 missing += diff;
             }
@@ -798,16 +813,20 @@ public class AssignmentService {
     @Transactional(readOnly = true)
     public List<SchoolPortalDtos.TeacherClassView> teacherClasses(UUID schoolId, UUID teacherUserId) {
         List<TeacherAssignment> assignments = teacherAssignmentRepository.findBySchoolIdAndTeacherUserIdAndActiveTrue(schoolId, teacherUserId);
-        List<LearnerEnrollment> enrollments = learnerEnrollmentRepository.findAll().stream()
-                .filter(enrollment -> schoolId.equals(enrollment.getSchoolId()) && enrollment.isActive())
-                .toList();
+        List<LearnerEnrollment> enrollments = learnerEnrollmentRepository.findBySchoolIdAndActiveTrue(schoolId);
         Map<UUID, Long> learnerCountByClass = new HashMap<>();
         for (LearnerEnrollment enrollment : enrollments) {
             learnerCountByClass.merge(enrollment.getClassId(), 1L, Long::sum);
         }
+        Map<UUID, SchoolClass> classesById = schoolClassRepository.findAllById(assignments.stream().map(TeacherAssignment::getClassId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(SchoolClass::getId, Function.identity()));
+        Map<UUID, SchoolSubject> subjectsById = schoolSubjectRepository.findByIdIn(assignments.stream().map(TeacherAssignment::getSubjectId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(SchoolSubject::getId, Function.identity()));
         return assignments.stream().map(assignment -> {
-            SchoolClass schoolClass = schoolClassRepository.findById(assignment.getClassId()).orElse(null);
-            SchoolSubject subject = schoolSubjectRepository.findById(assignment.getSubjectId()).orElse(null);
+            SchoolClass schoolClass = classesById.get(assignment.getClassId());
+            SchoolSubject subject = subjectsById.get(assignment.getSubjectId());
             if (schoolClass == null || subject == null) {
                 return null;
             }
@@ -829,8 +848,11 @@ public class AssignmentService {
         for (TeacherAssignment assignment : assignments) {
             classCountBySubject.merge(assignment.getSubjectId(), 1L, Long::sum);
         }
+        Map<UUID, SchoolSubject> subjectsById = schoolSubjectRepository.findByIdIn(classCountBySubject.keySet())
+                .stream()
+                .collect(Collectors.toMap(SchoolSubject::getId, Function.identity()));
         return classCountBySubject.entrySet().stream().map(entry -> {
-            SchoolSubject subject = schoolSubjectRepository.findById(entry.getKey()).orElse(null);
+            SchoolSubject subject = subjectsById.get(entry.getKey());
             if (subject == null) {
                 return null;
             }
@@ -872,20 +894,48 @@ public class AssignmentService {
     public List<SchoolPortalDtos.LearnerSubjectView> studentSubjects(UUID schoolId, UUID learnerUserId) {
         List<LearnerEnrollment> enrollments = learnerEnrollmentRepository.findBySchoolIdAndLearnerUserIdAndActiveTrue(schoolId, learnerUserId);
         List<SchoolPortalDtos.StudentTaskView> allTasks = studentTasks(schoolId, learnerUserId);
+        Set<UUID> enrollmentClassIds = enrollments.stream().map(LearnerEnrollment::getClassId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<UUID> enrollmentSubjectIds = enrollments.stream().map(LearnerEnrollment::getSubjectId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<UUID, SchoolTask> originalTasksById = schoolTaskRepository.findAllById(allTasks.stream().map(SchoolPortalDtos.StudentTaskView::taskId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(SchoolTask::getId, Function.identity()));
+        Map<UUID, SchoolSubject> subjectsById = schoolSubjectRepository.findByIdIn(enrollmentSubjectIds)
+                .stream()
+                .collect(Collectors.toMap(SchoolSubject::getId, Function.identity()));
+        List<TeacherAssignment> matchingTeacherAssignments = enrollmentClassIds.isEmpty() || enrollmentSubjectIds.isEmpty()
+                ? List.of()
+                : teacherAssignmentRepository.findBySchoolIdInAndActiveTrue(List.of(schoolId)).stream()
+                .filter(assignment -> enrollmentClassIds.contains(assignment.getClassId()))
+                .filter(assignment -> enrollmentSubjectIds.contains(assignment.getSubjectId()))
+                .toList();
+        Map<String, TeacherAssignment> teacherAssignmentByClassSubject = matchingTeacherAssignments.stream()
+                .collect(Collectors.toMap(
+                        assignment -> subjectScopeKey(assignment.getClassId(), assignment.getSubjectId()),
+                        Function.identity(),
+                        (left, right) -> left
+                ));
+        Map<UUID, User> teachersById = userRepository.findAllById(matchingTeacherAssignments.stream().map(TeacherAssignment::getTeacherUserId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        Map<String, List<LearningNote>> notesByClassSubject = enrollmentClassIds.isEmpty() || enrollmentSubjectIds.isEmpty()
+                ? Map.of()
+                : learningNoteRepository.findBySchoolIdAndClassIdInAndSubjectIdInAndPublishedTrue(schoolId, enrollmentClassIds, enrollmentSubjectIds)
+                .stream()
+                .collect(Collectors.groupingBy(note -> subjectScopeKey(note.getClassId(), note.getSubjectId())));
         Map<UUID, List<SchoolPortalDtos.StudentTaskView>> tasksBySubject = new HashMap<>();
         Map<UUID, List<LearningNote>> notesBySubject = new HashMap<>();
 
         for (LearnerEnrollment enrollment : enrollments) {
             List<SchoolPortalDtos.StudentTaskView> subjectTasks = allTasks.stream()
                     .filter(task -> {
-                        SchoolTask original = schoolTaskRepository.findById(task.taskId()).orElse(null);
+                        SchoolTask original = originalTasksById.get(task.taskId());
                         return original != null && original.getSubjectId().equals(enrollment.getSubjectId());
                     })
                     .toList();
             tasksBySubject.put(enrollment.getSubjectId(), subjectTasks);
             notesBySubject.put(
                     enrollment.getSubjectId(),
-                    learningNoteRepository.findBySchoolIdAndClassIdAndSubjectIdAndPublishedTrue(schoolId, enrollment.getClassId(), enrollment.getSubjectId())
+                    notesByClassSubject.getOrDefault(subjectScopeKey(enrollment.getClassId(), enrollment.getSubjectId()), List.of())
             );
         }
 
@@ -895,16 +945,12 @@ public class AssignmentService {
 
         return enrollments.stream()
                 .map(enrollment -> {
-                    SchoolSubject subject = schoolSubjectRepository.findById(enrollment.getSubjectId()).orElse(null);
+                    SchoolSubject subject = subjectsById.get(enrollment.getSubjectId());
                     if (subject == null) return null;
-                    TeacherAssignment teacherAssignment = teacherAssignmentRepository
-                            .findBySchoolIdAndClassIdAndSubjectIdAndActiveTrue(schoolId, enrollment.getClassId(), enrollment.getSubjectId())
-                            .stream()
-                            .findFirst()
-                            .orElse(null);
+                    TeacherAssignment teacherAssignment = teacherAssignmentByClassSubject.get(subjectScopeKey(enrollment.getClassId(), enrollment.getSubjectId()));
                     String teacherName = "Teacher";
                     if (teacherAssignment != null) {
-                        teacherName = userRepository.findById(teacherAssignment.getTeacherUserId())
+                        teacherName = Optional.ofNullable(teachersById.get(teacherAssignment.getTeacherUserId()))
                                 .map(user -> (safe(user.getFirstName()) + " " + safe(user.getLastName())).trim())
                                 .filter(name -> !name.isBlank())
                                 .orElse("Teacher");
@@ -1209,6 +1255,10 @@ public class AssignmentService {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String subjectScopeKey(UUID classId, UUID subjectId) {
+        return classId + ":" + subjectId;
     }
 
     private UserStatus resolveUserStatus(String value) {

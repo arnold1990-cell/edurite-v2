@@ -8,6 +8,10 @@ gemini:
   call-timeout-seconds: ${GEMINI_CALL_TIMEOUT_SECONDS:60}
   max-retries: ${GEMINI_MAX_RETRIES:2}
 
+backend:
+  image: edurite-backend:latest
+  ports:
+    - "8080:8080"
 ai:
   primary-provider: ${AI_PRIMARY_PROVIDER:gemini}
   fallback-provider: ${AI_FALLBACK_PROVIDER:openai}
@@ -47,6 +51,13 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DB_MAX_LIFETIME:1800000}
+      pool-name: ${DB_POOL_NAME:edurite-hikari}
 
   jpa:
     hibernate:
@@ -63,11 +74,42 @@ spring:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:}
+      ssl:
+        enabled: ${SPRING_REDIS_SSL_ENABLED:false}
+      timeout: ${SPRING_REDIS_TIMEOUT:2s}
+      connect-timeout: ${SPRING_REDIS_CONNECT_TIMEOUT:2s}
+      lettuce:
+        pool:
+          enabled: ${SPRING_REDIS_POOL_ENABLED:false}
+          max-active: ${SPRING_REDIS_POOL_MAX_ACTIVE:16}
+          max-idle: ${SPRING_REDIS_POOL_MAX_IDLE:8}
+          min-idle: ${SPRING_REDIS_POOL_MIN_IDLE:1}
+          max-wait: ${SPRING_REDIS_POOL_MAX_WAIT:2s}
       repositories:
         enabled: false
 
   cache:
-    type: simple
+    type: ${SPRING_CACHE_TYPE:redis}
+    redis:
+      time-to-live: ${SPRING_CACHE_REDIS_TTL:10m}
+      cache-null-values: false
+
+  task:
+    execution:
+      pool:
+        core-size: ${ASYNC_CORE_POOL_SIZE:8}
+        max-size: ${ASYNC_MAX_POOL_SIZE:32}
+        queue-capacity: ${ASYNC_QUEUE_CAPACITY:500}
+      shutdown:
+        await-termination: true
+        await-termination-period: ${ASYNC_SHUTDOWN_TIMEOUT:30s}
+    scheduling:
+      pool:
+        size: ${SCHEDULING_POOL_SIZE:4}
+      shutdown:
+        await-termination: true
+        await-termination-period: ${SCHEDULING_SHUTDOWN_TIMEOUT:30s}
 
   security:
     oauth2:
@@ -92,6 +134,18 @@ server:
   address: ${SERVER_ADDRESS:0.0.0.0}
   port: ${SERVER_PORT:8080}
   forward-headers-strategy: ${SERVER_FORWARD_HEADERS_STRATEGY:framework}
+  shutdown: graceful
+  tomcat:
+    mbeanregistry:
+      enabled: ${SERVER_TOMCAT_MBEANREGISTRY_ENABLED:true}
+    threads:
+      max: ${SERVER_TOMCAT_MAX_THREADS:250}
+      min-spare: ${SERVER_TOMCAT_MIN_SPARE_THREADS:20}
+    accept-count: ${SERVER_TOMCAT_ACCEPT_COUNT:200}
+    max-connections: ${SERVER_TOMCAT_MAX_CONNECTIONS:8192}
+  servlet:
+    session:
+      timeout: ${SERVER_SESSION_TIMEOUT:30m}
 
 security:
   jwt:
@@ -124,13 +178,58 @@ management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       probes:
         enabled: true
+      show-details: ${MANAGEMENT_HEALTH_SHOW_DETAILS:never}
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+    tags:
+      application: ${spring.application.name}
 
 edurite:
+  rate-limit:
+    enabled: ${EDURITE_RATE_LIMIT_ENABLED:true}
+    fail-open: ${EDURITE_RATE_LIMIT_FAIL_OPEN:true}
+    rules:
+      login:
+        path-prefixes: /api/v1/auth/login,/api/auth/login
+        limit: ${RATE_LIMIT_LOGIN_LIMIT:20}
+        window-seconds: ${RATE_LIMIT_LOGIN_WINDOW_SECONDS:60}
+      registration:
+        path-prefixes: /api/v1/auth/register,/api/auth/register,/api/v1/auth/register-school,/api/auth/register-school
+        limit: ${RATE_LIMIT_REGISTRATION_LIMIT:10}
+        window-seconds: ${RATE_LIMIT_REGISTRATION_WINDOW_SECONDS:300}
+      password-reset:
+        path-prefixes: /api/v1/auth/forgot-password,/api/auth/forgot-password,/api/v1/auth/reset-password,/api/auth/reset-password
+        limit: ${RATE_LIMIT_PASSWORD_RESET_LIMIT:8}
+        window-seconds: ${RATE_LIMIT_PASSWORD_RESET_WINDOW_SECONDS:300}
+      otp:
+        path-prefixes: /api/v1/auth/otp,/api/auth/otp,/api/v1/auth/verify-otp,/api/auth/verify-otp
+        limit: ${RATE_LIMIT_OTP_LIMIT:12}
+        window-seconds: ${RATE_LIMIT_OTP_WINDOW_SECONDS:300}
+      ai:
+        path-prefixes: /api/v1/ai,/api/ai
+        limit: ${RATE_LIMIT_AI_LIMIT:30}
+        window-seconds: ${RATE_LIMIT_AI_WINDOW_SECONDS:60}
+      search:
+        path-prefixes: /api/v1/jobs/search,/api/jobs/search,/api/v1/careers,/api/careers,/api/v1/courses,/api/courses
+        limit: ${RATE_LIMIT_SEARCH_LIMIT:120}
+        window-seconds: ${RATE_LIMIT_SEARCH_WINDOW_SECONDS:60}
+      upload:
+        path-prefixes: /api/v1/student/me/cv,/api/student/me/cv,/api/v1/student/me/transcript,/api/student/me/transcript,/api/v1/companies/documents,/api/companies/documents
+        limit: ${RATE_LIMIT_UPLOAD_LIMIT:20}
+        window-seconds: ${RATE_LIMIT_UPLOAD_WINDOW_SECONDS:300}
+      normal:
+        path-prefixes: /api/v1,/api
+        limit: ${RATE_LIMIT_NORMAL_LIMIT:600}
+        window-seconds: ${RATE_LIMIT_NORMAL_WINDOW_SECONDS:60}
   flyway:
     repair-on-startup: ${EDURITE_FLYWAY_REPAIR_ON_STARTUP:false}
   seed:

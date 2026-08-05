@@ -2492,15 +2492,25 @@ public class CurriculumService {
             startDate = LocalDate.now();
         }
         LocalDate endDate = firstNonNull(item.getEndDate(), startDate.plusDays(4));
-        for (School school : schoolRepository.findByDistrictIdOrderBySchoolNameAsc(asset.getDistrictId())) {
+        List<School> schools = schoolRepository.findByDistrictIdOrderBySchoolNameAsc(asset.getDistrictId());
+        List<UUID> schoolIds = schools.stream().map(School::getId).toList();
+        List<TeacherAssignment> assignments = schoolIds.isEmpty()
+                ? List.of()
+                : teacherAssignmentRepository.findBySchoolIdInAndActiveTrue(schoolIds);
+        Map<UUID, List<TeacherAssignment>> assignmentsBySchool = assignments.stream()
+                .collect(Collectors.groupingBy(TeacherAssignment::getSchoolId));
+        Map<UUID, SchoolSubject> subjectsById = schoolSubjectRepository.findByIdIn(assignments.stream().map(TeacherAssignment::getSubjectId).collect(Collectors.toSet()))
+                .stream()
+                .collect(Collectors.toMap(SchoolSubject::getId, subject -> subject));
+        for (School school : schools) {
             upsertSchoolReminder(item, school.getId(), "WEEK_START", atDate(startDate, 6, 0),
                     item.getGrade() + " " + item.getSubject() + " Week " + item.getWeekNumber() + " ATP: " + item.getTopic() + " should be covered this week.");
             upsertSchoolReminder(item, school.getId(), "MID_WEEK_CHECK", atDate(startDate.plusDays(2), 12, 0),
                     item.getSubject() + " " + item.getTerm() + " Week " + item.getWeekNumber() + " progress check.");
             upsertSchoolReminder(item, school.getId(), "WEEK_END_COMPLETION", atDate(endDate, 14, 0),
                     "Mark completion for " + item.getSubject() + " Week " + item.getWeekNumber() + ": " + item.getTopic() + ".");
-            for (TeacherAssignment assignment : teacherAssignmentRepository.findBySchoolIdAndActiveTrue(school.getId())) {
-                SchoolSubject subject = schoolSubjectRepository.findById(assignment.getSubjectId()).orElse(null);
+            for (TeacherAssignment assignment : assignmentsBySchool.getOrDefault(school.getId(), List.of())) {
+                SchoolSubject subject = subjectsById.get(assignment.getSubjectId());
                 if (subject == null) {
                     continue;
                 }

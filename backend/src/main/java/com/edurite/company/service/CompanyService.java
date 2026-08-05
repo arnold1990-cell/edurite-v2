@@ -3,6 +3,7 @@ package com.edurite.company.service;
 import com.edurite.application.repository.ApplicationRepository;
 import com.edurite.admin.entity.PlatformSetting;
 import com.edurite.admin.service.PlatformSettingsService;
+import com.edurite.background.DistributedJobLockService;
 import com.edurite.bursary.entity.Bursary;
 import com.edurite.bursary.repository.BursaryRepository;
 import com.edurite.common.exception.ResourceConflictException;
@@ -34,6 +35,7 @@ import com.edurite.upload.service.StorageService;
 import com.edurite.user.entity.User;
 import java.io.IOException;
 import java.security.Principal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -64,6 +66,7 @@ public class CompanyService {
     private final CurrentUserService currentUserService;
     private final StorageService storageService;
     private final PlatformSettingsService platformSettingsService;
+    private final DistributedJobLockService jobLockService;
 
     public CompanyService(
             CompanyProfileRepository companyRepository,
@@ -78,7 +81,8 @@ public class CompanyService {
             CompanyProfileMapper mapper,
             CurrentUserService currentUserService,
             StorageService storageService,
-            PlatformSettingsService platformSettingsService
+            PlatformSettingsService platformSettingsService,
+            DistributedJobLockService jobLockService
     ) {
         this.companyRepository = companyRepository;
         this.documentRepository = documentRepository;
@@ -93,6 +97,7 @@ public class CompanyService {
         this.currentUserService = currentUserService;
         this.storageService = storageService;
         this.platformSettingsService = platformSettingsService;
+        this.jobLockService = jobLockService;
     }
 
     public CompanyProfileDto getMe(Principal principal) { return mapper.toDto(requireCompany(principal)); }
@@ -360,6 +365,10 @@ public class CompanyService {
     @Transactional
     @Scheduled(cron = "${edurite.bursary.archive.cron:0 0 * * * *}")
     public void archiveExpiredBursaries() {
+        jobLockService.runOnce("bursary.archive-expired", Duration.ofMinutes(10), this::archiveExpiredBursariesOnce);
+    }
+
+    private void archiveExpiredBursariesOnce() {
         List<Bursary> expired = bursaryRepository.findByApplicationEndDateBeforeAndStatusIn(LocalDate.now(), List.of("ACTIVE", "PENDING_APPROVAL", "CLOSED"));
         expired.forEach(bursary -> bursary.setStatus("ARCHIVED"));
         bursaryRepository.saveAll(expired);

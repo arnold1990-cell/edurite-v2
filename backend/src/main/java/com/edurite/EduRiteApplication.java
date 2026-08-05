@@ -11,6 +11,7 @@ import com.edurite.subscription.payment.PaymentGatewayProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
@@ -25,6 +26,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         PayFastConfig.class
 })
 @EnableScheduling
+@EnableAsync
 /**
  * This class named EduRiteApplication is part of the Spring Boot application.
  * It groups related logic so the project stays organized and easier to learn.

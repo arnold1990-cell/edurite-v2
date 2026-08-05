@@ -46,6 +46,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -53,6 +56,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,6 +82,7 @@ class AuthServiceSchoolRegistrationTest {
     @Mock private SubscriptionService subscriptionService;
     @Mock private StudentPlanAccessService studentPlanAccessService;
     @Mock private NotificationService notificationService;
+    @Mock private TransactionTemplate transactionTemplate;
 
     private AuthService authService;
 
@@ -104,8 +109,13 @@ class AuthServiceSchoolRegistrationTest {
                 platformSettingsService,
                 subscriptionService,
                 studentPlanAccessService,
-                notificationService
+                notificationService,
+                transactionTemplate
         );
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(new SimpleTransactionStatus());
+        });
     }
 
     @Test

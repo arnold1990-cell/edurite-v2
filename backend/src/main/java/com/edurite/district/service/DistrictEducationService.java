@@ -374,12 +374,21 @@ public class DistrictEducationService {
         }
         Map<UUID, School> schoolMap = schoolRepository.findByDistrictIdOrderBySchoolNameAsc(districtId).stream()
                 .collect(Collectors.toMap(School::getId, Function.identity()));
-        Map<UUID, SchoolSubject> subjectMap = schoolSubjectRepository.findAll().stream()
+        List<UUID> schoolIds = schoolMap.keySet().stream().toList();
+        List<TeacherAssignment> teacherAssignments = schoolIds.isEmpty()
+                ? List.of()
+                : teacherAssignmentRepository.findBySchoolIdInAndActiveTrue(schoolIds);
+        Map<UUID, SchoolSubject> subjectMap = schoolSubjectRepository.findByIdIn(teacherAssignments.stream().map(TeacherAssignment::getSubjectId).collect(Collectors.toSet())).stream()
                 .collect(Collectors.toMap(SchoolSubject::getId, Function.identity()));
-        Map<UUID, User> userMap = userRepository.findAll().stream()
+        Map<UUID, User> userMap = userRepository.findAllById(teacherAssignments.stream().map(TeacherAssignment::getTeacherUserId).collect(Collectors.toSet())).stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
+        Map<String, Long> assignmentCountBySchoolTeacher = teacherAssignments.stream()
+                .collect(Collectors.groupingBy(
+                        assignment -> schoolTeacherKey(assignment.getSchoolId(), assignment.getTeacherUserId()),
+                        Collectors.counting()
+                ));
         List<DistrictEducationDtos.AdvisorTeacherRowDto> items = new ArrayList<>();
-        for (TeacherAssignment assignment : teacherAssignmentRepository.findAll()) {
+        for (TeacherAssignment assignment : teacherAssignments) {
             School school = schoolMap.get(assignment.getSchoolId());
             if (school == null) {
                 continue;
@@ -400,7 +409,7 @@ public class DistrictEducationService {
                     school.getSchoolName(),
                     subject.getSubjectName(),
                     firstNonBlank(assignment.getGrade(), subject.getGrade()),
-                    teacherAssignmentRepository.findBySchoolIdAndTeacherUserIdAndActiveTrue(school.getId(), assignment.getTeacherUserId()).size(),
+                    assignmentCountBySchoolTeacher.getOrDefault(schoolTeacherKey(school.getId(), assignment.getTeacherUserId()), 0L),
                     actualWeek,
                     expectedWeek,
                     widget.topicsBehindSchedule().isEmpty() ? "On Track" : "Behind",
@@ -427,8 +436,13 @@ public class DistrictEducationService {
                 .findFirst()
                 .orElseThrow(() -> new ResourceConflictException("Teacher is outside advisor scope."));
         List<TeacherAssignment> assignments = teacherAssignmentRepository.findBySchoolIdAndTeacherUserIdAndActiveTrue(row.schoolId(), teacherUserId);
+        Map<UUID, SchoolSubject> subjectsById = schoolSubjectRepository.findByIdIn(assignments.stream().map(TeacherAssignment::getSubjectId).collect(Collectors.toSet())).stream()
+                .collect(Collectors.toMap(SchoolSubject::getId, Function.identity()));
         List<String> subjects = assignments.stream()
-                .map(item -> schoolSubjectRepository.findById(item.getSubjectId()).map(SchoolSubject::getSubjectName).orElse(item.getGrade()))
+                .map(item -> {
+                    SchoolSubject subject = subjectsById.get(item.getSubjectId());
+                    return subject == null ? item.getGrade() : subject.getSubjectName();
+                })
                 .distinct()
                 .toList();
         List<String> classes = assignments.stream().map(item -> firstNonBlank(item.getGrade(), "Class")).distinct().toList();
@@ -743,5 +757,9 @@ public class DistrictEducationService {
 
     private String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String schoolTeacherKey(UUID schoolId, UUID teacherUserId) {
+        return schoolId + ":" + teacherUserId;
     }
 }

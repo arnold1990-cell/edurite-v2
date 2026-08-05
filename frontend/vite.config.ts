@@ -82,6 +82,25 @@ export default defineConfig(({ mode }) => {
         '@': resolve(__dirname, './src'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'vendor-react';
+            }
+            if (id.includes('@tanstack')) {
+              return 'vendor-query';
+            }
+            if (id.includes('framer-motion')) {
+              return 'vendor-motion';
+            }
+            return 'vendor';
+          },
+        },
+      },
+    },
     server: {
       host: '0.0.0.0',
       port: devServerPort,

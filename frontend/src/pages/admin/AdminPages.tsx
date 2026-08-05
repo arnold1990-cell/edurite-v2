@@ -9,7 +9,7 @@ import { MetricCard } from '@/components/cards/MetricCard';
 import { EmptyState, ErrorState, LoadingState } from '@/components/feedback/States';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { getErrorMessage } from '@/lib/errors';
-import { adminService, type AdminAnalytics, type AdminBulkUploadResult, type AdminBursary, type AdminCompany, type AdminDistrictManagementResponse, type AdminPlatformSettings, type AdminUser } from '@/services/adminService';
+import { adminService, type AdminAnalytics, type AdminBulkUploadResult, type AdminCompany, type AdminDistrictManagementResponse, type AdminPlatformSettings } from '@/services/adminService';
 import { notificationService } from '@/services/notificationService';
 import type { ApiError } from '@/types';
 
@@ -17,6 +17,29 @@ const Header = ({ title, subtitle }: { title: string; subtitle: string }) => (
   <div>
     <h1 className="text-2xl font-bold">{title}</h1>
     <p className="text-sm text-slate-600">{subtitle}</p>
+  </div>
+);
+
+const ADMIN_PAGE_SIZE = 25;
+
+const PaginationControls = ({
+  page,
+  totalPages,
+  totalElements,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  totalElements: number;
+  onPageChange: (page: number) => void;
+}) => (
+  <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
+    <span>{totalElements} total</span>
+    <div className="flex items-center gap-2">
+      <Button type="button" className="px-3 py-1.5" disabled={page <= 0} onClick={() => onPageChange(Math.max(0, page - 1))}>Previous</Button>
+      <span>Page {Math.min(page + 1, Math.max(1, totalPages))} of {Math.max(1, totalPages)}</span>
+      <Button type="button" className="px-3 py-1.5" disabled={page + 1 >= totalPages} onClick={() => onPageChange(page + 1)}>Next</Button>
+    </div>
   </div>
 );
 
@@ -89,14 +112,19 @@ export const AdminUsersPage = () => {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [accountType, setAccountType] = useState('');
+  const [page, setPage] = useState(0);
   const [file, setFile] = useState<File | null>(null);
   const [bulkResult, setBulkResult] = useState<AdminBulkUploadResult | null>(null);
 
-  const users = useAppQuery<AdminUser[]>({
-    queryKey: ['admin', 'users', search, status, accountType],
-    queryFn: () => adminService.getUsers({ search, status, accountType }),
+  useEffect(() => {
+    setPage(0);
+  }, [search, status, accountType]);
+
+  const users = useAppQuery({
+    queryKey: ['admin', 'users', search, status, accountType, page],
+    queryFn: () => adminService.getUsers({ search, status, accountType, page, size: ADMIN_PAGE_SIZE }),
   });
-  const rows = Array.isArray(users.data) ? users.data : [];
+  const rows = users.data?.content ?? [];
 
   const suspendUser = useMutation({ mutationFn: (id: string) => adminService.suspendUser(id), onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }) });
   const unsuspendUser = useMutation({ mutationFn: (id: string) => adminService.unsuspendUser(id), onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }) });
@@ -159,6 +187,7 @@ export const AdminUsersPage = () => {
       {users.error ? <ErrorState message="Unable to load users." /> : null}
       {!users.isLoading && rows.length === 0 ? <EmptyState title="No users found" message="No users match the current filters." /> : null}
       {rows.length > 0 ? (
+        <div className="space-y-3">
         <DataTable
           columns={[
             { key: 'fullName', header: 'User' },
@@ -185,6 +214,13 @@ export const AdminUsersPage = () => {
           ]}
           data={rows}
         />
+        <PaginationControls
+          page={users.data?.number ?? page}
+          totalPages={users.data?.totalPages ?? 1}
+          totalElements={users.data?.totalElements ?? rows.length}
+          onPageChange={setPage}
+        />
+        </div>
       ) : null}
     </section>
   );
@@ -307,16 +343,21 @@ export const AdminBursaryModerationPage = () => {
   const [companyId, setCompanyId] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [page, setPage] = useState(0);
 
-  const bursaries = useAppQuery<AdminBursary[]>({
-    queryKey: ['admin', 'bursaries', status, companyId, fromDate, toDate],
-    queryFn: () => adminService.listBursaries({ status, companyId, fromDate, toDate }),
+  useEffect(() => {
+    setPage(0);
+  }, [status, companyId, fromDate, toDate]);
+
+  const bursaries = useAppQuery({
+    queryKey: ['admin', 'bursaries', status, companyId, fromDate, toDate, page],
+    queryFn: () => adminService.listBursaries({ status, companyId, fromDate, toDate, page, size: ADMIN_PAGE_SIZE }),
   });
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ['admin', 'bursaries'] });
 
   if (bursaries.isLoading) return <LoadingState />;
   if (bursaries.error) return <ErrorState message="Unable to load bursaries." />;
-  const rows = Array.isArray(bursaries.data) ? bursaries.data : [];
+  const rows = bursaries.data?.content ?? [];
 
   return (
     <section className="space-y-6">
@@ -335,6 +376,7 @@ export const AdminBursaryModerationPage = () => {
         <Button type="button" onClick={refresh}>Refresh</Button>
       </div>
       {rows.length === 0 ? <EmptyState title="No bursaries found" message="No bursaries match the current filters." /> : (
+        <div className="space-y-3">
         <DataTable columns={[
           { key: 'title', header: 'Bursary' },
           { key: 'companyName', header: 'Company' },
@@ -358,6 +400,13 @@ export const AdminBursaryModerationPage = () => {
             ),
           },
         ]} data={rows} />
+        <PaginationControls
+          page={bursaries.data?.number ?? page}
+          totalPages={bursaries.data?.totalPages ?? 1}
+          totalElements={bursaries.data?.totalElements ?? rows.length}
+          onPageChange={setPage}
+        />
+        </div>
       )}
     </section>
   );

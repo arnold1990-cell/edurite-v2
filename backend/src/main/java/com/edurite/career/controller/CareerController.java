@@ -2,6 +2,7 @@ package com.edurite.career.controller;
 
 import com.edurite.career.entity.Career;
 import com.edurite.career.repository.CareerRepository;
+import com.edurite.common.web.PageRequestUtils;
 import java.util.Comparator;
 import java.util.Locale;
 import java.util.UUID;
@@ -37,7 +38,7 @@ public class CareerController {
             @RequestParam(defaultValue = "10") int size
     ) {
         String industryFilter = !industry.isBlank() ? industry : field;
-        PageRequest pageRequest = PageRequest.of(page, size);
+        PageRequest pageRequest = PageRequestUtils.capped(page, size);
         Page<Career> careers = careerRepository.search(
                 normalize(q),
                 industryFilter,

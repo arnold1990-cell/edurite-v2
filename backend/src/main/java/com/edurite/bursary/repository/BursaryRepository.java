@@ -75,12 +75,13 @@ public interface BursaryRepository extends JpaRepository<Bursary, UUID> {
               AND b.createdAt <= COALESCE(:toDate, b.createdAt)
             ORDER BY b.createdAt DESC
             """)
-    List<Bursary> searchForAdmin(
+    Page<Bursary> searchForAdmin(
             @Param("status") String status,
             @Param("companyId") UUID companyId,
             @Param("fromDate") java.time.OffsetDateTime fromDate,
             @Param("toDate") java.time.OffsetDateTime toDate,
-            @Param("includeDeleted") boolean includeDeleted
+            @Param("includeDeleted") boolean includeDeleted,
+            Pageable pageable
     );
 }
 

@@ -36,11 +36,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -87,6 +91,8 @@ class AdminSeedDataSeederTest {
     private StudentPlanAccessService studentPlanAccessService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private TransactionTemplate transactionTemplate;
 
     private AuthService authService;
     private AdminSeedDataSeeder seeder;
@@ -115,8 +121,13 @@ class AdminSeedDataSeederTest {
                 platformSettingsService,
                 subscriptionService,
                 studentPlanAccessService,
-                notificationService
+                notificationService,
+                transactionTemplate
         );
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(new SimpleTransactionStatus());
+        });
     }
 
     @Test
@@ -230,6 +241,7 @@ class AdminSeedDataSeederTest {
         User seededAdmin = userCaptor.getValue();
 
         when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(seededAdmin));
+        when(userRepository.findById(seededAdmin.getId())).thenReturn(Optional.of(seededAdmin));
         when(passwordEncoder.matches("Admin@123", "encoded-admin-password")).thenReturn(true);
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(companyProfileRepository.findByUserId(seededAdmin.getId())).thenReturn(Optional.empty());

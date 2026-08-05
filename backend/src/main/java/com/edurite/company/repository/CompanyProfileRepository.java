@@ -15,6 +15,7 @@ import org.springframework.data.repository.query.Param;
  */
 public interface CompanyProfileRepository extends JpaRepository<CompanyProfile, UUID> {
     Optional<CompanyProfile> findByUserId(UUID userId);
+    List<CompanyProfile> findByUserIdIn(List<UUID> userIds);
     long countByStatus(CompanyApprovalStatus status);
     Optional<CompanyProfile> findByOfficialEmailIgnoreCase(String officialEmail);
     Optional<CompanyProfile> findByMobileNumber(String mobileNumber);

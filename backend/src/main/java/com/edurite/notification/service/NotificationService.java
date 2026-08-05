@@ -5,6 +5,7 @@ import com.edurite.notification.dto.NotificationDtos.NotificationFilterRequest;
 import com.edurite.notification.dto.NotificationDtos.NotificationSummaryDto;
 import com.edurite.notification.dto.NotificationDtos.SendNotificationRequest;
 import com.edurite.notification.dto.NotificationDtos.UserFilterPreviewDto;
+import com.edurite.common.web.PageRequestUtils;
 import com.edurite.notification.entity.Notification;
 import com.edurite.notification.entity.NotificationPriority;
 import com.edurite.notification.entity.NotificationStatus;
@@ -29,7 +30,6 @@ import java.util.UUID;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -73,7 +73,7 @@ public class NotificationService {
         User user = currentUserService.requireUser(principal);
         String sortProperty = resolveMineSortProperty(sortBy);
         Sort.Direction sortDirection = "asc".equalsIgnoreCase(direction) ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), Sort.by(sortDirection, sortProperty));
+        Pageable pageable = PageRequestUtils.capped(page, size, Sort.by(sortDirection, sortProperty));
 
         Page<UserNotification> raw = userNotificationRepository.findByUserId(user.getId(), pageable);
         List<NotificationAssignmentDto> filtered = raw.getContent().stream()
@@ -185,7 +185,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public Page<NotificationSummaryDto> adminList(int page, int size, String status) {
-        Pageable pageable = PageRequest.of(Math.max(0, page), Math.max(1, size), org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+        Pageable pageable = PageRequestUtils.capped(page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
         if (status != null && !status.isBlank()) {
             NotificationStatus s = NotificationStatus.valueOf(status.toUpperCase());
             return notificationAdminRepository.findByStatus(s, pageable)
@@ -246,7 +246,7 @@ public class NotificationService {
                 schoolId,
                 criteria.search(),
                 criteria.activeOnly(),
-                PageRequest.of(Math.max(0, page), Math.max(1, size))
+                PageRequestUtils.capped(page, size)
         );
     }
 

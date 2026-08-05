@@ -7,11 +7,11 @@ import com.edurite.bursary.entity.Bursary;
 import com.edurite.bursary.repository.BursaryRepository;
 import com.edurite.bursary.service.BursaryAggregationService;
 import com.edurite.bursary.service.BursaryRecommendationService;
+import com.edurite.common.web.PageRequestUtils;
 import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,7 +48,7 @@ public class BursaryController {
             @RequestParam(defaultValue = "10") int size
     ) {
         return bursaryRepository.findByStatusIgnoreCaseAndDeletedAtIsNullAndTitleContainingIgnoreCaseAndQualificationLevelContainingIgnoreCaseAndLocationContainingIgnoreCaseAndEligibilityContainingIgnoreCase(
-                "ACTIVE", q, qualificationLevel, location, eligibility, PageRequest.of(page, size));
+                "ACTIVE", q, qualificationLevel, location, eligibility, PageRequestUtils.capped(page, size));
     }
 
     @GetMapping("/search")

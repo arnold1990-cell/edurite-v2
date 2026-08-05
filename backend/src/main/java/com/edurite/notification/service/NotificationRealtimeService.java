@@ -6,6 +6,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -13,10 +17,23 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 public class NotificationRealtimeService {
 
     private final Map<UUID, List<SseEmitter>> emittersByUser = new ConcurrentHashMap<>();
+    private final AtomicInteger activeConnections = new AtomicInteger();
+    private final long timeoutMillis;
+
+    public NotificationRealtimeService(
+            MeterRegistry meterRegistry,
+            @Value("${edurite.notifications.sse.timeout-ms:300000}") long timeoutMillis
+    ) {
+        this.timeoutMillis = Math.max(30_000L, timeoutMillis);
+        Gauge.builder("edurite.sse.connections", activeConnections, AtomicInteger::get)
+                .description("Current in-process SSE notification connections")
+                .register(meterRegistry);
+    }
 
     public SseEmitter subscribe(UUID userId) {
-        SseEmitter emitter = new SseEmitter(0L);
+        SseEmitter emitter = new SseEmitter(timeoutMillis);
         emittersByUser.computeIfAbsent(userId, ignored -> new CopyOnWriteArrayList<>()).add(emitter);
+        activeConnections.incrementAndGet();
         emitter.onCompletion(() -> remove(userId, emitter));
         emitter.onTimeout(() -> remove(userId, emitter));
         emitter.onError((ignored) -> remove(userId, emitter));
@@ -47,7 +64,9 @@ public class NotificationRealtimeService {
         if (emitters == null) {
             return;
         }
-        emitters.remove(emitter);
+        if (emitters.remove(emitter)) {
+            activeConnections.updateAndGet(value -> Math.max(0, value - 1));
+        }
         if (emitters.isEmpty()) {
             emittersByUser.remove(userId);
         }

@@ -8,6 +8,7 @@ import com.edurite.auth.dto.AuthResponse;
 
 // Response returned to frontend
 import com.edurite.auth.dto.VerificationStatusResponse;
+import com.edurite.auth.service.AuthService;
 
 // Service layer (business logic)
 import com.edurite.account.service.AccountService;
@@ -37,12 +38,19 @@ import org.springframework.web.bind.annotation.*;
 public class AccountController {
 
     private final AccountService accountService;
+    private final AuthService authService;
 
     /**
      * Constructor injection (Spring automatically injects AccountService)
      */
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, AuthService authService) {
         this.accountService = accountService;
+        this.authService = authService;
+    }
+
+    @GetMapping("/me")
+    public AuthResponse me(Principal principal) {
+        return authService.me(principal);
     }
 
     /**

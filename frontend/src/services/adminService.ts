@@ -1,4 +1,5 @@
 import { apiClient } from '@/services/apiClient';
+import type { PaginatedResponse } from '@/types';
 
 export type AdminMonthlyMetric = { month: string; total: number };
 export type AdminStatusCount = { status: string; total: number };
@@ -150,8 +151,8 @@ export const adminService = {
   }) => apiClient.put<AdminDistrict>(`/admin/districts/${districtId}`, payload).then((r) => r.data),
   createDistrictAdmin: (districtId: string) => apiClient.post<AdminDistrict>(`/admin/districts/${districtId}/create-admin`).then((r) => r.data),
 
-  getUsers: (params?: { search?: string; status?: string; accountType?: string; companyStatus?: string; includeDeleted?: boolean }) => apiClient
-    .get<AdminUser[]>('/admin/users', { params: toParams(params) })
+  getUsers: (params?: { search?: string; status?: string; accountType?: string; companyStatus?: string; includeDeleted?: boolean; page?: number; size?: number }) => apiClient
+    .get<PaginatedResponse<AdminUser>>('/admin/users', { params: toParams(params) })
     .then((r) => r.data),
   updateUserStatus: (id: string, active: boolean) => apiClient.patch<AdminUser>(`/admin/users/${id}/status`, { active }).then((r) => r.data),
   suspendUser: (id: string) => apiClient.patch<AdminUser>(`/admin/users/${id}/suspend`).then((r) => r.data),
@@ -175,8 +176,8 @@ export const adminService = {
   reactivateCompany: (id: string, notes?: string) => apiClient.patch<AdminCompany>(`/admin/companies/${id}/reactivate`, { notes }).then((r) => r.data),
   deleteCompany: (id: string, reason?: string) => apiClient.delete<AdminCompany>(`/admin/companies/${id}`, { data: { reason } }).then((r) => r.data),
 
-  listBursaries: (params?: { status?: string; companyId?: string; fromDate?: string; toDate?: string; includeDeleted?: boolean }) => apiClient
-    .get<AdminBursary[]>('/admin/bursaries', { params: toParams(params) })
+  listBursaries: (params?: { status?: string; companyId?: string; fromDate?: string; toDate?: string; includeDeleted?: boolean; page?: number; size?: number }) => apiClient
+    .get<PaginatedResponse<AdminBursary>>('/admin/bursaries', { params: toParams(params) })
     .then((r) => r.data),
   getPendingBursaries: () => apiClient.get<AdminBursary[]>('/admin/bursaries/pending').then((r) => r.data),
   reviewBursary: (id: string, decision: 'APPROVED' | 'REJECTED' | 'REQUEST_CHANGES', comment?: string) => apiClient.patch<AdminBursary>(`/admin/bursaries/${id}/review`, { decision, comment }).then((r) => r.data),

@@ -5,12 +5,15 @@ import com.edurite.ai.service.GeminiService;
 import com.edurite.ai.service.StudentAiGuidanceService;
 import com.edurite.ai.service.UniversitySourcesGuidanceService;
 import com.edurite.ai.university.UniversitySourceCoverageService;
+import com.edurite.account.controller.AccountController;
+import com.edurite.account.service.AccountService;
 import com.edurite.auth.controller.AuthController;
 import com.edurite.auth.controller.GoogleOAuthCompatibilityController;
 import com.edurite.auth.dto.AuthResponse;
 import com.edurite.auth.dto.GoogleLoginRequest;
 import com.edurite.auth.dto.LoginRequest;
 import com.edurite.auth.service.AuthService;
+import com.edurite.common.exception.InvalidCredentialsException;
 import com.edurite.security.filter.JwtAuthenticationFilter;
 import com.edurite.security.service.CustomUserDetailsService;
 import com.edurite.security.service.JwtService;
@@ -22,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -36,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
-        controllers = {AuthController.class, AiController.class, GoogleOAuthCompatibilityController.class},
+        controllers = {AuthController.class, AccountController.class, AiController.class, GoogleOAuthCompatibilityController.class},
         properties = {
                 "spring.flyway.enabled=false",
                 "spring.jpa.hibernate.ddl-auto=none",
@@ -53,6 +57,8 @@ class AuthAndAiSecurityWebMvcTest {
 
     @MockitoBean
     private AuthService authService;
+    @MockitoBean
+    private AccountService accountService;
     @MockitoBean
     private GeminiService geminiService;
     @MockitoBean
@@ -113,6 +119,68 @@ class AuthAndAiSecurityWebMvcTest {
         verify(authService).login(requestCaptor.capture());
         assertThat(requestCaptor.getValue().email()).isEqualTo("admin@edurite.com");
         assertThat(requestCaptor.getValue().password()).isEqualTo("Admin@123");
+    }
+
+    @Test
+    void invalidLoginReturnsControlledUnauthorizedResponse() throws Exception {
+        when(authService.login(any(LoginRequest.class))).thenThrow(new InvalidCredentialsException());
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "email": "missing@example.test",
+                                  "password": "wrong-password"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_FAILED"));
+    }
+
+    @Test
+    void malformedLoginReturnsControlledBadRequestResponse() throws Exception {
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+    }
+
+    @Test
+    @WithMockUser(username = "student@example.com", authorities = "ROLE_STUDENT")
+    void accountMeCompatibilityRouteReturnsCurrentUser() throws Exception {
+        AuthResponse response = new AuthResponse(
+                "access-token",
+                "refresh-token",
+                "Bearer",
+                3600L,
+                "STUDENT",
+                "ROLE_STUDENT",
+                null,
+                false,
+                new AuthResponse.UserSummary(
+                        UUID.randomUUID(),
+                        "student@example.com",
+                        "Student User",
+                        null,
+                        null,
+                        Set.of("ROLE_STUDENT"),
+                        "STUDENT",
+                        "ROLE_STUDENT",
+                        null,
+                        true,
+                        "BASIC",
+                        false,
+                        true,
+                        100
+                )
+        );
+        when(authService.me(any())).thenReturn(response);
+
+        mockMvc.perform(get("/api/account/me"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("access-token"))
+                .andExpect(jsonPath("$.user.email").value("student@example.com"));
     }
 
     @Test

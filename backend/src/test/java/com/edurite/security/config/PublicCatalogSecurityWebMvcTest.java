@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -59,7 +60,18 @@ class PublicCatalogSecurityWebMvcTest {
     private JwtService jwtService;
 
     @Test
-    void publicCatalogEndpointsAreAccessibleWithoutAuth() throws Exception {
+    void catalogEndpointsRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/careers"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/courses"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/bursaries"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "student@example.com", authorities = "ROLE_STUDENT")
+    void catalogEndpointsAreAccessibleWithAuth() throws Exception {
         when(careerRepository.search(anyString(), anyString(), anyString(), anyString(), anyString(), anyString(), any()))
                 .thenReturn(Page.empty());
         when(courseRepository.search(anyString(), anyString(), anyString(), any()))

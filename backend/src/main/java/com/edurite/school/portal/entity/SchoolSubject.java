@@ -3,6 +3,7 @@ package com.edurite.school.portal.entity;
 import com.edurite.common.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -49,7 +50,7 @@ public class SchoolSubject extends BaseEntity {
     @Column(name = "caps_aligned", nullable = false)
     private boolean capsAligned = true;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_catalogue_id")
     private SubjectCatalogue subjectCatalogue;
 

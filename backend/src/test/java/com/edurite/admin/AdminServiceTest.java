@@ -24,6 +24,7 @@ import com.edurite.application.entity.ApplicationRecord;
 import com.edurite.application.repository.ApplicationRepository;
 import com.edurite.bursary.entity.Bursary;
 import com.edurite.bursary.repository.BursaryRepository;
+import com.edurite.config.CacheInvalidationService;
 import com.edurite.company.entity.CompanyApprovalStatus;
 import com.edurite.company.entity.CompanyProfile;
 import com.edurite.company.repository.CompanyProfileRepository;
@@ -47,6 +48,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -67,6 +69,7 @@ class AdminServiceTest {
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     private final PlatformSettingsService platformSettingsService = mock(PlatformSettingsService.class);
     private final AccountService accountService = mock(AccountService.class);
+    private final CacheInvalidationService cacheInvalidationService = mock(CacheInvalidationService.class);
 
     private AdminService adminService;
     private User actor;
@@ -90,7 +93,8 @@ class AdminServiceTest {
                 passwordEncoder,
                 new ObjectMapper(),
                 platformSettingsService,
-                accountService
+                accountService,
+                cacheInvalidationService
         );
         actor = userWithRole("admin@edurite.local", "ROLE_ADMIN", UserStatus.ACTIVE, false);
         actor.setId(UUID.randomUUID());
@@ -151,8 +155,9 @@ class AdminServiceTest {
         User statusDeletedWithoutDeletedAt = userWithRole("ghost@edurite.local", "ROLE_STUDENT", UserStatus.DELETED, false);
         User deletedAtUser = userWithRole("deleted@edurite.local", "ROLE_STUDENT", UserStatus.ACTIVE, true);
 
-        when(userRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(activeUser, statusDeletedWithoutDeletedAt, deletedAtUser));
-        when(companyProfileRepository.findAll()).thenReturn(List.of());
+        when(userRepository.searchForAdmin(eq(""), eq(""), eq(""), eq(""), eq(false), any()))
+                .thenReturn(new PageImpl<>(List.of(activeUser)));
+        when(companyProfileRepository.findByUserIdIn(any())).thenReturn(List.of());
 
         var users = adminService.users(null, null, null, null, false);
 

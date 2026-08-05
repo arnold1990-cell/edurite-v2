@@ -88,22 +88,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
-                                "/actuator/health"
-                        ).permitAll()
-                        .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/v1/careers",
-                                "/api/careers",
-                                "/api/v1/careers/*",
-                                "/api/careers/*",
-                                "/api/v1/courses",
-                                "/api/courses",
-                                "/api/v1/courses/*",
-                                "/api/courses/*",
-                                "/api/v1/bursaries",
-                                "/api/bursaries",
-                                "/api/v1/bursaries/*",
-                                "/api/bursaries/*"
+                                "/actuator/health",
+                                "/actuator/health/**"
                         ).permitAll()
                         // Temporary permitAll for easier integration testing of Adzuna search.
                         // Can be tightened to student auth once client-side auth flow is confirmed in QA.
@@ -154,6 +140,23 @@ public class SecurityConfig {
                                 "/api/ai/**",
                                 "/api/v1/payments/**",
                                 "/api/payments/**"
+                        ).authenticated()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/careers",
+                                "/api/careers",
+                                "/api/v1/careers/*",
+                                "/api/careers/*",
+                                "/api/v1/courses",
+                                "/api/courses",
+                                "/api/v1/courses/*",
+                                "/api/courses/*",
+                                "/api/v1/bursaries",
+                                "/api/bursaries",
+                                "/api/v1/bursaries/search",
+                                "/api/bursaries/search",
+                                "/api/v1/bursaries/*",
+                                "/api/bursaries/*"
                         ).authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

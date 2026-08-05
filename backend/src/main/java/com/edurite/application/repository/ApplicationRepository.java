@@ -4,6 +4,8 @@ import com.edurite.application.entity.ApplicationRecord;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * This interface named ApplicationRepository is part of the Spring Boot application.
@@ -19,5 +21,18 @@ public interface ApplicationRepository extends JpaRepository<ApplicationRecord, 
     long countByBursaryId(UUID bursaryId);
     List<ApplicationRecord> findByBursaryIdIn(List<UUID> bursaryIds);
     List<ApplicationRecord> findTop10ByOrderByCreatedAtDesc();
+
+    @Query("""
+            SELECT a.bursaryId AS bursaryId, COUNT(a) AS total
+            FROM ApplicationRecord a
+            WHERE a.bursaryId IN :bursaryIds
+            GROUP BY a.bursaryId
+            """)
+    List<BursaryApplicationCount> countByBursaryIds(@Param("bursaryIds") List<UUID> bursaryIds);
+
+    interface BursaryApplicationCount {
+        UUID getBursaryId();
+        long getTotal();
+    }
 }
 

@@ -2,9 +2,11 @@ package com.edurite.user.repository;
 
 import com.edurite.user.entity.User;
 import com.edurite.user.entity.UserStatus;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -34,6 +36,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Example: "Test@gmail.com" and "test@gmail.com" are treated the same.
      */
     Optional<User> findByEmailIgnoreCase(String email);
+
+    @Query("""
+            SELECT DISTINCT u
+            FROM User u
+            LEFT JOIN FETCH u.roles
+            WHERE LOWER(u.email) IN :emails
+            """)
+    List<User> findAllByLowerEmailIn(@Param("emails") Collection<String> emails);
 
     Optional<User> findByUsernameIgnoreCase(String username);
 
@@ -132,6 +142,64 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Gets all users ordered from newest to oldest.
      */
     List<User> findAllByOrderByCreatedAtDesc();
+
+    @Query(
+            value = """
+                    SELECT DISTINCT u.*
+                    FROM users u
+                    WHERE (:includeDeleted = TRUE OR (u.deleted_at IS NULL AND u.status <> 'DELETED'))
+                      AND (:search = '' OR LOWER(COALESCE(u.email, '')) LIKE CONCAT('%', LOWER(:search), '%')
+                        OR LOWER(COALESCE(u.first_name, '')) LIKE CONCAT('%', LOWER(:search), '%')
+                        OR LOWER(COALESCE(u.last_name, '')) LIKE CONCAT('%', LOWER(:search), '%'))
+                      AND (:status = '' OR UPPER(u.status) = UPPER(:status))
+                      AND (:roleName = '' OR EXISTS (
+                            SELECT 1
+                            FROM user_roles ur
+                            JOIN roles r ON r.id = ur.role_id
+                            WHERE ur.user_id = u.id
+                              AND (UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))
+                      ))
+                      AND (:companyStatus = '' OR EXISTS (
+                            SELECT 1
+                            FROM companies c
+                            WHERE c.user_id = u.id
+                              AND (:includeDeleted = TRUE OR c.deleted_at IS NULL)
+                              AND UPPER(c.status) = UPPER(:companyStatus)
+                      ))
+                    ORDER BY u.created_at DESC
+                    """,
+            countQuery = """
+                    SELECT COUNT(DISTINCT u.id)
+                    FROM users u
+                    WHERE (:includeDeleted = TRUE OR (u.deleted_at IS NULL AND u.status <> 'DELETED'))
+                      AND (:search = '' OR LOWER(COALESCE(u.email, '')) LIKE CONCAT('%', LOWER(:search), '%')
+                        OR LOWER(COALESCE(u.first_name, '')) LIKE CONCAT('%', LOWER(:search), '%')
+                        OR LOWER(COALESCE(u.last_name, '')) LIKE CONCAT('%', LOWER(:search), '%'))
+                      AND (:status = '' OR UPPER(u.status) = UPPER(:status))
+                      AND (:roleName = '' OR EXISTS (
+                            SELECT 1
+                            FROM user_roles ur
+                            JOIN roles r ON r.id = ur.role_id
+                            WHERE ur.user_id = u.id
+                              AND (UPPER(r.name) = UPPER(:roleName) OR UPPER(r.name) = CONCAT('ROLE_', UPPER(:roleName)))
+                      ))
+                      AND (:companyStatus = '' OR EXISTS (
+                            SELECT 1
+                            FROM companies c
+                            WHERE c.user_id = u.id
+                              AND (:includeDeleted = TRUE OR c.deleted_at IS NULL)
+                              AND UPPER(c.status) = UPPER(:companyStatus)
+                      ))
+                    """,
+            nativeQuery = true)
+    Page<User> searchForAdmin(
+            @Param("search") String search,
+            @Param("status") String status,
+            @Param("roleName") String roleName,
+            @Param("companyStatus") String companyStatus,
+            @Param("includeDeleted") boolean includeDeleted,
+            Pageable pageable
+    );
 
     /**
      * Gets only the latest 10 users.

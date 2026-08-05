@@ -3,6 +3,7 @@ package com.edurite.course.controller;
 import com.edurite.course.dto.CourseDto;
 import com.edurite.course.entity.Course;
 import com.edurite.course.repository.CourseRepository;
+import com.edurite.common.web.PageRequestUtils;
 import com.edurite.institution.entity.Institution;
 import com.edurite.institution.repository.InstitutionRepository;
 import java.util.Comparator;
@@ -44,7 +45,7 @@ public class CourseController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        PageRequest pageRequest = PageRequest.of(page, size);
+        PageRequest pageRequest = PageRequestUtils.capped(page, size);
         Page<Course> courses = courseRepository.search(normalize(q), normalize(level), normalize(location), pageRequest);
         Map<UUID, String> institutionNames = resolveInstitutionNames(courses.getContent());
         Map<UUID, String> institutionLocations = resolveInstitutionLocations(courses.getContent());

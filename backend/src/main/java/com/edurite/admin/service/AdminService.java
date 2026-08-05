@@ -25,6 +25,9 @@ import com.edurite.application.repository.ApplicationRepository;
 import com.edurite.bursary.entity.Bursary;
 import com.edurite.bursary.repository.BursaryRepository;
 import com.edurite.common.exception.ResourceConflictException;
+import com.edurite.config.CacheInvalidationService;
+import com.edurite.config.CacheNames;
+import com.edurite.common.web.PageRequestUtils;
 import com.edurite.company.entity.CompanyApprovalStatus;
 import com.edurite.company.entity.CompanyProfile;
 import com.edurite.company.repository.CompanyProfileRepository;
@@ -63,6 +66,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -105,6 +111,7 @@ public class AdminService {
     private final ObjectMapper objectMapper;
     private final PlatformSettingsService platformSettingsService;
     private final AccountService accountService;
+    private final CacheInvalidationService cacheInvalidationService;
 
     public AdminService(
             UserRepository userRepository,
@@ -122,7 +129,8 @@ public class AdminService {
             PasswordEncoder passwordEncoder,
             ObjectMapper objectMapper,
             PlatformSettingsService platformSettingsService,
-            AccountService accountService
+            AccountService accountService,
+            CacheInvalidationService cacheInvalidationService
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -140,6 +148,7 @@ public class AdminService {
         this.objectMapper = objectMapper;
         this.platformSettingsService = platformSettingsService;
         this.accountService = accountService;
+        this.cacheInvalidationService = cacheInvalidationService;
     }
 
     private String safe(String value) {
@@ -184,29 +193,32 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public List<AdminUserDto> users(String search, String status, String accountType, String companyStatus, boolean includeDeleted) {
+    public Page<AdminUserDto> users(String search, String status, String accountType, String companyStatus, boolean includeDeleted, int page, int size) {
         String normalizedSearch = safe(search).toLowerCase(Locale.ROOT);
         String normalizedStatus = safe(status).toUpperCase(Locale.ROOT);
         String normalizedRole = safe(accountType).toUpperCase(Locale.ROOT);
         CompanyApprovalStatus normalizedCompanyStatus = parseCompanyStatus(companyStatus);
-        Map<UUID, CompanyProfile> companiesByUserId = companyProfileRepository.findAll().stream()
+        String normalizedCompanyStatusName = normalizedCompanyStatus == null ? "" : normalizedCompanyStatus.name();
+        PageRequest pageRequest = PageRequestUtils.capped(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<User> users = userRepository.searchForAdmin(
+                normalizedSearch,
+                normalizedStatus,
+                normalizedRole,
+                normalizedCompanyStatusName,
+                includeDeleted,
+                pageRequest
+        );
+        List<UUID> userIds = users.getContent().stream().map(User::getId).toList();
+        Map<UUID, CompanyProfile> companiesByUserId = companyProfileRepository.findByUserIdIn(userIds).stream()
                 .filter(company -> includeDeleted || company.getDeletedAt() == null)
                 .collect(Collectors.toMap(CompanyProfile::getUserId, company -> company, (left, right) -> left));
 
-        return userRepository.findAllByOrderByCreatedAtDesc().stream()
-                .filter(user -> includeDeleted || isLiveUser(user))
-                .filter(user -> normalizedSearch.isBlank() || matchesUserSearch(user, normalizedSearch))
-                .filter(user -> normalizedStatus.isBlank() || user.getStatus().name().equalsIgnoreCase(normalizedStatus))
-                .filter(user -> normalizedRole.isBlank() || hasRole(user, normalizeRoleName(normalizedRole)))
-                .filter(user -> {
-                    if (normalizedCompanyStatus == null) {
-                        return true;
-                    }
-                    CompanyProfile company = companiesByUserId.get(user.getId());
-                    return company != null && company.getStatus() == normalizedCompanyStatus;
-                })
-                .map(user -> toUserDto(user, companiesByUserId.get(user.getId())))
-                .toList();
+        return users.map(user -> toUserDto(user, companiesByUserId.get(user.getId())));
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminUserDto> users(String search, String status, String accountType, String companyStatus, boolean includeDeleted) {
+        return users(search, status, accountType, companyStatus, includeDeleted, 0, PageRequestUtils.MAX_PAGE_SIZE).getContent();
     }
 
     @Transactional
@@ -378,19 +390,34 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public List<AdminBursaryDto> bursaries(String status, UUID companyId, LocalDate fromDate, LocalDate toDate, boolean includeDeleted) {
+    public Page<AdminBursaryDto> bursaries(String status, UUID companyId, LocalDate fromDate, LocalDate toDate, boolean includeDeleted, int page, int size) {
         OffsetDateTime from = fromDate == null ? null : fromDate.atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
         OffsetDateTime to = toDate == null ? null : toDate.plusDays(1).atStartOfDay().minusSeconds(1).atOffset(OffsetDateTime.now().getOffset());
-        Map<UUID, CompanyProfile> companiesById = companyProfileRepository.findAll().stream()
+        PageRequest pageRequest = PageRequestUtils.capped(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Bursary> bursaries = bursaryRepository.searchForAdmin(safe(status), companyId, from, to, includeDeleted, pageRequest);
+        List<UUID> companyIds = bursaries.getContent().stream().map(Bursary::getCompanyId).distinct().toList();
+        Map<UUID, CompanyProfile> companiesById = companyProfileRepository.findAllById(companyIds).stream()
                 .collect(Collectors.toMap(CompanyProfile::getId, company -> company, (left, right) -> left));
-        return bursaryRepository.searchForAdmin(safe(status), companyId, from, to, includeDeleted).stream()
-                .map(bursary -> toBursaryDto(bursary, companiesById.get(bursary.getCompanyId())))
-                .toList();
+        List<UUID> bursaryIds = bursaries.getContent().stream().map(Bursary::getId).toList();
+        Map<UUID, Long> applicationCounts = bursaryIds.isEmpty()
+                ? Map.of()
+                : applicationRepository.countByBursaryIds(bursaryIds).stream()
+                .collect(Collectors.toMap(ApplicationRepository.BursaryApplicationCount::getBursaryId, ApplicationRepository.BursaryApplicationCount::getTotal));
+        return bursaries.map(bursary -> toBursaryDto(
+                bursary,
+                companiesById.get(bursary.getCompanyId()),
+                applicationCounts.getOrDefault(bursary.getId(), 0L)
+        ));
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminBursaryDto> bursaries(String status, UUID companyId, LocalDate fromDate, LocalDate toDate, boolean includeDeleted) {
+        return bursaries(status, companyId, fromDate, toDate, includeDeleted, 0, PageRequestUtils.MAX_PAGE_SIZE).getContent();
     }
 
     @Transactional(readOnly = true)
     public List<AdminBursaryDto> pendingBursaries() {
-        return bursaries("PENDING_APPROVAL", null, null, null, false);
+        return bursaries("PENDING_APPROVAL", null, null, null, false, 0, PageRequestUtils.MAX_PAGE_SIZE).getContent();
     }
 
     @Transactional
@@ -595,6 +622,7 @@ public class AdminService {
                 "username", credentials.username(),
                 "status", status
         ));
+        evictLocationReferenceCachesAfterCommit();
 
         return toDistrictDto(district, credentials.username(), credentials.temporaryPassword());
     }
@@ -633,6 +661,7 @@ public class AdminService {
                 "districtCode", district.getDistrictCode(),
                 "status", status
         ));
+        evictLocationReferenceCachesAfterCommit();
         return toDistrictDto(district);
     }
 
@@ -850,6 +879,11 @@ public class AdminService {
         return toCompanyDto(saved);
     }
 
+    private void evictLocationReferenceCachesAfterCommit() {
+        cacheInvalidationService.evictAllAfterCommit(CacheNames.LOCATION_DISTRICTS);
+        cacheInvalidationService.evictAllAfterCommit(CacheNames.LOCATION_CIRCUITS);
+    }
+
     private void ensureBursaryNotDeleted(Bursary bursary) {
         if (bursary.getDeletedAt() != null) {
             throw new ResourceConflictException("Bursary has been deleted");
@@ -921,6 +955,10 @@ public class AdminService {
     }
 
     private AdminBursaryDto toBursaryDto(Bursary bursary, CompanyProfile companyProfile) {
+        return toBursaryDto(bursary, companyProfile, applicationRepository.countByBursaryId(bursary.getId()));
+    }
+
+    private AdminBursaryDto toBursaryDto(Bursary bursary, CompanyProfile companyProfile, long applicantCount) {
         return new AdminBursaryDto(
                 bursary.getId(),
                 bursary.getTitle(),
@@ -929,7 +967,7 @@ public class AdminService {
                 safe(bursary.getStatus()),
                 bursary.getApplicationStartDate(),
                 bursary.getApplicationEndDate(),
-                applicationRepository.countByBursaryId(bursary.getId()),
+                applicantCount,
                 bursary.getCreatedAt(),
                 bursary.getDeletedAt()
         );

@@ -67,6 +67,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class AuthService {
@@ -119,6 +120,7 @@ public class AuthService {
     private final SubscriptionService subscriptionService;
     private final StudentPlanAccessService studentPlanAccessService;
     private final NotificationService notificationService;
+    private final TransactionTemplate transactionTemplate;
 
     public AuthService(
             UserRepository userRepository,
@@ -141,7 +143,8 @@ public class AuthService {
             PlatformSettingsService platformSettingsService,
             SubscriptionService subscriptionService,
             StudentPlanAccessService studentPlanAccessService,
-            NotificationService notificationService
+            NotificationService notificationService,
+            TransactionTemplate transactionTemplate
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -164,6 +167,7 @@ public class AuthService {
         this.subscriptionService = subscriptionService;
         this.studentPlanAccessService = studentPlanAccessService;
         this.notificationService = notificationService;
+        this.transactionTemplate = transactionTemplate;
     }
 
     @Transactional
@@ -447,9 +451,17 @@ public class AuthService {
         return issueAuthResponse(user);
     }
 
-    @Transactional
     public AuthResponse login(LoginRequest request) {
-        User user = authenticateActiveUser(request);
+        User authenticatedUser = authenticateActiveUser(request);
+
+        return transactionTemplate.execute(status -> completePasswordLogin(authenticatedUser.getId()));
+    }
+
+    private AuthResponse completePasswordLogin(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        validateUserEligibleForLogin(user, user.getEmail());
 
         user.setLastLoginAt(OffsetDateTime.now());
         userRepository.save(user);

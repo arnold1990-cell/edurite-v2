@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,14 +41,16 @@ public class AdminController {
     }
 
     @GetMapping("/users")
-    public List<AdminUserDto> users(
+    public Page<AdminUserDto> users(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String accountType,
             @RequestParam(required = false) String companyStatus,
-            @RequestParam(defaultValue = "false") boolean includeDeleted
+            @RequestParam(defaultValue = "false") boolean includeDeleted,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size
     ) {
-        return adminService.users(search, status, accountType, companyStatus, includeDeleted);
+        return adminService.users(search, status, accountType, companyStatus, includeDeleted, page, size);
     }
 
     @PatchMapping("/users/{id}/status")
@@ -96,14 +99,16 @@ public class AdminController {
     }
 
     @GetMapping("/bursaries")
-    public List<AdminBursaryDto> bursaries(
+    public Page<AdminBursaryDto> bursaries(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) UUID companyId,
             @RequestParam(required = false) LocalDate fromDate,
             @RequestParam(required = false) LocalDate toDate,
-            @RequestParam(defaultValue = "false") boolean includeDeleted
+            @RequestParam(defaultValue = "false") boolean includeDeleted,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size
     ) {
-        return adminService.bursaries(status, companyId, fromDate, toDate, includeDeleted);
+        return adminService.bursaries(status, companyId, fromDate, toDate, includeDeleted, page, size);
     }
 
     @GetMapping("/bursaries/pending")

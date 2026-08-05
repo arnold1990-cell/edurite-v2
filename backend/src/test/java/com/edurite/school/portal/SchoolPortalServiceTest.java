@@ -43,6 +43,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -192,6 +195,61 @@ class SchoolPortalServiceTest {
                 teacherId,
                 new SchoolPortalDtos.SchoolTaskRequest(null, classId, subjectId, null, "ASSIGNMENT", "Task", 2026, "FET", "Grade 10", "", "Assignment", null, OffsetDateTime.now().plusDays(1), "Term 1", new BigDecimal("50"), null, null, null, "Informal")
         )).isInstanceOf(ResourceConflictException.class).hasMessageContaining("not assigned");
+    }
+
+    @Test
+    void teacherProgressUsesBatchEnrollmentAndSubmissionQueries() {
+        UUID schoolId = UUID.randomUUID();
+        UUID teacherId = UUID.randomUUID();
+        UUID classId = UUID.randomUUID();
+        UUID subjectId = UUID.randomUUID();
+        UUID firstTaskId = UUID.randomUUID();
+        UUID secondTaskId = UUID.randomUUID();
+
+        SchoolTask firstTask = new SchoolTask();
+        firstTask.setId(firstTaskId);
+        firstTask.setSchoolId(schoolId);
+        firstTask.setClassId(classId);
+        firstTask.setSubjectId(subjectId);
+        firstTask.setTeacherUserId(teacherId);
+
+        SchoolTask secondTask = new SchoolTask();
+        secondTask.setId(secondTaskId);
+        secondTask.setSchoolId(schoolId);
+        secondTask.setClassId(classId);
+        secondTask.setSubjectId(subjectId);
+        secondTask.setTeacherUserId(teacherId);
+
+        LearnerEnrollment firstEnrollment = new LearnerEnrollment();
+        firstEnrollment.setSchoolId(schoolId);
+        firstEnrollment.setClassId(classId);
+        firstEnrollment.setSubjectId(subjectId);
+        firstEnrollment.setActive(true);
+
+        LearnerEnrollment secondEnrollment = new LearnerEnrollment();
+        secondEnrollment.setSchoolId(schoolId);
+        secondEnrollment.setClassId(classId);
+        secondEnrollment.setSubjectId(subjectId);
+        secondEnrollment.setActive(true);
+
+        TaskSubmission submission = new TaskSubmission();
+        submission.setTaskId(firstTaskId);
+        submission.setLate(true);
+
+        when(schoolTaskRepository.findBySchoolIdAndTeacherUserId(schoolId, teacherId)).thenReturn(List.of(firstTask, secondTask));
+        when(learnerEnrollmentRepository.findBySchoolIdAndClassIdInAndSubjectIdInAndActiveTrue(eq(schoolId), any(), any()))
+                .thenReturn(List.of(firstEnrollment, secondEnrollment));
+        when(taskSubmissionRepository.findByTaskIdIn(any())).thenReturn(List.of(submission));
+
+        SchoolPortalDtos.ProgressSummaryResponse progress = assignmentService.teacherProgress(schoolId, teacherId);
+
+        assertThat(progress.totalTasks()).isEqualTo(2);
+        assertThat(progress.submitted()).isEqualTo(1);
+        assertThat(progress.missing()).isEqualTo(3);
+        assertThat(progress.late()).isEqualTo(1);
+        verify(learnerEnrollmentRepository, never()).findBySchoolIdAndClassIdAndSubjectIdAndActiveTrue(schoolId, classId, subjectId);
+        verify(taskSubmissionRepository, never()).findByTaskId(firstTaskId);
+        verify(taskSubmissionRepository, never()).findByTaskId(secondTaskId);
     }
 
     @Test

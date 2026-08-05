@@ -1,6 +1,7 @@
 package com.edurite.roadmap.service;
 
 import com.edurite.common.exception.ResourceConflictException;
+import com.edurite.config.CacheNames;
 import com.edurite.institution.entity.Institution;
 import com.edurite.institution.repository.InstitutionRepository;
 import com.edurite.roadmap.dto.CareerRoadmapDtos.ApsCalculationRequest;
@@ -48,6 +49,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -86,11 +88,13 @@ public class CareerRoadmapService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.CAREER_ROADMAP_REFERENCE, key = "'active-list'", sync = true)
     public List<CareerRoadmapResponse> list() {
         return repository.findByActiveTrueOrderByTitleAsc().stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.CAREER_ROADMAP_REFERENCE, key = "'detail:' + #slug.trim().toLowerCase()", sync = true)
     public CareerRoadmapResponse detail(String slug) {
         return repository.findBySlugAndActiveTrue(slug)
                 .map(this::toResponse)
@@ -116,11 +120,11 @@ public class CareerRoadmapService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.UNIVERSITY_REQUIREMENTS, key = "#career == null ? '' : #career.trim().toLowerCase()", sync = true)
     public List<UniversityRequirementResponse> requirements(String career) {
         return buildUniversityRequirements(career, null, null);
     }
 
-    @Transactional
     public CareerRoadmapGenerateResponse generate(Principal principal, CareerRoadmapGenerateRequest request) {
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElseGet(() -> createDefaultProfile(user.getId()));

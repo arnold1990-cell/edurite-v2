@@ -1,6 +1,8 @@
 package com.edurite.student.repository;
 
 import com.edurite.student.entity.StudentProfile;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.Lock;
@@ -15,6 +17,8 @@ import jakarta.persistence.LockModeType;
  */
 public interface StudentProfileRepository extends JpaRepository<StudentProfile, UUID> {
     Optional<StudentProfile> findByUserId(UUID userId);
+
+    List<StudentProfile> findByUserIdIn(Collection<UUID> userIds);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select sp from StudentProfile sp where sp.userId = :userId")

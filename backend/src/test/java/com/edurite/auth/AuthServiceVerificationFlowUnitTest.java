@@ -52,6 +52,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -108,6 +111,8 @@ class AuthServiceVerificationFlowUnitTest {
     private StudentPlanAccessService studentPlanAccessService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private TransactionTemplate transactionTemplate;
 
     private AuthService authService;
 
@@ -134,7 +139,8 @@ class AuthServiceVerificationFlowUnitTest {
                 platformSettingsService,
                 subscriptionService,
                 studentPlanAccessService,
-                notificationService
+                notificationService,
+                transactionTemplate
         );
 
         PlatformSetting settings = new PlatformSetting();
@@ -143,6 +149,10 @@ class AuthServiceVerificationFlowUnitTest {
         settings.setMaintenanceModeEnabled(false);
         settings.setManualCompanyApprovalRequired(true);
         lenient().when(platformSettingsService.getCurrentSettingsEntity()).thenReturn(settings);
+        lenient().when(transactionTemplate.execute(any())).thenAnswer(invocation -> {
+            TransactionCallback<?> callback = invocation.getArgument(0);
+            return callback.doInTransaction(new SimpleTransactionStatus());
+        });
         lenient().when(subscriptionService.initializeStudentTrialIfAbsent(any())).thenReturn(null);
         lenient().when(studentPlanAccessService.hasPremiumAccess(any())).thenReturn(false);
     }
@@ -211,6 +221,7 @@ class AuthServiceVerificationFlowUnitTest {
         createdUser.setEmailVerified(true);
 
         when(userRepository.findByEmailIgnoreCase(normalizedEmail)).thenReturn(Optional.of(createdUser));
+        when(userRepository.findById(createdUser.getId())).thenReturn(Optional.of(createdUser));
         when(passwordEncoder.matches("StrongPass@123", "encoded-password")).thenReturn(true);
         when(companyProfileRepository.findByUserId(createdUser.getId())).thenReturn(Optional.empty());
         when(studentProfileRepository.findByUserId(createdUser.getId())).thenReturn(Optional.empty());
@@ -675,6 +686,7 @@ class AuthServiceVerificationFlowUnitTest {
         user.setFirstName("Student");
         user.setLastName("Example");
         user.getRoles().add(role);
+        lenient().when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
         return user;
     }
 }

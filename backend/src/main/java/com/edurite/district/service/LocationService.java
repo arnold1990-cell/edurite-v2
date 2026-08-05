@@ -1,6 +1,7 @@
 package com.edurite.district.service;
 
 import com.edurite.common.exception.ResourceConflictException;
+import com.edurite.config.CacheNames;
 import com.edurite.district.dto.LocationDtos;
 import com.edurite.district.entity.Circuit;
 import com.edurite.district.entity.District;
@@ -10,6 +11,7 @@ import com.edurite.district.repository.DistrictRepository;
 import com.edurite.district.repository.ProvinceRepository;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ public class LocationService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.LOCATION_PROVINCES, key = "'all'", sync = true)
     public List<LocationDtos.LocationOptionDto> provinces() {
         return provinceRepository.findByActiveTrueOrderByNameAsc().stream()
                 .map(this::toOption)
@@ -38,6 +41,7 @@ public class LocationService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.LOCATION_DISTRICTS, key = "'all'", sync = true)
     public List<LocationDtos.LocationOptionDto> districts() {
         return districtRepository.findByActiveTrueOrderByDistrictNameAsc().stream()
                 .map(this::toOption)
@@ -45,6 +49,7 @@ public class LocationService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.LOCATION_DISTRICTS, key = "'province:' + #provinceId", sync = true)
     public List<LocationDtos.LocationOptionDto> districts(UUID provinceId) {
         requireActiveProvince(provinceId);
         return districtRepository.findByProvinceIdAndActiveTrueOrderByDistrictNameAsc(provinceId).stream()
@@ -53,6 +58,7 @@ public class LocationService {
     }
 
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = CacheNames.LOCATION_CIRCUITS, key = "'district:' + #districtId", sync = true)
     public List<LocationDtos.LocationOptionDto> circuits(UUID districtId) {
         requireActiveDistrict(districtId);
         return circuitRepository.findByDistrictIdAndActiveTrueOrderByNameAsc(districtId).stream()

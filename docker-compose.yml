@@ -3,16 +3,20 @@ services:
     image: postgres:16
     container_name: edurite-postgres
     restart: unless-stopped
+
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-edurite}
       POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?Set SPRING_DATASOURCE_PASSWORD in .env}
+
     ports:
       - "${POSTGRES_HOST_PORT:-5432}:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -22,8 +26,10 @@ services:
     image: redis:7
     container_name: edurite-redis
     restart: unless-stopped
+
     ports:
       - "${REDIS_HOST_PORT:-6379}:6379"
+
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -34,39 +40,54 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+
     image: edurite-backend:latest
-    container_name: edurite-backend
     restart: unless-stopped
+
     env_file:
       - ./.env
+
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      PERF_TEST_SEED_ENABLED: ${PERF_TEST_SEED_ENABLED:-false}
+
       SERVER_ADDRESS: 0.0.0.0
       SERVER_PORT: 8080
+      EDURITE_INSTANCE_RESPONSE_HEADER_ENABLED: ${EDURITE_INSTANCE_RESPONSE_HEADER_ENABLED:-false}
+
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-edurite}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?Set SPRING_DATASOURCE_PASSWORD in .env}
+
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+
       SPRING_JPA_HIBERNATE_DDL_AUTO: ${SPRING_JPA_HIBERNATE_DDL_AUTO:-validate}
       SPRING_FLYWAY_ENABLED: ${SPRING_FLYWAY_ENABLED:-true}
+      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL:-false}
+
       APP_BASE_URL: ${APP_BASE_URL:-https://edurite.org}
       APP_FRONTEND_URL: ${APP_FRONTEND_URL:-https://edurite.org}
       APP_FRONTEND_BASE_URL: ${APP_FRONTEND_BASE_URL:-https://edurite.org}
       BACKEND_BASE_URL: ${BACKEND_BASE_URL:-https://edurite.org}
+
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://edurite.org,http://www.edurite.org,https://edurite.org,https://www.edurite.org,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}
+
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://edurite.org/login/oauth2/code/google}
+
       EDURITE_SEED_ENABLED: ${EDURITE_SEED_ENABLED:-false}
-      SPRING_JPA_SHOW_SQL: ${SPRING_JPA_SHOW_SQL:-false}
-    ports:
-      - "${BACKEND_HOST_PORT:-8080}:8080"
+
+    expose:
+      - "8080"
+
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/actuator/health"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/actuator/health/readiness"]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -83,15 +104,19 @@ services:
         VITE_GOOGLE_SIGNIN_ENABLED: ${VITE_GOOGLE_SIGNIN_ENABLED:-false}
         VITE_GOOGLE_OAUTH_ENABLED: ${VITE_GOOGLE_OAUTH_ENABLED:-${VITE_GOOGLE_SIGNIN_ENABLED:-false}}
         VITE_AI_GUIDANCE_DEMO_MODE: ${VITE_AI_GUIDANCE_DEMO_MODE:-false}
-        VITE_YOUTUBE_API_KEY: ${VITE_YOUTUBE_API_KEY}
+        VITE_YOUTUBE_API_KEY: ${VITE_YOUTUBE_API_KEY:-}
+
     image: edurite-frontend:latest
     container_name: edurite-frontend
     restart: unless-stopped
+
     ports:
       - "${FRONTEND_HOST_PORT:-5173}:80"
+
     depends_on:
       backend:
         condition: service_healthy
+
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
       interval: 30s
