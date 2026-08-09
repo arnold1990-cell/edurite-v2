@@ -1,0 +1,5 @@
+edurite-ai-career-guidance-clean-backend-2 Up About a minute (healthy)
+edurite-ai-career-guidance-clean-backend-1 Up About a minute (healthy)
+edurite-frontend Up 32 minutes (healthy)
+edurite-postgres Up 52 minutes (healthy)
+edurite-redis Up 52 minutes (healthy)

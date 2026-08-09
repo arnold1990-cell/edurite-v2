@@ -1,0 +1,85 @@
+==== 2026-08-09T00:35:15.1286388+02:00 postgres ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    41 |      1 |       0 |            1
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    40
+ active |                 |            |     1
+(2 rows)
+
+   age    | state  | wait_event_type | wait_event |                                                                                        query                                                                                         
+----------+--------+-----------------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 00:00:00 | active |                 |            | select now()-query_start as age, state, wait_event_type, wait_event, left(regexp_replace(query,'\s+',' ','g'),180) as query from pg_stat_activity where datname=current_database() a
+(1 row)
+
+==== 2026-08-09T00:35:27.9182698+02:00 postgres ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    41 |      1 |       0 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    40
+ active |                 |            |     1
+(2 rows)
+
+   age    | state  | wait_event_type | wait_event |                                                                                        query                                                                                         
+----------+--------+-----------------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 00:00:00 | active |                 |            | select now()-query_start as age, state, wait_event_type, wait_event, left(regexp_replace(query,'\s+',' ','g'),180) as query from pg_stat_activity where datname=current_database() a
+(1 row)
+
+==== 2026-08-09T00:35:40.6909040+02:00 postgres ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    41 |      1 |       0 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    40
+ active |                 |            |     1
+(2 rows)
+
+   age    | state  | wait_event_type | wait_event |                                                                                        query                                                                                         
+----------+--------+-----------------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 00:00:00 | active |                 |            | select now()-query_start as age, state, wait_event_type, wait_event, left(regexp_replace(query,'\s+',' ','g'),180) as query from pg_stat_activity where datname=current_database() a
+(1 row)
+
+==== 2026-08-09T00:35:53.5468391+02:00 postgres ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    41 |      1 |       0 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    40
+ active |                 |            |     1
+(2 rows)
+
+   age    | state  | wait_event_type | wait_event |                                                                                        query                                                                                         
+----------+--------+-----------------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 00:00:00 | active |                 |            | select now()-query_start as age, state, wait_event_type, wait_event, left(regexp_replace(query,'\s+',' ','g'),180) as query from pg_stat_activity where datname=current_database() a
+(1 row)
+
+==== 2026-08-09T00:36:06.3026837+02:00 postgres ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    41 |      1 |       0 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    40
+ active |                 |            |     1
+(2 rows)
+
+   age    | state  | wait_event_type | wait_event |                                                                                        query                                                                                         
+----------+--------+-----------------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 00:00:00 | active |                 |            | select now()-query_start as age, state, wait_event_type, wait_event, left(regexp_replace(query,'\s+',' ','g'),180) as query from pg_stat_activity where datname=current_database() a
+(1 row)
+

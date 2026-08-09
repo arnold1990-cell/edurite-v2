@@ -1,0 +1,449 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: performance/scripts/api-journey.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 100 max VUs, 2m30s max duration (incl. graceful stop):
+              * realistic_api_journey: 100 looping VUs for 2m0s (gracefulStop: 30s)
+
+
+running (0m01.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+realistic_api_journey   [   1% ] 100 VUs  0m01.0s/2m0s
+
+running (0m02.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+realistic_api_journey   [   2% ] 100 VUs  0m02.0s/2m0s
+
+running (0m03.0s), 100/100 VUs, 0 complete and 0 interrupted iterations
+realistic_api_journey   [   2% ] 100 VUs  0m03.0s/2m0s
+
+running (0m04.0s), 100/100 VUs, 6 complete and 0 interrupted iterations
+realistic_api_journey   [   3% ] 100 VUs  0m04.0s/2m0s
+
+running (0m05.0s), 100/100 VUs, 45 complete and 0 interrupted iterations
+realistic_api_journey   [   4% ] 100 VUs  0m05.0s/2m0s
+
+running (0m06.0s), 100/100 VUs, 78 complete and 0 interrupted iterations
+realistic_api_journey   [   5% ] 100 VUs  0m06.0s/2m0s
+
+running (0m07.0s), 100/100 VUs, 130 complete and 0 interrupted iterations
+realistic_api_journey   [   6% ] 100 VUs  0m07.0s/2m0s
+
+running (0m08.0s), 100/100 VUs, 155 complete and 0 interrupted iterations
+realistic_api_journey   [   7% ] 100 VUs  0m08.0s/2m0s
+
+running (0m09.0s), 100/100 VUs, 203 complete and 0 interrupted iterations
+realistic_api_journey   [   7% ] 100 VUs  0m09.0s/2m0s
+
+running (0m10.0s), 100/100 VUs, 238 complete and 0 interrupted iterations
+realistic_api_journey   [   8% ] 100 VUs  0m10.0s/2m0s
+
+running (0m11.0s), 100/100 VUs, 274 complete and 0 interrupted iterations
+realistic_api_journey   [   9% ] 100 VUs  0m11.0s/2m0s
+
+running (0m12.0s), 100/100 VUs, 305 complete and 0 interrupted iterations
+realistic_api_journey   [  10% ] 100 VUs  0m12.0s/2m0s
+
+running (0m13.0s), 100/100 VUs, 353 complete and 0 interrupted iterations
+realistic_api_journey   [  11% ] 100 VUs  0m13.0s/2m0s
+
+running (0m14.0s), 100/100 VUs, 387 complete and 0 interrupted iterations
+realistic_api_journey   [  12% ] 100 VUs  0m14.0s/2m0s
+
+running (0m15.0s), 100/100 VUs, 420 complete and 0 interrupted iterations
+realistic_api_journey   [  12% ] 100 VUs  0m15.0s/2m0s
+
+running (0m16.0s), 100/100 VUs, 463 complete and 0 interrupted iterations
+realistic_api_journey   [  13% ] 100 VUs  0m16.0s/2m0s
+
+running (0m17.0s), 100/100 VUs, 501 complete and 0 interrupted iterations
+realistic_api_journey   [  14% ] 100 VUs  0m17.0s/2m0s
+
+running (0m18.0s), 100/100 VUs, 539 complete and 0 interrupted iterations
+realistic_api_journey   [  15% ] 100 VUs  0m18.0s/2m0s
+
+running (0m19.0s), 100/100 VUs, 574 complete and 0 interrupted iterations
+realistic_api_journey   [  16% ] 100 VUs  0m19.0s/2m0s
+
+running (0m20.0s), 100/100 VUs, 617 complete and 0 interrupted iterations
+realistic_api_journey   [  17% ] 100 VUs  0m20.0s/2m0s
+
+running (0m21.0s), 100/100 VUs, 641 complete and 0 interrupted iterations
+realistic_api_journey   [  17% ] 100 VUs  0m21.0s/2m0s
+
+running (0m22.0s), 100/100 VUs, 691 complete and 0 interrupted iterations
+realistic_api_journey   [  18% ] 100 VUs  0m22.0s/2m0s
+
+running (0m23.0s), 100/100 VUs, 727 complete and 0 interrupted iterations
+realistic_api_journey   [  19% ] 100 VUs  0m23.0s/2m0s
+
+running (0m24.0s), 100/100 VUs, 762 complete and 0 interrupted iterations
+realistic_api_journey   [  20% ] 100 VUs  0m24.0s/2m0s
+
+running (0m25.0s), 100/100 VUs, 790 complete and 0 interrupted iterations
+realistic_api_journey   [  21% ] 100 VUs  0m25.0s/2m0s
+
+running (0m26.0s), 100/100 VUs, 834 complete and 0 interrupted iterations
+realistic_api_journey   [  22% ] 100 VUs  0m26.0s/2m0s
+
+running (0m27.0s), 100/100 VUs, 872 complete and 0 interrupted iterations
+realistic_api_journey   [  22% ] 100 VUs  0m27.0s/2m0s
+
+running (0m28.0s), 100/100 VUs, 916 complete and 0 interrupted iterations
+realistic_api_journey   [  23% ] 100 VUs  0m28.0s/2m0s
+
+running (0m29.0s), 100/100 VUs, 944 complete and 0 interrupted iterations
+realistic_api_journey   [  24% ] 100 VUs  0m29.0s/2m0s
+
+running (0m30.0s), 100/100 VUs, 984 complete and 0 interrupted iterations
+realistic_api_journey   [  25% ] 100 VUs  0m30.0s/2m0s
+
+running (0m31.0s), 100/100 VUs, 1022 complete and 0 interrupted iterations
+realistic_api_journey   [  26% ] 100 VUs  0m31.0s/2m0s
+
+running (0m32.0s), 100/100 VUs, 1057 complete and 0 interrupted iterations
+realistic_api_journey   [  27% ] 100 VUs  0m32.0s/2m0s
+
+running (0m33.0s), 100/100 VUs, 1102 complete and 0 interrupted iterations
+realistic_api_journey   [  27% ] 100 VUs  0m33.0s/2m0s
+
+running (0m34.0s), 100/100 VUs, 1138 complete and 0 interrupted iterations
+realistic_api_journey   [  28% ] 100 VUs  0m34.0s/2m0s
+
+running (0m35.0s), 100/100 VUs, 1173 complete and 0 interrupted iterations
+realistic_api_journey   [  29% ] 100 VUs  0m35.0s/2m0s
+
+running (0m36.0s), 100/100 VUs, 1209 complete and 0 interrupted iterations
+realistic_api_journey   [  30% ] 100 VUs  0m36.0s/2m0s
+
+running (0m37.0s), 100/100 VUs, 1250 complete and 0 interrupted iterations
+realistic_api_journey   [  31% ] 100 VUs  0m37.0s/2m0s
+
+running (0m38.0s), 100/100 VUs, 1293 complete and 0 interrupted iterations
+realistic_api_journey   [  32% ] 100 VUs  0m38.0s/2m0s
+
+running (0m39.0s), 100/100 VUs, 1325 complete and 0 interrupted iterations
+realistic_api_journey   [  32% ] 100 VUs  0m39.0s/2m0s
+
+running (0m40.0s), 100/100 VUs, 1360 complete and 0 interrupted iterations
+realistic_api_journey   [  33% ] 100 VUs  0m40.0s/2m0s
+
+running (0m41.0s), 100/100 VUs, 1403 complete and 0 interrupted iterations
+realistic_api_journey   [  34% ] 100 VUs  0m41.0s/2m0s
+
+running (0m42.0s), 100/100 VUs, 1437 complete and 0 interrupted iterations
+realistic_api_journey   [  35% ] 100 VUs  0m42.0s/2m0s
+
+running (0m43.0s), 100/100 VUs, 1476 complete and 0 interrupted iterations
+realistic_api_journey   [  36% ] 100 VUs  0m43.0s/2m0s
+
+running (0m44.0s), 100/100 VUs, 1529 complete and 0 interrupted iterations
+realistic_api_journey   [  37% ] 100 VUs  0m44.0s/2m0s
+
+running (0m45.0s), 100/100 VUs, 1556 complete and 0 interrupted iterations
+realistic_api_journey   [  37% ] 100 VUs  0m45.0s/2m0s
+
+running (0m46.0s), 100/100 VUs, 1606 complete and 0 interrupted iterations
+realistic_api_journey   [  38% ] 100 VUs  0m46.0s/2m0s
+
+running (0m47.0s), 100/100 VUs, 1637 complete and 0 interrupted iterations
+realistic_api_journey   [  39% ] 100 VUs  0m47.0s/2m0s
+
+running (0m48.0s), 100/100 VUs, 1681 complete and 0 interrupted iterations
+realistic_api_journey   [  40% ] 100 VUs  0m48.0s/2m0s
+
+running (0m49.0s), 100/100 VUs, 1722 complete and 0 interrupted iterations
+realistic_api_journey   [  41% ] 100 VUs  0m49.0s/2m0s
+
+running (0m50.0s), 100/100 VUs, 1751 complete and 0 interrupted iterations
+realistic_api_journey   [  42% ] 100 VUs  0m50.0s/2m0s
+
+running (0m51.0s), 100/100 VUs, 1793 complete and 0 interrupted iterations
+realistic_api_journey   [  42% ] 100 VUs  0m51.0s/2m0s
+
+running (0m52.0s), 100/100 VUs, 1827 complete and 0 interrupted iterations
+realistic_api_journey   [  43% ] 100 VUs  0m52.0s/2m0s
+
+running (0m53.0s), 100/100 VUs, 1869 complete and 0 interrupted iterations
+realistic_api_journey   [  44% ] 100 VUs  0m53.0s/2m0s
+
+running (0m54.0s), 100/100 VUs, 1905 complete and 0 interrupted iterations
+realistic_api_journey   [  45% ] 100 VUs  0m54.0s/2m0s
+
+running (0m55.0s), 100/100 VUs, 1948 complete and 0 interrupted iterations
+realistic_api_journey   [  46% ] 100 VUs  0m55.0s/2m0s
+
+running (0m56.0s), 100/100 VUs, 1985 complete and 0 interrupted iterations
+realistic_api_journey   [  47% ] 100 VUs  0m56.0s/2m0s
+
+running (0m57.0s), 100/100 VUs, 2017 complete and 0 interrupted iterations
+realistic_api_journey   [  47% ] 100 VUs  0m57.0s/2m0s
+
+running (0m58.0s), 100/100 VUs, 2054 complete and 0 interrupted iterations
+realistic_api_journey   [  48% ] 100 VUs  0m58.0s/2m0s
+
+running (0m59.0s), 100/100 VUs, 2087 complete and 0 interrupted iterations
+realistic_api_journey   [  49% ] 100 VUs  0m59.0s/2m0s
+
+running (1m00.0s), 100/100 VUs, 2133 complete and 0 interrupted iterations
+realistic_api_journey   [  50% ] 100 VUs  1m00.0s/2m0s
+
+running (1m01.0s), 100/100 VUs, 2165 complete and 0 interrupted iterations
+realistic_api_journey   [  51% ] 100 VUs  1m01.0s/2m0s
+
+running (1m02.0s), 100/100 VUs, 2198 complete and 0 interrupted iterations
+realistic_api_journey   [  52% ] 100 VUs  1m02.0s/2m0s
+
+running (1m03.0s), 100/100 VUs, 2246 complete and 0 interrupted iterations
+realistic_api_journey   [  52% ] 100 VUs  1m03.0s/2m0s
+
+running (1m04.0s), 100/100 VUs, 2287 complete and 0 interrupted iterations
+realistic_api_journey   [  53% ] 100 VUs  1m04.0s/2m0s
+
+running (1m05.0s), 100/100 VUs, 2322 complete and 0 interrupted iterations
+realistic_api_journey   [  54% ] 100 VUs  1m05.0s/2m0s
+
+running (1m06.0s), 100/100 VUs, 2361 complete and 0 interrupted iterations
+realistic_api_journey   [  55% ] 100 VUs  1m06.0s/2m0s
+
+running (1m07.0s), 100/100 VUs, 2404 complete and 0 interrupted iterations
+realistic_api_journey   [  56% ] 100 VUs  1m07.0s/2m0s
+
+running (1m08.0s), 100/100 VUs, 2437 complete and 0 interrupted iterations
+realistic_api_journey   [  57% ] 100 VUs  1m08.0s/2m0s
+
+running (1m09.0s), 100/100 VUs, 2469 complete and 0 interrupted iterations
+realistic_api_journey   [  57% ] 100 VUs  1m09.0s/2m0s
+
+running (1m10.0s), 100/100 VUs, 2511 complete and 0 interrupted iterations
+realistic_api_journey   [  58% ] 100 VUs  1m10.0s/2m0s
+
+running (1m11.0s), 100/100 VUs, 2543 complete and 0 interrupted iterations
+realistic_api_journey   [  59% ] 100 VUs  1m11.0s/2m0s
+
+running (1m12.0s), 100/100 VUs, 2589 complete and 0 interrupted iterations
+realistic_api_journey   [  60% ] 100 VUs  1m12.0s/2m0s
+
+running (1m13.0s), 100/100 VUs, 2619 complete and 0 interrupted iterations
+realistic_api_journey   [  61% ] 100 VUs  1m13.0s/2m0s
+
+running (1m14.0s), 100/100 VUs, 2660 complete and 0 interrupted iterations
+realistic_api_journey   [  62% ] 100 VUs  1m14.0s/2m0s
+
+running (1m15.0s), 100/100 VUs, 2692 complete and 0 interrupted iterations
+realistic_api_journey   [  62% ] 100 VUs  1m15.0s/2m0s
+
+running (1m16.0s), 100/100 VUs, 2730 complete and 0 interrupted iterations
+realistic_api_journey   [  63% ] 100 VUs  1m16.0s/2m0s
+
+running (1m17.0s), 100/100 VUs, 2768 complete and 0 interrupted iterations
+realistic_api_journey   [  64% ] 100 VUs  1m17.0s/2m0s
+
+running (1m18.0s), 100/100 VUs, 2809 complete and 0 interrupted iterations
+realistic_api_journey   [  65% ] 100 VUs  1m18.0s/2m0s
+
+running (1m19.0s), 100/100 VUs, 2849 complete and 0 interrupted iterations
+realistic_api_journey   [  66% ] 100 VUs  1m19.0s/2m0s
+
+running (1m20.0s), 100/100 VUs, 2890 complete and 0 interrupted iterations
+realistic_api_journey   [  67% ] 100 VUs  1m20.0s/2m0s
+
+running (1m21.0s), 100/100 VUs, 2930 complete and 0 interrupted iterations
+realistic_api_journey   [  67% ] 100 VUs  1m21.0s/2m0s
+
+running (1m22.0s), 100/100 VUs, 2961 complete and 0 interrupted iterations
+realistic_api_journey   [  68% ] 100 VUs  1m22.0s/2m0s
+
+running (1m23.0s), 100/100 VUs, 3008 complete and 0 interrupted iterations
+realistic_api_journey   [  69% ] 100 VUs  1m23.0s/2m0s
+
+running (1m24.0s), 100/100 VUs, 3040 complete and 0 interrupted iterations
+realistic_api_journey   [  70% ] 100 VUs  1m24.0s/2m0s
+
+running (1m25.0s), 100/100 VUs, 3080 complete and 0 interrupted iterations
+realistic_api_journey   [  71% ] 100 VUs  1m25.0s/2m0s
+
+running (1m26.0s), 100/100 VUs, 3112 complete and 0 interrupted iterations
+realistic_api_journey   [  72% ] 100 VUs  1m26.0s/2m0s
+
+running (1m27.0s), 100/100 VUs, 3153 complete and 0 interrupted iterations
+realistic_api_journey   [  72% ] 100 VUs  1m27.0s/2m0s
+
+running (1m28.0s), 100/100 VUs, 3194 complete and 0 interrupted iterations
+realistic_api_journey   [  73% ] 100 VUs  1m28.0s/2m0s
+
+running (1m29.0s), 100/100 VUs, 3231 complete and 0 interrupted iterations
+realistic_api_journey   [  74% ] 100 VUs  1m29.0s/2m0s
+
+running (1m30.0s), 100/100 VUs, 3270 complete and 0 interrupted iterations
+realistic_api_journey   [  75% ] 100 VUs  1m30.0s/2m0s
+
+running (1m31.0s), 100/100 VUs, 3311 complete and 0 interrupted iterations
+realistic_api_journey   [  76% ] 100 VUs  1m31.0s/2m0s
+
+running (1m32.0s), 100/100 VUs, 3343 complete and 0 interrupted iterations
+realistic_api_journey   [  77% ] 100 VUs  1m32.0s/2m0s
+
+running (1m33.0s), 100/100 VUs, 3391 complete and 0 interrupted iterations
+realistic_api_journey   [  77% ] 100 VUs  1m33.0s/2m0s
+
+running (1m34.0s), 100/100 VUs, 3414 complete and 0 interrupted iterations
+realistic_api_journey   [  78% ] 100 VUs  1m34.0s/2m0s
+
+running (1m35.0s), 100/100 VUs, 3462 complete and 0 interrupted iterations
+realistic_api_journey   [  79% ] 100 VUs  1m35.0s/2m0s
+
+running (1m36.0s), 100/100 VUs, 3502 complete and 0 interrupted iterations
+realistic_api_journey   [  80% ] 100 VUs  1m36.0s/2m0s
+
+running (1m37.0s), 100/100 VUs, 3530 complete and 0 interrupted iterations
+realistic_api_journey   [  81% ] 100 VUs  1m37.0s/2m0s
+
+running (1m38.0s), 100/100 VUs, 3572 complete and 0 interrupted iterations
+realistic_api_journey   [  82% ] 100 VUs  1m38.0s/2m0s
+
+running (1m39.0s), 100/100 VUs, 3610 complete and 0 interrupted iterations
+realistic_api_journey   [  82% ] 100 VUs  1m39.0s/2m0s
+
+running (1m40.0s), 100/100 VUs, 3654 complete and 0 interrupted iterations
+realistic_api_journey   [  83% ] 100 VUs  1m40.0s/2m0s
+
+running (1m41.0s), 100/100 VUs, 3687 complete and 0 interrupted iterations
+realistic_api_journey   [  84% ] 100 VUs  1m41.0s/2m0s
+
+running (1m42.0s), 100/100 VUs, 3722 complete and 0 interrupted iterations
+realistic_api_journey   [  85% ] 100 VUs  1m42.0s/2m0s
+
+running (1m43.0s), 100/100 VUs, 3770 complete and 0 interrupted iterations
+realistic_api_journey   [  86% ] 100 VUs  1m43.0s/2m0s
+
+running (1m44.0s), 100/100 VUs, 3803 complete and 0 interrupted iterations
+realistic_api_journey   [  87% ] 100 VUs  1m44.0s/2m0s
+
+running (1m45.0s), 100/100 VUs, 3843 complete and 0 interrupted iterations
+realistic_api_journey   [  87% ] 100 VUs  1m45.0s/2m0s
+
+running (1m46.0s), 100/100 VUs, 3878 complete and 0 interrupted iterations
+realistic_api_journey   [  88% ] 100 VUs  1m46.0s/2m0s
+
+running (1m47.0s), 100/100 VUs, 3919 complete and 0 interrupted iterations
+realistic_api_journey   [  89% ] 100 VUs  1m47.0s/2m0s
+
+running (1m48.0s), 100/100 VUs, 3955 complete and 0 interrupted iterations
+realistic_api_journey   [  90% ] 100 VUs  1m48.0s/2m0s
+
+running (1m49.0s), 100/100 VUs, 3988 complete and 0 interrupted iterations
+realistic_api_journey   [  91% ] 100 VUs  1m49.0s/2m0s
+
+running (1m50.0s), 100/100 VUs, 4029 complete and 0 interrupted iterations
+realistic_api_journey   [  92% ] 100 VUs  1m50.0s/2m0s
+
+running (1m51.0s), 100/100 VUs, 4064 complete and 0 interrupted iterations
+realistic_api_journey   [  92% ] 100 VUs  1m51.0s/2m0s
+
+running (1m52.0s), 100/100 VUs, 4103 complete and 0 interrupted iterations
+realistic_api_journey   [  93% ] 100 VUs  1m52.0s/2m0s
+
+running (1m53.0s), 100/100 VUs, 4136 complete and 0 interrupted iterations
+realistic_api_journey   [  94% ] 100 VUs  1m53.0s/2m0s
+
+running (1m54.0s), 100/100 VUs, 4179 complete and 0 interrupted iterations
+realistic_api_journey   [  95% ] 100 VUs  1m54.0s/2m0s
+
+running (1m55.0s), 100/100 VUs, 4217 complete and 0 interrupted iterations
+realistic_api_journey   [  96% ] 100 VUs  1m55.0s/2m0s
+
+running (1m56.0s), 100/100 VUs, 4258 complete and 0 interrupted iterations
+realistic_api_journey   [  97% ] 100 VUs  1m56.0s/2m0s
+
+running (1m57.0s), 100/100 VUs, 4291 complete and 0 interrupted iterations
+realistic_api_journey   [  97% ] 100 VUs  1m57.0s/2m0s
+
+running (1m58.0s), 100/100 VUs, 4334 complete and 0 interrupted iterations
+realistic_api_journey   [  98% ] 100 VUs  1m58.0s/2m0s
+
+running (1m59.0s), 100/100 VUs, 4365 complete and 0 interrupted iterations
+realistic_api_journey   [  99% ] 100 VUs  1m59.0s/2m0s
+
+running (2m00.0s), 100/100 VUs, 4405 complete and 0 interrupted iterations
+realistic_api_journey   [ 100% ] 100 VUs  2m00.0s/2m0s
+
+running (2m01.0s), 061/100 VUs, 4444 complete and 0 interrupted iterations
+realistic_api_journey ↓ [ 100% ] 100 VUs  2m0s
+
+running (2m02.0s), 024/100 VUs, 4481 complete and 0 interrupted iterations
+realistic_api_journey ↓ [ 100% ] 100 VUs  2m0s
+
+running (2m03.0s), 006/100 VUs, 4499 complete and 0 interrupted iterations
+realistic_api_journey ↓ [ 100% ] 100 VUs  2m0s
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate>0.95' rate=100.00%
+
+      {check:readiness 200}
+      ✓ 'rate>0.99' rate=100.00%
+
+    http_req_duration
+    ✓ 'p(95)<5000' p(95)=40.16ms
+
+    http_req_failed
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 31735   256.386478/s
+    checks_succeeded...: 100.00% 31735 out of 31735
+    checks_failed......: 0.00%   0 out of 31735
+
+    ✓ login success
+    ✓ token exists
+    ✓ readiness 200
+    ✓ careers success
+    ✓ courses success
+    ✓ bursaries success
+    ✓ account/me success
+    ✓ notifications success
+    ✓ recommendations success
+
+    CUSTOM
+    authenticated_api_duration.....................: avg=21.58ms min=6ms      med=14.44ms p(90)=30.64ms p(95)=40.79ms p(99)=167.51ms max=1.3s    
+    endpoint_account_me_duration...................: avg=26.58ms min=9.45ms   med=18.33ms p(90)=37.41ms p(95)=50.81ms p(99)=213.63ms max=657.85ms
+    endpoint_bursaries_duration....................: avg=18.86ms min=6.35ms   med=12.73ms p(90)=26.21ms p(95)=36.07ms p(99)=167.32ms max=626.81ms
+    endpoint_careers_duration......................: avg=23.96ms min=6ms      med=12.5ms  p(90)=26.39ms p(95)=36.89ms p(99)=354.99ms max=1.3s    
+    endpoint_courses_duration......................: avg=19ms    min=6.31ms   med=12.44ms p(90)=25.44ms p(95)=36.72ms p(99)=152.05ms max=1.04s   
+    endpoint_login_duration........................: avg=1.39s   min=213.23ms med=1.28s   p(90)=2.36s   p(95)=2.54s   p(99)=2.7s     max=2.84s   
+    endpoint_notifications_unread_count_duration...: avg=18.76ms min=7.16ms   med=13.56ms p(90)=27.82ms p(95)=37.82ms p(99)=114.43ms max=563.55ms
+    endpoint_readiness_duration....................: avg=12.08ms min=3.72ms   med=9.31ms  p(90)=19.38ms p(95)=25.39ms p(99)=51.99ms  max=197.45ms
+    endpoint_recommendations_duration..............: avg=22.3ms  min=7.72ms   med=16.53ms p(90)=33.86ms p(95)=43.75ms p(99)=123.72ms max=464.53ms
+
+    HTTP
+    http_req_duration..............................: avg=24.57ms min=3.72ms   med=13.8ms  p(90)=29.64ms p(95)=40.16ms p(99)=205.33ms max=2.84s   
+      { expected_response:true }...................: avg=24.57ms min=3.72ms   med=13.8ms  p(90)=29.64ms p(95)=40.16ms p(99)=205.33ms max=2.84s   
+    http_req_failed................................: 0.00% 0 out of 31635
+    http_reqs......................................: 31635 255.57858/s
+
+    EXECUTION
+    iteration_duration.............................: avg=2.69s   min=1.06s    med=2.68s   p(90)=3.88s   p(95)=4.04s   p(99)=5.37s    max=6.73s   
+    iterations.....................................: 4505  36.395812/s
+    vus............................................: 6     min=6          max=100
+    vus_max........................................: 100   min=100        max=100
+
+    NETWORK
+    data_received..................................: 50 MB 401 kB/s
+    data_sent......................................: 13 MB 105 kB/s
+
+
+
+
+running (2m03.8s), 000/100 VUs, 4505 complete and 0 interrupted iterations
+realistic_api_journey ✓ [ 100% ] 100 VUs  2m0s

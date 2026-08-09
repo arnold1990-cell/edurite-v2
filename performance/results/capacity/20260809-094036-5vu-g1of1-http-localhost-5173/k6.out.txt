@@ -1,0 +1,199 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: performance/scripts/capacity-500k-steady-state.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 5 max VUs, 1m0s max duration (incl. graceful stop):
+              * steady_state_capacity: Up to 5 looping VUs for 30s over 4 stages (gracefulRampDown: 2m0s, gracefulStop: 30s)
+
+
+running (0m01.0s), 0/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [   3% ] 0/5 VUs  01.0s/30.0s
+
+running (0m02.0s), 1/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [   7% ] 1/5 VUs  02.0s/30.0s
+
+running (0m03.0s), 2/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [  10% ] 2/5 VUs  03.0s/30.0s
+
+running (0m04.0s), 3/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [  13% ] 3/5 VUs  04.0s/30.0s
+
+running (0m05.0s), 4/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [  17% ] 4/5 VUs  05.0s/30.0s
+
+running (0m06.0s), 5/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [  20% ] 5/5 VUs  06.0s/30.0s
+
+running (0m07.0s), 5/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [  23% ] 5/5 VUs  07.0s/30.0s
+
+running (0m08.0s), 5/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [  27% ] 5/5 VUs  08.0s/30.0s
+
+running (0m09.0s), 5/5 VUs, 0 complete and 0 interrupted iterations
+steady_state_capacity   [  30% ] 5/5 VUs  09.0s/30.0s
+
+running (0m10.0s), 5/5 VUs, 1 complete and 0 interrupted iterations
+steady_state_capacity   [  33% ] 5/5 VUs  10.0s/30.0s
+
+running (0m11.0s), 5/5 VUs, 1 complete and 0 interrupted iterations
+steady_state_capacity   [  37% ] 5/5 VUs  11.0s/30.0s
+
+running (0m12.0s), 5/5 VUs, 1 complete and 0 interrupted iterations
+steady_state_capacity   [  40% ] 5/5 VUs  12.0s/30.0s
+
+running (0m13.0s), 5/5 VUs, 1 complete and 0 interrupted iterations
+steady_state_capacity   [  43% ] 5/5 VUs  13.0s/30.0s
+
+running (0m14.0s), 5/5 VUs, 1 complete and 0 interrupted iterations
+steady_state_capacity   [  47% ] 5/5 VUs  14.0s/30.0s
+
+running (0m15.0s), 5/5 VUs, 2 complete and 0 interrupted iterations
+steady_state_capacity   [  50% ] 5/5 VUs  15.0s/30.0s
+
+running (0m16.0s), 5/5 VUs, 2 complete and 0 interrupted iterations
+steady_state_capacity   [  53% ] 5/5 VUs  16.0s/30.0s
+
+running (0m17.0s), 5/5 VUs, 2 complete and 0 interrupted iterations
+steady_state_capacity   [  57% ] 5/5 VUs  17.0s/30.0s
+
+running (0m18.0s), 5/5 VUs, 3 complete and 0 interrupted iterations
+steady_state_capacity   [  60% ] 5/5 VUs  18.0s/30.0s
+
+running (0m19.0s), 5/5 VUs, 3 complete and 0 interrupted iterations
+steady_state_capacity   [  63% ] 5/5 VUs  19.0s/30.0s
+
+running (0m20.0s), 5/5 VUs, 4 complete and 0 interrupted iterations
+steady_state_capacity   [  67% ] 5/5 VUs  20.0s/30.0s
+
+running (0m21.0s), 5/5 VUs, 4 complete and 0 interrupted iterations
+steady_state_capacity   [  70% ] 5/5 VUs  21.0s/30.0s
+
+running (0m22.0s), 5/5 VUs, 5 complete and 0 interrupted iterations
+steady_state_capacity   [  73% ] 5/5 VUs  22.0s/30.0s
+
+running (0m23.0s), 5/5 VUs, 5 complete and 0 interrupted iterations
+steady_state_capacity   [  77% ] 5/5 VUs  23.0s/30.0s
+
+running (0m24.0s), 5/5 VUs, 5 complete and 0 interrupted iterations
+steady_state_capacity   [  80% ] 5/5 VUs  24.0s/30.0s
+
+running (0m25.0s), 5/5 VUs, 6 complete and 0 interrupted iterations
+steady_state_capacity   [  83% ] 5/5 VUs  25.0s/30.0s
+
+running (0m26.0s), 5/5 VUs, 6 complete and 0 interrupted iterations
+steady_state_capacity   [  87% ] 5/5 VUs  26.0s/30.0s
+
+running (0m27.0s), 5/5 VUs, 6 complete and 0 interrupted iterations
+steady_state_capacity   [  90% ] 5/5 VUs  27.0s/30.0s
+
+running (0m28.0s), 5/5 VUs, 6 complete and 0 interrupted iterations
+steady_state_capacity   [  93% ] 5/5 VUs  28.0s/30.0s
+
+running (0m29.0s), 5/5 VUs, 7 complete and 0 interrupted iterations
+steady_state_capacity   [  97% ] 5/5 VUs  29.0s/30.0s
+
+running (0m30.0s), 5/5 VUs, 7 complete and 0 interrupted iterations
+steady_state_capacity   [ 100% ] 5/5 VUs  30.0s/30.0s
+
+running (0m31.0s), 5/5 VUs, 7 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m32.0s), 5/5 VUs, 7 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m33.0s), 3/5 VUs, 9 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m34.0s), 3/5 VUs, 9 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m35.0s), 3/5 VUs, 9 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m36.0s), 2/5 VUs, 10 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m37.0s), 2/5 VUs, 10 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m38.0s), 1/5 VUs, 11 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m39.0s), 1/5 VUs, 11 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m40.0s), 1/5 VUs, 11 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m41.0s), 1/5 VUs, 11 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m42.0s), 1/5 VUs, 11 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+running (0m43.0s), 1/5 VUs, 11 complete and 0 interrupted iterations
+steady_state_capacity ↓ [ 100% ] 5/5 VUs  30s
+
+
+  █ THRESHOLDS 
+
+    capacity_ordinary_api_duration
+    ✓ 'p(95)<1000' p(95)=21.37ms
+
+    checks
+    ✓ 'rate>0.99' rate=100.00%
+
+    http_req_failed{phase:steady_state}
+    ✓ 'rate<0.01' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 58      1.332573/s
+    checks_succeeded...: 100.00% 58 out of 58
+    checks_failed......: 0.00%   0 out of 58
+
+    ✓ login success
+    ✓ token exists
+    ✓ account_me success
+    ✓ courses success
+    ✓ bursaries success
+    ✓ recommendations_me success
+
+    CUSTOM
+    capacity_learner_duration........: avg=13.63ms  min=6.39ms  med=13.8ms   p(90)=18.85ms  p(95)=21.37ms  p(99)=25ms     max=25.39ms 
+    capacity_login_duration..........: avg=107.37ms min=85.66ms med=107.61ms p(90)=126.76ms p(95)=130.55ms p(99)=133.58ms max=134.34ms
+    capacity_login_failed............: 0.00% 0 out of 5
+    capacity_ordinary_api_duration...: avg=13.63ms  min=6.39ms  med=13.8ms   p(90)=18.85ms  p(95)=21.37ms  p(99)=25ms     max=25.39ms 
+
+    HTTP
+    http_req_duration................: avg=22.47ms  min=6.39ms  med=14.21ms  p(90)=25.22ms  p(95)=99.36ms  p(99)=124.49ms max=134.34ms
+      { expected_response:true }.....: avg=22.47ms  min=6.39ms  med=14.21ms  p(90)=25.22ms  p(95)=99.36ms  p(99)=124.49ms max=134.34ms
+    http_req_failed..................: 0.00% 0 out of 53
+      { phase:steady_state }.........: 0.00% 0 out of 48
+    http_reqs........................: 53    1.217696/s
+
+    EXECUTION
+    iteration_duration...............: avg=13.87s   min=8.34s   med=14.31s   p(90)=19.81s   p(95)=20.33s   p(99)=20.46s   max=20.49s  
+    iterations.......................: 12    0.275705/s
+    vus..............................: 1     min=0       max=5
+    vus_max..........................: 5     min=5       max=5
+
+    NETWORK
+    data_received....................: 99 kB 2.3 kB/s
+    data_sent........................: 24 kB 541 B/s
+
+
+
+
+running (0m43.5s), 0/5 VUs, 12 complete and 0 interrupted iterations
+steady_state_capacity ✓ [ 100% ] 0/5 VUs  30s

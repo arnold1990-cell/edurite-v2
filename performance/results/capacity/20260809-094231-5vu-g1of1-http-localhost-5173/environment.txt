@@ -1,0 +1,16 @@
+timestamp=20260809-094231
+baseUrl=http://localhost:5173
+targetVus=5
+userIdStart=1
+usersPerGenerator=100
+generatorIndex=1
+generatorCount=1
+warmupDuration=5s
+rampUpDuration=5s
+holdDuration=15s
+rampDownDuration=5s
+minThinkSeconds=1
+maxThinkSeconds=2
+machine=DESKTOP-2NG7KG8
+os=Microsoft Windows NT 10.0.26200.0
+k6ExitCode=0

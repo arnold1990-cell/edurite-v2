@@ -1,0 +1,173 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: performance/scripts/api-journey.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 5 max VUs, 1m0s max duration (incl. graceful stop):
+              * realistic_api_journey: 5 looping VUs for 30s (gracefulStop: 30s)
+
+
+running (0m01.0s), 5/5 VUs, 0 complete and 0 interrupted iterations
+realistic_api_journey   [   3% ] 5 VUs  01.0s/30s
+
+running (0m02.0s), 5/5 VUs, 1 complete and 0 interrupted iterations
+realistic_api_journey   [   7% ] 5 VUs  02.0s/30s
+
+running (0m03.0s), 5/5 VUs, 1 complete and 0 interrupted iterations
+realistic_api_journey   [  10% ] 5 VUs  03.0s/30s
+
+running (0m04.0s), 5/5 VUs, 4 complete and 0 interrupted iterations
+realistic_api_journey   [  13% ] 5 VUs  04.0s/30s
+
+running (0m05.0s), 5/5 VUs, 7 complete and 0 interrupted iterations
+realistic_api_journey   [  17% ] 5 VUs  05.0s/30s
+
+running (0m06.0s), 5/5 VUs, 7 complete and 0 interrupted iterations
+realistic_api_journey   [  20% ] 5 VUs  06.0s/30s
+
+running (0m07.0s), 5/5 VUs, 11 complete and 0 interrupted iterations
+realistic_api_journey   [  23% ] 5 VUs  07.0s/30s
+
+running (0m08.0s), 5/5 VUs, 12 complete and 0 interrupted iterations
+realistic_api_journey   [  27% ] 5 VUs  08.0s/30s
+
+running (0m09.0s), 5/5 VUs, 14 complete and 0 interrupted iterations
+realistic_api_journey   [  30% ] 5 VUs  09.0s/30s
+
+running (0m10.0s), 5/5 VUs, 15 complete and 0 interrupted iterations
+realistic_api_journey   [  33% ] 5 VUs  10.0s/30s
+
+running (0m11.0s), 5/5 VUs, 18 complete and 0 interrupted iterations
+realistic_api_journey   [  37% ] 5 VUs  11.0s/30s
+
+running (0m12.0s), 5/5 VUs, 20 complete and 0 interrupted iterations
+realistic_api_journey   [  40% ] 5 VUs  12.0s/30s
+
+running (0m13.0s), 5/5 VUs, 21 complete and 0 interrupted iterations
+realistic_api_journey   [  43% ] 5 VUs  13.0s/30s
+
+running (0m14.0s), 5/5 VUs, 23 complete and 0 interrupted iterations
+realistic_api_journey   [  47% ] 5 VUs  14.0s/30s
+
+running (0m15.0s), 5/5 VUs, 26 complete and 0 interrupted iterations
+realistic_api_journey   [  50% ] 5 VUs  15.0s/30s
+
+running (0m16.0s), 5/5 VUs, 28 complete and 0 interrupted iterations
+realistic_api_journey   [  53% ] 5 VUs  16.0s/30s
+
+running (0m17.0s), 5/5 VUs, 28 complete and 0 interrupted iterations
+realistic_api_journey   [  57% ] 5 VUs  17.0s/30s
+
+running (0m18.0s), 5/5 VUs, 31 complete and 0 interrupted iterations
+realistic_api_journey   [  60% ] 5 VUs  18.0s/30s
+
+running (0m19.0s), 5/5 VUs, 34 complete and 0 interrupted iterations
+realistic_api_journey   [  63% ] 5 VUs  19.0s/30s
+
+running (0m20.0s), 5/5 VUs, 34 complete and 0 interrupted iterations
+realistic_api_journey   [  67% ] 5 VUs  20.0s/30s
+
+running (0m21.0s), 5/5 VUs, 35 complete and 0 interrupted iterations
+realistic_api_journey   [  70% ] 5 VUs  21.0s/30s
+
+running (0m22.0s), 5/5 VUs, 39 complete and 0 interrupted iterations
+realistic_api_journey   [  73% ] 5 VUs  22.0s/30s
+
+running (0m23.0s), 5/5 VUs, 40 complete and 0 interrupted iterations
+realistic_api_journey   [  77% ] 5 VUs  23.0s/30s
+
+running (0m24.0s), 5/5 VUs, 43 complete and 0 interrupted iterations
+realistic_api_journey   [  80% ] 5 VUs  24.0s/30s
+
+running (0m25.0s), 5/5 VUs, 45 complete and 0 interrupted iterations
+realistic_api_journey   [  83% ] 5 VUs  25.0s/30s
+
+running (0m26.0s), 5/5 VUs, 47 complete and 0 interrupted iterations
+realistic_api_journey   [  87% ] 5 VUs  26.0s/30s
+
+running (0m27.0s), 5/5 VUs, 48 complete and 0 interrupted iterations
+realistic_api_journey   [  90% ] 5 VUs  27.0s/30s
+
+running (0m28.0s), 5/5 VUs, 48 complete and 0 interrupted iterations
+realistic_api_journey   [  93% ] 5 VUs  28.0s/30s
+
+running (0m29.0s), 5/5 VUs, 52 complete and 0 interrupted iterations
+realistic_api_journey   [  97% ] 5 VUs  29.0s/30s
+
+running (0m30.0s), 5/5 VUs, 52 complete and 0 interrupted iterations
+realistic_api_journey   [ 100% ] 5 VUs  30.0s/30s
+
+running (0m31.0s), 0/5 VUs, 57 complete and 0 interrupted iterations
+realistic_api_journey ✓ [ 100% ] 5 VUs  30s
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate>0.95' rate=100.00%
+
+      {check:readiness 200}
+      ✓ 'rate>0.99' rate=100.00%
+
+    http_req_duration
+    ✓ 'p(95)<5000' p(95)=24.77ms
+
+    http_req_failed
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 409     13.201764/s
+    checks_succeeded...: 100.00% 409 out of 409
+    checks_failed......: 0.00%   0 out of 409
+
+    ✓ login success
+    ✓ token exists
+    ✓ readiness 200
+    ✓ careers success
+    ✓ courses success
+    ✓ bursaries success
+    ✓ account/me success
+    ✓ notifications success
+    ✓ recommendations success
+
+    CUSTOM
+    authenticated_api_duration.....................: avg=13.04ms  min=7.29ms   med=11.67ms  p(90)=18.46ms  p(95)=23.48ms  p(99)=31.88ms  max=85.79ms 
+    endpoint_account_me_duration...................: avg=18.19ms  min=12.03ms  med=15.15ms  p(90)=25.22ms  p(95)=27.67ms  p(99)=60.3ms   max=85.79ms 
+    endpoint_bursaries_duration....................: avg=11.48ms  min=8.02ms   med=10ms     p(90)=13.8ms   p(95)=21.74ms  p(99)=26.86ms  max=28.11ms 
+    endpoint_careers_duration......................: avg=12.01ms  min=7.84ms   med=9.88ms   p(90)=14.64ms  p(95)=30.86ms  p(99)=30.86ms  max=30.86ms 
+    endpoint_courses_duration......................: avg=10.33ms  min=7.29ms   med=9.47ms   p(90)=14.44ms  p(95)=15.79ms  p(99)=18.88ms  max=21.01ms 
+    endpoint_login_duration........................: avg=330.73ms min=327.95ms med=330.13ms p(90)=333.71ms p(95)=334.03ms p(99)=334.28ms max=334.35ms
+    endpoint_notifications_unread_count_duration...: avg=11.74ms  min=8.09ms   med=10.59ms  p(90)=16.79ms  p(95)=19.8ms   p(99)=22.49ms  max=22.49ms 
+    endpoint_readiness_duration....................: avg=8.58ms   min=5.73ms   med=8.32ms   p(90)=10.73ms  p(95)=11.06ms  p(99)=11.51ms  max=11.62ms 
+    endpoint_recommendations_duration..............: avg=14.46ms  min=10.94ms  med=12.51ms  p(90)=18.42ms  p(95)=23.74ms  p(99)=32.87ms  max=33.22ms 
+
+    HTTP
+    http_req_duration..............................: avg=16.34ms  min=5.73ms   med=10.74ms  p(90)=18.36ms  p(95)=24.77ms  p(99)=320.68ms max=334.35ms
+      { expected_response:true }...................: avg=16.34ms  min=5.73ms   med=10.74ms  p(90)=18.36ms  p(95)=24.77ms  p(99)=320.68ms max=334.35ms
+    http_req_failed................................: 0.00%  0 out of 404
+    http_reqs......................................: 404    13.040373/s
+
+    EXECUTION
+    iteration_duration.............................: avg=2.67s    min=1.15s    med=2.64s    p(90)=3.83s    p(95)=3.94s    p(99)=4.18s    max=4.42s   
+    iterations.....................................: 57     1.839855/s
+    vus............................................: 5      min=5        max=5
+    vus_max........................................: 5      min=5        max=5
+
+    NETWORK
+    data_received..................................: 635 kB 21 kB/s
+    data_sent......................................: 164 kB 5.3 kB/s
+
+
+
+
+running (0m31.0s), 0/5 VUs, 57 complete and 0 interrupted iterations
+realistic_api_journey ✓ [ 100% ] 5 VUs  30s

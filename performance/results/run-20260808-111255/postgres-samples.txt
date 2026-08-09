@@ -1,0 +1,752 @@
+==== 2026-08-08T11:12:55.1538413+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      2 |      19 |           18
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle in transaction | Client          | ClientRead |    17
+ idle                | Client          | ClientRead |     3
+ active              |                 |            |     1
+(3 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6571 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:13:04.5732888+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      3 |      19 |            3
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle                | Client          | ClientRead |    18
+ idle in transaction | Client          | ClientRead |     2
+ active              |                 |            |     1
+(3 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6615 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:13:14.6075029+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            3
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6659 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:13:29.7325543+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      19 |            1
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6695 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:13:38.8232655+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle                | Client          | ClientRead |    18
+ active              |                 |            |     1
+ idle in transaction | Client          | ClientRead |     1
+ idle in transaction |                 |            |     1
+(4 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6733 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:13:53.3165291+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            1
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle                | Client          | ClientRead |    19
+ active              |                 |            |     1
+ idle in transaction | Client          | ClientRead |     1
+(3 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6769 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:14:02.8835371+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            1
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle                | Client          | ClientRead |    19
+ active              |                 |            |     1
+ idle in transaction | Client          | ClientRead |     1
+(3 rows)
+
+ pid  | state  | wait_event_type | wait_event |       age        |                                                                                                                      query                                                                                                                       
+------+--------+-----------------+------------+------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6806 | active |                 |            | 00:00:00         | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+ 6494 | active | Client          | ClientRead | -00:00:00.003852 | select cp1_0.id,cp1_0.address,cp1_0.company_name,cp1_0.contact_person_name,cp1_0.created_at,cp1_0.deleted_at,cp1_0.deleted_by,cp1_0.deletion_reason,cp1_0.description,cp1_0.email_verified,cp1_0.industry,cp1_0.mobile_number,cp1_0.mobile_verif
+(2 rows)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:14:11.2007653+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6843 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:14:19.1605193+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      2 |      18 |            1
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle                | Client          | ClientRead |    19
+ active              |                 |            |     1
+ idle in transaction | Client          | ClientRead |     1
+(3 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6870 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:14:27.5893276+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      2 |      19 |            0
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle                | Client          | ClientRead |    19
+ active              |                 |            |     1
+ idle in transaction | Client          | ClientRead |     1
+(3 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6909 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:14:36.1026954+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle                | Client          | ClientRead |    19
+ active              |                 |            |     1
+ idle in transaction | Client          | ClientRead |     1
+(3 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6945 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:14:44.9644188+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6979 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:14:53.7980232+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            1
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7015 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:15:02.7758348+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7051 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:15:11.1533329+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7080 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:15:19.2994004+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7116 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:15:27.4536316+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7152 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:15:35.7148106+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7187 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:15:43.3348450+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      19 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    18
+ active | Client          | ClientRead |     1
+ active |                 |            |     1
+ idle   |                 |            |     1
+(4 rows)
+
+ pid  | state  | wait_event_type | wait_event |       age       |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+-----------------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7225 | active |                 |            | 00:00:00        | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+ 6497 | active |                 |            | -00:00:00.01293 | select r1_0.user_id,r1_1.id,r1_1.created_at,r1_1.name,r1_1.updated_at from public.user_roles r1_0 join public.roles r1_1 on r1_1.id=r1_0.role_id where r1_0.user_id=$1
+(2 rows)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:15:52.4071264+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle                | Client          | ClientRead |    18
+ active              | Client          | ClientRead |     1
+ active              |                 |            |     1
+ idle in transaction | Client          | ClientRead |     1
+(4 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7259 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:16:00.9619878+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7287 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:16:08.8670011+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7324 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:16:17.2289323+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7360 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:16:25.5382083+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      2 |      19 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7396 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:16:33.3112807+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |       age        |                                                                                                                      query                                                                                                                       
+------+--------+-----------------+------------+------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7433 | active |                 |            | 00:00:00         | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+ 6494 | active | Client          | ClientRead | -00:00:00.009324 | select cp1_0.id,cp1_0.address,cp1_0.company_name,cp1_0.contact_person_name,cp1_0.created_at,cp1_0.deleted_at,cp1_0.deleted_by,cp1_0.deletion_reason,cp1_0.description,cp1_0.email_verified,cp1_0.industry,cp1_0.mobile_number,cp1_0.mobile_verif
+(2 rows)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:16:41.6792740+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      18 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7461 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:16:49.8032901+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      19 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    19
+ active |                 |            |     1
+ idle   |                 |            |     1
+(3 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7497 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:16:57.9472435+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7534 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:17:05.8284718+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7570 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:17:14.1294494+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7605 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:17:21.9316791+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      19 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7633 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:17:30.6261223+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7669 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:17:39.5383837+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      2 |      19 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7704 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:17:48.0969643+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7743 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+
+==== 2026-08-08T11:17:56.7303434+02:00 pg activity ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    21 |      1 |      20 |            0
+(1 row)
+
+ state  | wait_event_type | wait_event | count 
+--------+-----------------+------------+-------
+ idle   | Client          | ClientRead |    20
+ active |                 |            |     1
+(2 rows)
+
+ pid  | state  | wait_event_type | wait_event |   age    |                                                                                                               query                                                                                                               
+------+--------+-----------------+------------+----------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 7779 | active |                 |            | 00:00:00 | select pid,state,wait_event_type,wait_event,now()-query_start as age,left(regexp_replace(query,'\s+',' ','g'),240) as query from pg_stat_activity where datname=current_database() and state='active' order by age desc limit 10;
+(1 row)
+
+ blocked_pid | blocking_pid | blocked_age | blocked_query 
+-------------+--------------+-------------+---------------
+(0 rows)
+

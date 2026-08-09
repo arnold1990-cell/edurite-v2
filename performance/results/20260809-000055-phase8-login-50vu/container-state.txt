@@ -1,0 +1,11 @@
+edurite-ai-career-guidance-clean-backend-2 Up 25 minutes (healthy) 8080/tcp
+edurite-ai-career-guidance-clean-backend-1 Up 25 minutes (healthy) 8080/tcp
+edurite-frontend Up About an hour (healthy) 0.0.0.0:5173->80/tcp, [::]:5173->80/tcp
+edurite-postgres Up About an hour (healthy) 0.0.0.0:5432->5432/tcp, [::]:5432->5432/tcp
+edurite-redis Up About an hour (healthy) 0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+frontend restart=0 oom=false
+backend1 restart=0 oom=false
+backend2 restart=0 oom=false
+frontend restart=0 oom=false
+backend1 restart=0 oom=false
+backend2 restart=0 oom=false

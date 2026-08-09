@@ -1,0 +1,9 @@
+==== 2026-08-08T11:05:16.4334028+02:00 docker stats ====
+edurite-backend cpu=83.75% mem=987.8MiB / 7.387GiB net=77.8MB / 129MB block=27MB / 717kB pids=293
+edurite-postgres cpu=687.81% mem=193.6MiB / 7.387GiB net=135MB / 86MB block=75.1MB / 1.2GB pids=26
+==== 2026-08-08T11:05:30.9001024+02:00 docker stats ====
+edurite-backend cpu=78.83% mem=997.8MiB / 7.387GiB net=79.5MB / 131MB block=27MB / 729kB pids=293
+edurite-postgres cpu=704.58% mem=197.4MiB / 7.387GiB net=136MB / 87.2MB block=75.1MB / 1.2GB pids=26
+==== 2026-08-08T11:05:40.5799850+02:00 docker stats ====
+edurite-backend cpu=97.56% mem=993.3MiB / 7.387GiB net=81.2MB / 133MB block=27MB / 729kB pids=293
+edurite-postgres cpu=692.07% mem=198.6MiB / 7.387GiB net=137MB / 88.4MB block=75.1MB / 1.2GB pids=26

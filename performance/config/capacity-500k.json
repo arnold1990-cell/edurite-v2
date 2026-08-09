@@ -1,0 +1,57 @@
+{
+  "description": "EduRite distributed capacity ladder. 500000 means concurrent VUs, not total requests.",
+  "safety": {
+    "requiredEnvironment": "dedicated staging/performance only",
+    "forbiddenTargets": ["local developer laptop", "public production", "paid external AI providers"],
+    "largeRunGuardEnv": "ALLOW_DISTRIBUTED_CAPACITY_TEST=true",
+    "localMaxVus": 500
+  },
+  "userModel": {
+    "roleDistribution": {
+      "learner": 0.70,
+      "teacher": 0.15,
+      "school_admin": 0.08,
+      "district_curriculum": 0.04,
+      "career_guidance_heavy": 0.02,
+      "admin_other": 0.01
+    },
+    "averageThinkTimeSeconds": 15,
+    "estimatedRequestsPerJourney": 6,
+    "estimatedRequestsPerUserPerMinute": 4,
+    "expectedRequestRateAt500000Vus": 33333
+  },
+  "thresholds": {
+    "ordinaryApiHttpFailureRate": "< 1%",
+    "ordinaryApiP95": "< 1000ms provisional",
+    "ordinaryApiP99": "< 2000ms provisional",
+    "loginHttpFailureRate": "< 1% provisional",
+    "loginLatency": "reported separately; do not use main steady-state threshold"
+  },
+  "capacityLadder": [
+    500,
+    1000,
+    2500,
+    5000,
+    10000,
+    25000,
+    50000,
+    100000,
+    200000,
+    300000,
+    400000,
+    500000
+  ],
+  "recommendedMajorMilestoneHoldDurations": {
+    "10000": "20m",
+    "50000": "30m",
+    "100000": "45m",
+    "200000": "60m",
+    "300000": "60m",
+    "400000": "60m",
+    "500000": "60m"
+  },
+  "generatorPartitioning": {
+    "requiredEnv": ["GENERATOR_INDEX", "GENERATOR_COUNT", "USER_ID_START", "USERS_PER_GENERATOR"],
+    "example": "generator 1 uses USER_ID_START=1 USERS_PER_GENERATOR=10000; generator 2 uses USER_ID_START=10001 USERS_PER_GENERATOR=10000"
+  }
+}

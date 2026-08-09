@@ -1,0 +1,98 @@
+==== 2026-08-08T11:12:55.1538413+02:00 postgres-query-analysis.sql ====
+Pager usage is off.
+         captured_at          
+------------------------------
+ 2026-08-08 09:12:59.26073+00
+(1 row)
+
+ total_connections | active_queries | waiting_backends | idle_in_transaction 
+-------------------+----------------+------------------+---------------------
+                26 |              2 |               24 |                   4
+(1 row)
+
+        state        | wait_event_type |     wait_event      | backends 
+---------------------+-----------------+---------------------+----------
+ idle                | Client          | ClientRead          |       15
+ idle in transaction | Client          | ClientRead          |        4
+ active              |                 |                     |        2
+                     | Activity        | BgWriterHibernate   |        1
+                     | Activity        | AutoVacuumMain      |        1
+                     | Activity        | CheckpointerMain    |        1
+                     | Activity        | WalWriterMain       |        1
+                     | Activity        | LogicalLauncherMain |        1
+(8 rows)
+
+ pid  | state  | wait_event_type | wait_event |   query_age    |                                                                                                                                                                 query                                                                                                                                                                 
+------+--------+-----------------+------------+----------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 6539 | active |                 |            | 00:00:00.00719 | select u1_0.id,u1_0.created_at,u1_0.deleted_at,u1_0.deletion_reason,u1_0.email,u1_0.email_verified,u1_0.first_name,u1_0.last_login_at,u1_0.last_name,u1_0.must_change_password,u1_0.password_hash,u1_0.phone_number,u1_0.plan_type,u1_0.status,u1_0.updated_at,u1_0.username from public.users u1_0 where upper(u1_0.email)=upper($1)
+ 6586 | active |                 |            | 00:00:00       | select pid, state, wait_event_type, wait_event, now() - query_start as query_age, left(regexp_replace(query, '\s+', ' ', 'g'), 500) as query from pg_stat_activity where datname = current_database() and state = 'active' order by query_age desc limit 20;
+(2 rows)
+
+ datname | numbackends | xact_commit | xact_rollback | blks_read | blks_hit | cache_hit_pct | temp_files | temp_bytes | deadlocks 
+---------+-------------+-------------+---------------+-----------+----------+---------------+------------+------------+-----------
+ edurite |          21 |      139919 |         29421 |       828 | 20995984 |        100.00 |          2 |    2211840 |         0
+(1 row)
+
+ schemaname |        relname        | seq_scan | seq_tup_read | idx_scan | idx_tup_fetch | n_live_tup | n_dead_tup 
+------------+-----------------------+----------+--------------+----------+---------------+------------+------------
+ public     | users                 |    40578 |    533516006 |   202173 |       3899620 |      50007 |        107
+ public     | students              |      225 |      3782476 |     3602 |          3602 |      50001 |          0
+ public     | notifications         |      849 |       364221 |    49154 |         49154 |      50206 |          0
+ public     | roles                 |    62298 |        63397 |       50 |            50 |          7 |          0
+ public     | companies             |    12331 |        12331 |        0 |             0 |          0 |          0
+ public     | user_roles            |       64 |         6248 |    12364 |           102 |      50007 |          0
+ public     | flyway_schema_history |      109 |         5833 |        0 |             0 |         32 |          0
+ public     | subscriptions         |     2900 |         2896 |        0 |             0 |          1 |          0
+ public     | careers               |     1223 |         2446 |        0 |             0 |          0 |          0
+ public     | bursaries             |     1165 |         1165 |        0 |             0 |          0 |          0
+ public     | districts             |       11 |          217 |        1 |             1 |         53 |         54
+ public     | school_subjects       |       16 |           78 |       32 |            32 |          6 |          6
+ public     | subject_catalogue     |        5 |           65 |       31 |           265 |         65 |          0
+ public     | institutions          |        2 |           52 |        0 |             0 |         50 |          0
+ public     | school_tasks          |        9 |           50 |       13 |             8 |          8 |          0
+ public     | schools               |       21 |           21 |       46 |            46 |          1 |          1
+ public     | provinces             |        6 |           19 |       62 |            53 |          9 |          0
+ public     | learning_resources    |        2 |            6 |        0 |             0 |          0 |          2
+ public     | teacher_assignments   |        4 |            6 |        8 |            11 |          6 |          6
+ public     | school_user_profiles  |        5 |            3 |        1 |             3 |          4 |          3
+ public     | school_classes        |        3 |            1 |       81 |            80 |          1 |          0
+ public     | student_terms         |        0 |            0 |        0 |             0 |          0 |          0
+ public     | school_students       |        0 |            0 |        0 |             0 |          0 |          0
+ public     | school_assessments    |        1 |            0 |        0 |             0 |          0 |          0
+ public     | task_submissions      |        3 |            0 |       10 |             7 |          3 |          0
+(25 rows)
+
+ schemaname |           relname            |               indexrelname               | idx_scan | idx_tup_read | idx_tup_fetch 
+------------+------------------------------+------------------------------------------+----------+--------------+---------------
+ public     | users                        | users_pkey                               |   201838 |      3899437 |       3899288
+ public     | notifications                | notifications_pkey                       |    49154 |        49154 |         49154
+ public     | user_roles                   | user_roles_pkey                          |    12160 |      2510387 |             0
+ public     | school_registration_requests | school_registration_requests_user_id_key |     3548 |            0 |             0
+ public     | students                     | uk_students_user_id                      |     3503 |         3503 |          3503
+ public     | user_notifications           | idx_user_notifications_user_id           |     1136 |          441 |           441
+ public     | psychometric_submissions     | idx_psychometric_submissions_student_id  |     1122 |            0 |             0
+ public     | student_points_ledger        | idx_student_points_ledger_student_id     |      629 |          529 |           529
+ public     | users                        | idx_users_upper_email                    |      332 |          332 |             0
+ public     | user_roles                   | idx_user_roles_user_id                   |      204 |          204 |           102
+ public     | reward_rules                 | reward_rules_code_key                    |      200 |          200 |           200
+ public     | student_points_ledger        | idx_student_points_ledger_term_code      |      100 |         4749 |          4695
+ public     | students                     | students_pkey                            |       99 |           99 |            99
+ public     | provinces                    | provinces_pkey                           |       53 |           53 |            53
+ public     | roles                        | roles_pkey                               |       50 |           50 |            50
+ public     | school_classes               | uk_school_class                          |       49 |           48 |            48
+ public     | schools                      | schools_pkey                             |       46 |           46 |            46
+ public     | school_subjects              | school_subjects_pkey                     |       32 |           32 |            32
+ public     | school_classes               | school_classes_pkey                      |       32 |           32 |            32
+ public     | subject_catalogue            | subject_catalogue_pkey                   |       25 |           25 |            25
+ public     | learner_enrollments          | idx_learner_enrollments_learner          |       16 |           36 |            22
+ public     | school_tasks                 | idx_tasks_scope                          |       10 |            5 |             5
+ public     | provinces                    | provinces_name_key                       |        9 |            0 |             0
+ public     | teacher_assignments          | idx_teacher_assignments_teacher          |        8 |           18 |            11
+ public     | task_submissions             | idx_submissions_task                     |        8 |            5 |             0
+(25 rows)
+
+                           pg_stat_statements_status                           
+-------------------------------------------------------------------------------
+ pg_stat_statements is not installed; skipping normalized query timing report.
+(1 row)
+

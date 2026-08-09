@@ -1,0 +1,5 @@
+edurite-ai-career-guidance-clean-backend-2 cpu=0.31% mem=1.033GiB / 7.387GiB
+edurite-ai-career-guidance-clean-backend-1 cpu=0.26% mem=1.111GiB / 7.387GiB
+edurite-frontend cpu=0.00% mem=8.699MiB / 7.387GiB
+edurite-postgres cpu=0.08% mem=244.1MiB / 7.387GiB
+edurite-redis cpu=0.32% mem=3.906MiB / 7.387GiB

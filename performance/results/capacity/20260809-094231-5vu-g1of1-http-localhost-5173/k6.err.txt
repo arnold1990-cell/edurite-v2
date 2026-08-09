@@ -1,0 +1,1 @@
+time="2026-08-09T09:42:31+02:00" level=warning msg="SSLKEYLOGFILE was specified, logging TLS connection keys to '\\\\.\\aswMonFltProxy\\3f3f3153566600af'..." test_path="file:///C:/Users/user/edurite-ai-career-guidance-clean/performance/scripts/capacity-500k-steady-state.js"

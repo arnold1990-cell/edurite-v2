@@ -1,0 +1,21 @@
+==== 2026-08-09T00:05:58.2519440+02:00 postgres ====
+ total | active | waiting | idle_in_xact 
+-------+--------+---------+--------------
+    41 |      1 |       0 |           40
+(1 row)
+
+        state        | wait_event_type | wait_event | count 
+---------------------+-----------------+------------+-------
+ idle in transaction | Client          | ClientRead |    36
+ active              | LWLock          | WALWrite   |     2
+ active              | IO              | WALSync    |     1
+ active              |                 |            |     1
+ idle                | Client          | ClientRead |     1
+(5 rows)
+
+       age       | state  | wait_event_type | wait_event |                                                                                        query                                                                                         
+-----------------+--------+-----------------+------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 00:00:00.016155 | active | IO              | WALSync    | COMMIT
+ 00:00:00        | active |                 |            | select now()-query_start as age, state, wait_event_type, wait_event, left(regexp_replace(query,'\s+',' ','g'),180) as query from pg_stat_activity where datname=current_database() a
+(2 rows)
+

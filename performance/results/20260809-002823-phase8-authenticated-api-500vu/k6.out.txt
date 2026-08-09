@@ -1,0 +1,350 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: performance/scripts/authenticated-api-preauth.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 500 max VUs, 1m30s max duration (incl. graceful stop):
+              * authenticated_api_only: 500 looping VUs for 1m0s (gracefulStop: 30s)
+
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+Run                      [ 100% ] setup()
+authenticated_api_only   [   0% ]
+
+running (0m57.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [   1% ] 500 VUs  0m00.7s/1m0s
+
+running (0m58.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [   3% ] 500 VUs  0m01.7s/1m0s
+
+running (0m59.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [   4% ] 500 VUs  0m02.7s/1m0s
+
+running (1m00.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [   6% ] 500 VUs  0m03.7s/1m0s
+
+running (1m01.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [   8% ] 500 VUs  0m04.7s/1m0s
+
+running (1m02.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [   9% ] 500 VUs  0m05.7s/1m0s
+
+running (1m03.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [  11% ] 500 VUs  0m06.7s/1m0s
+
+running (1m04.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [  13% ] 500 VUs  0m07.7s/1m0s
+
+running (1m05.9s), 500/500 VUs, 0 complete and 0 interrupted iterations
+authenticated_api_only   [  14% ] 500 VUs  0m08.7s/1m0s
+
+running (1m06.9s), 500/500 VUs, 1 complete and 0 interrupted iterations
+authenticated_api_only   [  16% ] 500 VUs  0m09.7s/1m0s
+
+running (1m07.9s), 500/500 VUs, 3 complete and 0 interrupted iterations
+authenticated_api_only   [  18% ] 500 VUs  0m10.7s/1m0s
+
+running (1m08.9s), 500/500 VUs, 5 complete and 0 interrupted iterations
+authenticated_api_only   [  19% ] 500 VUs  0m11.7s/1m0s
+
+running (1m09.9s), 500/500 VUs, 11 complete and 0 interrupted iterations
+authenticated_api_only   [  21% ] 500 VUs  0m12.7s/1m0s
+
+running (1m10.9s), 500/500 VUs, 37 complete and 0 interrupted iterations
+authenticated_api_only   [  23% ] 500 VUs  0m13.7s/1m0s
+
+running (1m11.9s), 500/500 VUs, 83 complete and 0 interrupted iterations
+authenticated_api_only   [  24% ] 500 VUs  0m14.7s/1m0s
+
+running (1m12.9s), 500/500 VUs, 145 complete and 0 interrupted iterations
+authenticated_api_only   [  26% ] 500 VUs  0m15.7s/1m0s
+
+running (1m13.9s), 500/500 VUs, 213 complete and 0 interrupted iterations
+authenticated_api_only   [  28% ] 500 VUs  0m16.7s/1m0s
+
+running (1m14.9s), 500/500 VUs, 271 complete and 0 interrupted iterations
+authenticated_api_only   [  29% ] 500 VUs  0m17.7s/1m0s
+
+running (1m15.9s), 500/500 VUs, 354 complete and 0 interrupted iterations
+authenticated_api_only   [  31% ] 500 VUs  0m18.7s/1m0s
+
+running (1m16.9s), 500/500 VUs, 406 complete and 0 interrupted iterations
+authenticated_api_only   [  33% ] 500 VUs  0m19.7s/1m0s
+
+running (1m17.9s), 500/500 VUs, 439 complete and 0 interrupted iterations
+authenticated_api_only   [  34% ] 500 VUs  0m20.7s/1m0s
+
+running (1m18.9s), 500/500 VUs, 469 complete and 0 interrupted iterations
+authenticated_api_only   [  36% ] 500 VUs  0m21.7s/1m0s
+
+running (1m20.0s), 500/500 VUs, 477 complete and 0 interrupted iterations
+authenticated_api_only   [  38% ] 500 VUs  0m22.7s/1m0s
+
+running (1m21.0s), 500/500 VUs, 491 complete and 0 interrupted iterations
+authenticated_api_only   [  40% ] 500 VUs  0m23.8s/1m0s
+
+running (1m21.9s), 500/500 VUs, 507 complete and 0 interrupted iterations
+authenticated_api_only   [  41% ] 500 VUs  0m24.7s/1m0s
+
+running (1m22.9s), 500/500 VUs, 518 complete and 0 interrupted iterations
+authenticated_api_only   [  43% ] 500 VUs  0m25.7s/1m0s
+
+running (1m23.9s), 500/500 VUs, 528 complete and 0 interrupted iterations
+authenticated_api_only   [  44% ] 500 VUs  0m26.7s/1m0s
+
+running (1m24.9s), 500/500 VUs, 544 complete and 0 interrupted iterations
+authenticated_api_only   [  46% ] 500 VUs  0m27.7s/1m0s
+
+running (1m25.9s), 500/500 VUs, 564 complete and 0 interrupted iterations
+authenticated_api_only   [  48% ] 500 VUs  0m28.7s/1m0s
+
+running (1m26.9s), 500/500 VUs, 584 complete and 0 interrupted iterations
+authenticated_api_only   [  49% ] 500 VUs  0m29.7s/1m0s
+
+running (1m27.9s), 500/500 VUs, 604 complete and 0 interrupted iterations
+authenticated_api_only   [  51% ] 500 VUs  0m30.7s/1m0s
+
+running (1m28.9s), 500/500 VUs, 632 complete and 0 interrupted iterations
+authenticated_api_only   [  53% ] 500 VUs  0m31.7s/1m0s
+
+running (1m30.0s), 500/500 VUs, 664 complete and 0 interrupted iterations
+authenticated_api_only   [  55% ] 500 VUs  0m32.7s/1m0s
+
+running (1m30.9s), 000/500 VUs, 666 complete and 500 interrupted iterations
+authenticated_api_only ✗ [  55% ] 500 VUs  0m32.8s/1m0s
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate>0.95' rate=100.00%
+
+      {check:readiness 200}
+      ✓ 'rate>0.99' rate=100.00%
+
+    http_req_duration
+    ✗ 'p(95)<5000' p(95)=5.02s
+
+    http_req_failed
+    ✓ 'rate<0.05' rate=0.00%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 6804    74.880249/s
+    checks_succeeded...: 100.00% 6804 out of 6804
+    checks_failed......: 0.00%   0 out of 6804
+
+    ✓ readiness 200
+    ✓ careers success
+    ✓ courses success
+    ✓ bursaries success
+    ✓ account/me success
+    ✓ notifications success
+    ✓ recommendations success
+
+    CUSTOM
+    authenticated_api_duration.....................: avg=2.25s    min=33.91ms med=1.92s    p(90)=4.42s  p(95)=5.42s  p(99)=7.11s max=10.35s
+    endpoint_account_me_duration...................: avg=2.45s    min=66.82ms med=2.14s    p(90)=4.71s  p(95)=5.52s  p(99)=7.14s max=8.49s 
+    endpoint_bursaries_duration....................: avg=1.94s    min=33.91ms med=1.56s    p(90)=3.9s   p(95)=4.74s  p(99)=6.68s max=8.36s 
+    endpoint_careers_duration......................: avg=2.66s    min=81.69ms med=2.37s    p(90)=5.38s  p(95)=6.46s  p(99)=7.07s max=9.61s 
+    endpoint_courses_duration......................: avg=1.79s    min=34.81ms med=1.53s    p(90)=3.65s  p(95)=4.37s  p(99)=6.16s max=8.31s 
+    endpoint_notifications_unread_count_duration...: avg=2.1s     min=38.25ms med=1.82s    p(90)=4.03s  p(95)=4.79s  p(99)=6.55s max=8.67s 
+    endpoint_readiness_duration....................: avg=600.98ms min=16.02ms med=350.13ms p(90)=1.45s  p(95)=1.59s  p(99)=2.26s max=3.25s 
+    endpoint_recommendations_duration..............: avg=2.64s    min=61.21ms med=2.35s    p(90)=4.83s  p(95)=6.27s  p(99)=7.86s max=10.35s
+
+    HTTP
+    http_req_duration..............................: avg=1.85s    min=16.02ms med=1.47s    p(90)=4.08s  p(95)=5.02s  p(99)=6.95s max=10.35s
+      { expected_response:true }...................: avg=1.85s    min=16.02ms med=1.47s    p(90)=4.08s  p(95)=5.02s  p(99)=6.95s max=10.35s
+    http_req_failed................................: 0.00%  0 out of 7304
+    http_reqs......................................: 7304   80.382913/s
+
+    EXECUTION
+    iteration_duration.............................: avg=16.21s   min=6.34s   med=16.06s   p(90)=19.99s p(95)=21.51s p(99)=26.5s max=30.74s
+    iterations.....................................: 666    7.329548/s
+    vus............................................: 500    min=0         max=500
+    vus_max........................................: 500    min=500       max=500
+
+    NETWORK
+    data_received..................................: 11 MB  124 kB/s
+    data_sent......................................: 3.1 MB 34 kB/s
+
+
+
+
+running (1m31.1s), 000/500 VUs, 666 complete and 500 interrupted iterations
+authenticated_api_only ✗ [  55% ] 500 VUs  0m32.8s/1m0s

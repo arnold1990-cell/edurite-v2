@@ -1,0 +1,35 @@
+==== 2026-08-09T00:00:55.4453766+02:00 host ====
+
+
+LoadPercentage : 100
+
+
+
+
+
+
+FreePhysicalMemory     : 1497336
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Established=50
+Listen=2
+==== 2026-08-09T00:01:23.1875119+02:00 host ====
+
+
+LoadPercentage : 12
+
+
+
+
+
+
+FreePhysicalMemory     : 2331652
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Listen=2

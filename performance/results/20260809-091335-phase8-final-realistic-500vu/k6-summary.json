@@ -1,0 +1,290 @@
+{
+    "root_group": {
+        "name": "",
+        "path": "",
+        "id": "d41d8cd98f00b204e9800998ecf8427e",
+        "groups": {},
+        "checks": {
+                "login success": {
+                    "name": "login success",
+                    "path": "::login success",
+                    "id": "5e9145e3435397cfb51ed9c3151ba755",
+                    "passes": 205,
+                    "fails": 4136
+                },
+                "token exists": {
+                    "name": "token exists",
+                    "path": "::token exists",
+                    "id": "501d3ab8642eebcf0d59abc7d9aca2c1",
+                    "passes": 205,
+                    "fails": 0
+                },
+                "readiness 200": {
+                    "id": "ea762e71fbf751783e80206b8bf64a37",
+                    "passes": 158,
+                    "fails": 0,
+                    "name": "readiness 200",
+                    "path": "::readiness 200"
+                },
+                "careers success": {
+                    "fails": 0,
+                    "name": "careers success",
+                    "path": "::careers success",
+                    "id": "087befecf81043364ba93d35149e97c6",
+                    "passes": 98
+                },
+                "courses success": {
+                    "id": "a1b17b5ccc0e51c5b0ced9be05d2533f",
+                    "passes": 61,
+                    "fails": 0,
+                    "name": "courses success",
+                    "path": "::courses success"
+                },
+                "bursaries success": {
+                    "path": "::bursaries success",
+                    "id": "e3b3493541f73966881ebda287769057",
+                    "passes": 34,
+                    "fails": 0,
+                    "name": "bursaries success"
+                },
+                "account/me success": {
+                    "fails": 0,
+                    "name": "account/me success",
+                    "path": "::account/me success",
+                    "id": "94b97f2ea9cbfc3a6ae3165e4d74a4c3",
+                    "passes": 19
+                },
+                "notifications success": {
+                    "name": "notifications success",
+                    "path": "::notifications success",
+                    "id": "a75c0f1f24f1c6edc773cf036b363f62",
+                    "passes": 11,
+                    "fails": 0
+                },
+                "recommendations success": {
+                    "name": "recommendations success",
+                    "path": "::recommendations success",
+                    "id": "ed19d1d77582f6e6648a063bb2b1b420",
+                    "passes": 6,
+                    "fails": 0
+                }
+            }
+    },
+    "metrics": {
+        "http_req_sending": {
+            "p(95)": 2.9388,
+            "p(99)": 22.503,
+            "max": 386.0181,
+            "avg": 1.1738539763113363,
+            "min": 0,
+            "med": 0,
+            "p(90)": 1.0131299999999999
+        },
+        "http_req_duration{expected_response:true}": {
+            "p(99)": 19141.766440000003,
+            "max": 19713.0265,
+            "avg": 5292.479129560809,
+            "min": 9.7729,
+            "med": 472.20889999999997,
+            "p(90)": 16709.38324,
+            "p(95)": 17935.837039999995
+        },
+        "endpoint_readiness_duration": {
+            "p(95)": 7421.878300000003,
+            "p(99)": 9053.178277000003,
+            "max": 11600.4959,
+            "avg": 1346.8380272151896,
+            "min": 9.7729,
+            "med": 41.8198,
+            "p(90)": 5753.111820000001
+        },
+        "vus": {
+            "value": 500,
+            "min": 500,
+            "max": 500
+        },
+        "http_req_tls_handshaking": {
+            "p(95)": 0,
+            "p(99)": 0,
+            "max": 0,
+            "avg": 0,
+            "min": 0,
+            "med": 0,
+            "p(90)": 0
+        },
+        "http_req_receiving": {
+            "p(95)": 5.2261349999999975,
+            "p(99)": 62.0732429999996,
+            "max": 1139.0343,
+            "avg": 2.6244740059221665,
+            "min": 0,
+            "med": 0,
+            "p(90)": 2.7187900000000016
+        },
+        "http_req_duration": {
+            "p(95)": 4274.51638999999,
+            "p(99)": 17199.629923999997,
+            "max": 19713.0265,
+            "avg": 866.3605325507616,
+            "min": 0,
+            "med": 128.9715,
+            "p(90)": 1065.87823,
+            "thresholds": {
+                "p(95)<5000": false
+            }
+        },
+        "data_received": {
+            "count": 4141336,
+            "rate": 128153.53539537045
+        },
+        "iterations": {
+            "count": 4140,
+            "rate": 128.11219290992898
+        },
+        "endpoint_courses_duration": {
+            "med": 43.0236,
+            "p(90)": 8644.4885,
+            "p(95)": 9245.349,
+            "p(99)": 12466.157519999995,
+            "max": 14196.5706,
+            "avg": 1372.5851950819674,
+            "min": 15.8816
+        },
+        "endpoint_recommendations_duration": {
+            "min": 44.5812,
+            "med": 80.9359,
+            "p(90)": 119.03110000000001,
+            "p(95)": 124.01555,
+            "p(99)": 128.00311,
+            "max": 129,
+            "avg": 85.85388333333333
+        },
+        "iteration_duration": {
+            "p(95)": 2633.6233199999992,
+            "p(99)": 3014.561179,
+            "max": 19695.5499,
+            "avg": 1327.8217613768109,
+            "min": 1011.4422,
+            "med": 1161.2066,
+            "p(90)": 1767.0734099999997
+        },
+        "checks{check:readiness 200}": {
+            "passes": 158,
+            "fails": 0,
+            "thresholds": {
+                "rate>0.99": false
+            },
+            "value": 1
+        },
+        "http_req_waiting": {
+            "avg": 862.5622045685278,
+            "min": 0,
+            "med": 127.0048,
+            "p(90)": 1063.3139300000005,
+            "p(95)": 4183.480879999994,
+            "p(99)": 17176.838911999985,
+            "max": 19650.7078
+        },
+        "http_req_connecting": {
+            "avg": 19.499043887478848,
+            "min": 0,
+            "med": 0,
+            "p(90)": 1.9898700000000025,
+            "p(95)": 55.2181,
+            "p(99)": 702.8095199999991,
+            "max": 819.4984
+        },
+        "vus_max": {
+            "value": 500,
+            "min": 500,
+            "max": 500
+        },
+        "endpoint_account_me_duration": {
+            "avg": 959.8504736842103,
+            "min": 31.3219,
+            "med": 83.606,
+            "p(90)": 1512.684759999997,
+            "p(95)": 5570.978019999987,
+            "p(99)": 9895.492564,
+            "max": 10976.6212
+        },
+        "http_req_blocked": {
+            "med": 0,
+            "p(90)": 2.00897,
+            "p(95)": 90.1802149999997,
+            "p(99)": 705.0408219999997,
+            "max": 1035.1871,
+            "avg": 21.36115010575296,
+            "min": 0
+        },
+        "data_sent": {
+            "count": 1199394,
+            "rate": 37115.21630507521
+        },
+        "checks": {
+            "fails": 4136,
+            "passes": 797,
+            "thresholds": {
+                "rate>0.95": true
+            },
+            "value": 0.16156497060612204
+        },
+        "authenticated_api_duration": {
+            "p(99)": 13448.577352,
+            "max": 14196.5706,
+            "avg": 1353.7809986899556,
+            "min": 12.826,
+            "med": 50.617,
+            "p(90)": 6288.589920000004,
+            "p(95)": 9635.59068
+        },
+        "endpoint_notifications_unread_count_duration": {
+            "p(99)": 9628.263780000001,
+            "max": 10278.1793,
+            "avg": 1394.7350727272726,
+            "min": 15.4517,
+            "med": 42.2367,
+            "p(90)": 3779.0241,
+            "p(95)": 7028.601699999999
+        },
+        "endpoint_login_duration": {
+            "avg": 823.1597191660907,
+            "min": 0,
+            "med": 134.0874,
+            "p(90)": 763.2498,
+            "p(95)": 1997.2082,
+            "p(99)": 17411.47358000002,
+            "max": 19713.0265
+        },
+        "endpoint_bursaries_duration": {
+            "max": 13845.4232,
+            "avg": 1447.0178705882354,
+            "min": 19.5973,
+            "med": 52.59765,
+            "p(90)": 3101.8210299999982,
+            "p(95)": 13339.49151,
+            "p(99)": 13741.706048
+        },
+        "http_req_failed": {
+            "passes": 4136,
+            "fails": 592,
+            "thresholds": {
+                "rate<0.05": true
+            },
+            "value": 0.8747884940778342
+        },
+        "endpoint_careers_duration": {
+            "min": 12.826,
+            "med": 47.39245,
+            "p(90)": 6547.0770299999995,
+            "p(95)": 9457.931159999998,
+            "p(99)": 10809.145764,
+            "max": 12028.1436,
+            "avg": 1459.1344499999998
+        },
+        "http_reqs": {
+            "count": 4728,
+            "rate": 146.30783770003484
+        }
+    }
+}

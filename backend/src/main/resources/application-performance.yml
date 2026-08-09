@@ -1,0 +1,21 @@
+spring:
+  datasource:
+    hikari:
+      leak-detection-threshold: ${DB_LEAK_DETECTION_THRESHOLD:15000}
+
+edurite:
+  instance:
+    response-header:
+      enabled: true
+  rate-limit:
+    enabled: true
+    fail-open: ${EDURITE_RATE_LIMIT_FAIL_OPEN:true}
+    rules:
+      login:
+        path-prefixes: /api/v1/auth/login,/api/auth/login
+        limit: ${RATE_LIMIT_LOGIN_LIMIT:100000}
+        window-seconds: ${RATE_LIMIT_LOGIN_WINDOW_SECONDS:60}
+      normal:
+        path-prefixes: /api/v1,/api
+        limit: ${RATE_LIMIT_NORMAL_LIMIT:1000000}
+        window-seconds: ${RATE_LIMIT_NORMAL_WINDOW_SECONDS:60}

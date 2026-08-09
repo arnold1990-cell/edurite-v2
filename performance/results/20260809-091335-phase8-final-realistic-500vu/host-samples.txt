@@ -1,0 +1,17 @@
+==== 2026-08-09T09:13:37.5087761+02:00 host ====
+
+
+LoadPercentage : 26
+
+
+
+
+
+
+FreePhysicalMemory     : 541376
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Listen=2

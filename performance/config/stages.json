@@ -1,0 +1,12 @@
+{
+  "stage1": { "vus": 100, "duration": "5m" },
+  "stage2": { "vus": 500, "duration": "10m" },
+  "stage3": { "vus": 1000, "duration": "10m" },
+  "stage4": { "vus": 5000, "duration": "15m" },
+  "stage5": { "vus": 10000, "duration": "20m" },
+  "stage6": { "vus": 25000, "duration": "30m" },
+  "stage7": { "vus": 50000, "duration": "30m" },
+  "stage8": { "vus": 100000, "duration": "45m" },
+  "stage9": { "vus": 250000, "duration": "60m" },
+  "stage10": { "vus": 500000, "duration": "60m" }
+}

@@ -1,0 +1,215 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+
+     execution: local
+        script: performance/scripts/login-burst.js
+        output: -
+
+     scenarios: (100.00%) 1 scenario, 250 max VUs, 1m15s max duration (incl. graceful stop):
+              * login_burst: 250 looping VUs for 45s (gracefulStop: 30s)
+
+
+running (0m01.0s), 250/250 VUs, 69 complete and 0 interrupted iterations
+login_burst   [   2% ] 250 VUs  01.0s/45s
+
+running (0m02.0s), 250/250 VUs, 140 complete and 0 interrupted iterations
+login_burst   [   4% ] 250 VUs  02.0s/45s
+
+running (0m03.0s), 250/250 VUs, 180 complete and 0 interrupted iterations
+login_burst   [   7% ] 250 VUs  03.0s/45s
+
+running (0m04.0s), 250/250 VUs, 218 complete and 0 interrupted iterations
+login_burst   [   9% ] 250 VUs  04.0s/45s
+
+running (0m05.0s), 250/250 VUs, 252 complete and 0 interrupted iterations
+login_burst   [  11% ] 250 VUs  05.0s/45s
+
+running (0m06.0s), 250/250 VUs, 287 complete and 0 interrupted iterations
+login_burst   [  13% ] 250 VUs  06.0s/45s
+
+running (0m07.0s), 250/250 VUs, 329 complete and 0 interrupted iterations
+login_burst   [  15% ] 250 VUs  07.0s/45s
+
+running (0m08.0s), 250/250 VUs, 367 complete and 0 interrupted iterations
+login_burst   [  18% ] 250 VUs  08.0s/45s
+
+running (0m09.0s), 250/250 VUs, 408 complete and 0 interrupted iterations
+login_burst   [  20% ] 250 VUs  09.0s/45s
+
+running (0m10.0s), 250/250 VUs, 448 complete and 0 interrupted iterations
+login_burst   [  22% ] 250 VUs  10.0s/45s
+
+running (0m11.0s), 250/250 VUs, 492 complete and 0 interrupted iterations
+login_burst   [  24% ] 250 VUs  11.0s/45s
+
+running (0m12.0s), 250/250 VUs, 535 complete and 0 interrupted iterations
+login_burst   [  27% ] 250 VUs  12.0s/45s
+
+running (0m13.0s), 250/250 VUs, 572 complete and 0 interrupted iterations
+login_burst   [  29% ] 250 VUs  13.0s/45s
+
+running (0m14.0s), 250/250 VUs, 612 complete and 0 interrupted iterations
+login_burst   [  31% ] 250 VUs  14.0s/45s
+
+running (0m15.0s), 250/250 VUs, 654 complete and 0 interrupted iterations
+login_burst   [  33% ] 250 VUs  15.0s/45s
+
+running (0m16.0s), 250/250 VUs, 696 complete and 0 interrupted iterations
+login_burst   [  35% ] 250 VUs  16.0s/45s
+
+running (0m17.0s), 250/250 VUs, 733 complete and 0 interrupted iterations
+login_burst   [  38% ] 250 VUs  17.0s/45s
+
+running (0m18.0s), 250/250 VUs, 763 complete and 0 interrupted iterations
+login_burst   [  40% ] 250 VUs  18.0s/45s
+
+running (0m19.0s), 250/250 VUs, 804 complete and 0 interrupted iterations
+login_burst   [  42% ] 250 VUs  19.0s/45s
+
+running (0m20.0s), 250/250 VUs, 848 complete and 0 interrupted iterations
+login_burst   [  44% ] 250 VUs  20.0s/45s
+
+running (0m21.0s), 250/250 VUs, 885 complete and 0 interrupted iterations
+login_burst   [  47% ] 250 VUs  21.0s/45s
+
+running (0m22.0s), 250/250 VUs, 922 complete and 0 interrupted iterations
+login_burst   [  49% ] 250 VUs  22.0s/45s
+
+running (0m23.0s), 250/250 VUs, 966 complete and 0 interrupted iterations
+login_burst   [  51% ] 250 VUs  23.0s/45s
+
+running (0m24.0s), 250/250 VUs, 998 complete and 0 interrupted iterations
+login_burst   [  53% ] 250 VUs  24.0s/45s
+
+running (0m25.0s), 250/250 VUs, 1037 complete and 0 interrupted iterations
+login_burst   [  55% ] 250 VUs  25.0s/45s
+
+running (0m26.0s), 250/250 VUs, 1074 complete and 0 interrupted iterations
+login_burst   [  58% ] 250 VUs  26.0s/45s
+
+running (0m27.0s), 250/250 VUs, 1107 complete and 0 interrupted iterations
+login_burst   [  60% ] 250 VUs  27.0s/45s
+
+running (0m28.0s), 250/250 VUs, 1154 complete and 0 interrupted iterations
+login_burst   [  62% ] 250 VUs  28.0s/45s
+
+running (0m29.0s), 250/250 VUs, 1197 complete and 0 interrupted iterations
+login_burst   [  64% ] 250 VUs  29.0s/45s
+
+running (0m30.0s), 250/250 VUs, 1235 complete and 0 interrupted iterations
+login_burst   [  67% ] 250 VUs  30.0s/45s
+
+running (0m31.0s), 250/250 VUs, 1276 complete and 0 interrupted iterations
+login_burst   [  69% ] 250 VUs  31.0s/45s
+
+running (0m32.0s), 250/250 VUs, 1320 complete and 0 interrupted iterations
+login_burst   [  71% ] 250 VUs  32.0s/45s
+
+running (0m33.0s), 250/250 VUs, 1357 complete and 0 interrupted iterations
+login_burst   [  73% ] 250 VUs  33.0s/45s
+
+running (0m34.0s), 250/250 VUs, 1395 complete and 0 interrupted iterations
+login_burst   [  75% ] 250 VUs  34.0s/45s
+
+running (0m35.0s), 250/250 VUs, 1437 complete and 0 interrupted iterations
+login_burst   [  78% ] 250 VUs  35.0s/45s
+
+running (0m36.0s), 250/250 VUs, 1475 complete and 0 interrupted iterations
+login_burst   [  80% ] 250 VUs  36.0s/45s
+
+running (0m37.0s), 250/250 VUs, 1520 complete and 0 interrupted iterations
+login_burst   [  82% ] 250 VUs  37.0s/45s
+
+running (0m38.0s), 250/250 VUs, 1561 complete and 0 interrupted iterations
+login_burst   [  84% ] 250 VUs  38.0s/45s
+
+running (0m39.0s), 250/250 VUs, 1602 complete and 0 interrupted iterations
+login_burst   [  87% ] 250 VUs  39.0s/45s
+
+running (0m40.0s), 250/250 VUs, 1645 complete and 0 interrupted iterations
+login_burst   [  89% ] 250 VUs  40.0s/45s
+
+running (0m41.0s), 250/250 VUs, 1682 complete and 0 interrupted iterations
+login_burst   [  91% ] 250 VUs  41.0s/45s
+
+running (0m42.0s), 250/250 VUs, 1720 complete and 0 interrupted iterations
+login_burst   [  93% ] 250 VUs  42.0s/45s
+
+running (0m43.0s), 250/250 VUs, 1759 complete and 0 interrupted iterations
+login_burst   [  95% ] 250 VUs  43.0s/45s
+
+running (0m44.0s), 250/250 VUs, 1793 complete and 0 interrupted iterations
+login_burst   [  98% ] 250 VUs  44.0s/45s
+
+running (0m45.0s), 250/250 VUs, 1831 complete and 0 interrupted iterations
+login_burst   [ 100% ] 250 VUs  45.0s/45s
+
+running (0m46.0s), 206/250 VUs, 1875 complete and 0 interrupted iterations
+login_burst ↓ [ 100% ] 250 VUs  45s
+
+running (0m47.0s), 179/250 VUs, 1902 complete and 0 interrupted iterations
+login_burst ↓ [ 100% ] 250 VUs  45s
+
+running (0m48.0s), 147/250 VUs, 1934 complete and 0 interrupted iterations
+login_burst ↓ [ 100% ] 250 VUs  45s
+
+running (0m49.0s), 102/250 VUs, 1979 complete and 0 interrupted iterations
+login_burst ↓ [ 100% ] 250 VUs  45s
+
+running (0m50.0s), 064/250 VUs, 2017 complete and 0 interrupted iterations
+login_burst ↓ [ 100% ] 250 VUs  45s
+
+running (0m51.0s), 009/250 VUs, 2072 complete and 0 interrupted iterations
+login_burst ↓ [ 100% ] 250 VUs  45s
+
+
+  █ THRESHOLDS 
+
+    checks
+    ✓ 'rate>0.95' rate=97.69%
+
+    http_req_failed
+    ✓ 'rate<0.05' rate=2.30%
+
+
+  █ TOTAL RESULTS 
+
+    checks_total.......: 4162   81.519613/s
+    checks_succeeded...: 97.69% 4066 out of 4162
+    checks_failed......: 2.30%  96 out of 4162
+
+    ✗ login success
+      ↳  97% — ✓ 2033 / ✗ 48
+    ✗ token exists
+      ↳  97% — ✓ 2033 / ✗ 48
+
+    CUSTOM
+    endpoint_login_duration........: avg=5.78s min=0s       med=6.18s p(90)=7.76s p(95)=11.68s p(99)=13.04s max=17.93s
+    login_failed...................: 2.30%  48 out of 2081
+
+    HTTP
+    http_req_duration..............: avg=5.78s min=0s       med=6.18s p(90)=7.76s p(95)=11.68s p(99)=13.04s max=17.93s
+      { expected_response:true }...: avg=5.92s min=224.52ms med=6.21s p(90)=7.87s p(95)=11.7s  p(99)=13.05s max=17.93s
+    http_req_failed................: 2.30%  48 out of 2081
+    http_reqs......................: 2081   40.759806/s
+
+    EXECUTION
+    iteration_duration.............: avg=5.79s min=526.2µs  med=6.18s p(90)=7.76s p(95)=11.68s p(99)=13.04s max=17.93s
+    iterations.....................: 2081   40.759806/s
+    vus............................: 9      min=9          max=250
+    vus_max........................: 250    min=250        max=250
+
+    NETWORK
+    data_received..................: 4.4 MB 86 kB/s
+    data_sent......................: 489 kB 9.6 kB/s
+
+
+
+
+running (0m51.1s), 000/250 VUs, 2081 complete and 0 interrupted iterations
+login_burst ✓ [ 100% ] 250 VUs  45s

@@ -1,0 +1,107 @@
+==== 2026-08-09T00:28:23.4328634+02:00 host ====
+
+
+LoadPercentage : 51
+
+
+
+
+
+
+FreePhysicalMemory     : 516012
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Established=1
+Listen=2
+==== 2026-08-09T00:28:36.5940088+02:00 host ====
+
+
+LoadPercentage : 32
+
+
+
+
+
+
+FreePhysicalMemory     : 502060
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Established=1
+Listen=2
+==== 2026-08-09T00:28:48.7918256+02:00 host ====
+
+
+LoadPercentage : 26
+
+
+
+
+
+
+FreePhysicalMemory     : 443256
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Established=1
+Listen=2
+==== 2026-08-09T00:29:00.7268720+02:00 host ====
+
+
+LoadPercentage : 48
+
+
+
+
+
+
+FreePhysicalMemory     : 387024
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Established=1
+Listen=2
+==== 2026-08-09T00:29:12.6835393+02:00 host ====
+
+
+LoadPercentage : 100
+
+
+
+
+
+
+FreePhysicalMemory     : 266208
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Established=501
+Listen=2
+==== 2026-08-09T00:29:29.6653816+02:00 host ====
+
+
+LoadPercentage : 17
+
+
+
+
+
+
+FreePhysicalMemory     : 541548
+TotalVisibleMemorySize : 15991048
+
+
+
+
+Listen=2

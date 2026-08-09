@@ -1,0 +1,3 @@
+connected_clients:1
+maxclients:10000
+blocked_clients:0
