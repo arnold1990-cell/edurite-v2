@@ -51,7 +51,7 @@ jobs:
         env:
           EDURITE_TEST_DB_URL: jdbc:postgresql://localhost:5432/edurite
           EDURITE_TEST_DB_USERNAME: postgres
-          EDURITE_TEST_DB_PASSWORD: edurite_ci_password
+          EDURITE_TEST_DB_PASSWORD: Crt@Ailsa
         run: mvn -B clean verify
 
       - name: Print backend test reports
