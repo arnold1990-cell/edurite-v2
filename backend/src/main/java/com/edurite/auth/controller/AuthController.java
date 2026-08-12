@@ -10,10 +10,12 @@ import com.edurite.auth.dto.ResendVerificationOtpRequest;
 import com.edurite.auth.dto.RegistrationResponse;
 import com.edurite.auth.dto.ResetPasswordWithOtpRequest;
 import com.edurite.auth.dto.SchoolRegisterRequest;
+import com.edurite.auth.dto.SchoolPasswordRecoveryDtos;
 import com.edurite.auth.dto.StudentRegisterRequest;
 import com.edurite.auth.dto.VerifyOtpRequest;
 import com.edurite.auth.dto.VerificationStatusResponse;
 import com.edurite.auth.service.AuthService;
+import com.edurite.auth.service.SchoolPasswordRecoveryService;
 import jakarta.validation.Valid;
 import java.security.Principal;
 import java.util.Map;
@@ -30,9 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final SchoolPasswordRecoveryService schoolPasswordRecoveryService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, SchoolPasswordRecoveryService schoolPasswordRecoveryService) {
         this.authService = authService;
+        this.schoolPasswordRecoveryService = schoolPasswordRecoveryService;
     }
 
     @GetMapping("/me")
@@ -119,6 +123,34 @@ public class AuthController {
             @Valid @RequestBody ResetPasswordWithOtpRequest request
     ) {
         return ResponseEntity.ok(authService.resetPasswordWithOtp(request));
+    }
+
+    @PostMapping("/school/forgot-password")
+    public ResponseEntity<SchoolPasswordRecoveryDtos.RecoveryResponse> schoolForgotPassword(
+            @Valid @RequestBody SchoolPasswordRecoveryDtos.ForgotPasswordRequest request
+    ) {
+        return ResponseEntity.ok(schoolPasswordRecoveryService.requestOtp(request));
+    }
+
+    @PostMapping("/school/resend-otp")
+    public ResponseEntity<SchoolPasswordRecoveryDtos.RecoveryResponse> schoolResendOtp(
+            @Valid @RequestBody SchoolPasswordRecoveryDtos.ForgotPasswordRequest request
+    ) {
+        return ResponseEntity.ok(schoolPasswordRecoveryService.resendOtp(request));
+    }
+
+    @PostMapping("/school/verify-otp")
+    public ResponseEntity<SchoolPasswordRecoveryDtos.RecoveryResponse> schoolVerifyOtp(
+            @Valid @RequestBody SchoolPasswordRecoveryDtos.VerifyOtpRequest request
+    ) {
+        return ResponseEntity.ok(schoolPasswordRecoveryService.verifyOtp(request));
+    }
+
+    @PostMapping("/school/reset-password")
+    public ResponseEntity<SchoolPasswordRecoveryDtos.RecoveryResponse> schoolResetPassword(
+            @Valid @RequestBody SchoolPasswordRecoveryDtos.ResetPasswordRequest request
+    ) {
+        return ResponseEntity.ok(schoolPasswordRecoveryService.resetPassword(request));
     }
 }
 

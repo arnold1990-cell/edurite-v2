@@ -44,6 +44,8 @@ import com.edurite.school.portal.entity.SchoolUserProfile;
 import com.edurite.school.portal.repository.SchoolRegistrationRequestRepository;
 import com.edurite.school.portal.repository.SchoolRepository;
 import com.edurite.school.portal.repository.SchoolUserProfileRepository;
+import com.edurite.school.service.SchoolWhitelistOptions;
+import com.edurite.school.service.SouthAfricanMobileNumber;
 import com.edurite.user.entity.Role;
 import com.edurite.user.entity.User;
 import com.edurite.user.entity.UserStatus;
@@ -169,6 +171,12 @@ public class AdminService {
     private String trimToNull(String value) {
         String trimmed = safe(value);
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean sameText(String left, String right) {
+        return trimToNull(left) != null
+                && trimToNull(right) != null
+                && left.trim().equalsIgnoreCase(right.trim());
     }
 
     private String normalizeRoleName(String value) {
@@ -738,62 +746,72 @@ public class AdminService {
         String emisNumber = safe(request.emisNumber()).toUpperCase(Locale.ROOT);
         String schoolName = safe(request.schoolName());
         String schoolEmail = safe(request.schoolEmail()).toLowerCase(Locale.ROOT);
-        String contactNumber = safe(request.contactNumber());
+        String contactNumber = SouthAfricanMobileNumber.normalizeRequired(request.contactNumber());
         String principalName = safe(request.principalName());
+        String physicalAddress = safe(request.physicalAddress());
+        String province = SchoolWhitelistOptions.canonicalProvince(request.province())
+                .orElseThrow(() -> new ResourceConflictException("Province must be one of the supported South African provinces."));
+        String schoolType = SchoolWhitelistOptions.canonicalSchoolType(request.schoolType())
+                .orElseThrow(() -> new ResourceConflictException("School type must be one of the supported school types."));
         String status = safe(request.status()).toUpperCase(Locale.ROOT);
-        if (schoolName.isBlank() || emisNumber.isBlank() || schoolEmail.isBlank() || contactNumber.isBlank() || principalName.isBlank()) {
-            throw new ResourceConflictException("School name, EMIS, email, contact number, and principal are required.");
+        if (schoolName.isBlank() || emisNumber.isBlank() || contactNumber.isBlank() || physicalAddress.isBlank()) {
+            throw new ResourceConflictException("School name, EMIS, province, district, school type, school mobile number, and physical address are required.");
         }
         if (!Set.of("ACTIVE", "INACTIVE", "PENDING").contains(status)) {
             throw new ResourceConflictException("School status must be Active, Pending, or Inactive.");
         }
         District district = districtRepository.findById(request.districtId())
                 .orElseThrow(() -> new ResourceConflictException("District not found."));
+        if (!sameText(district.getProvince(), province)) {
+            throw new ResourceConflictException("Selected district does not belong to the selected province.");
+        }
+        if (schoolRepository.findByRegistrationNumberIgnoreCase(emisNumber).isPresent()
+                || schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(emisNumber).isPresent()) {
+            throw new ResourceConflictException("A school with this EMIS number already exists.");
+        }
+        if (userRepository.existsByUsernameIgnoreCase(emisNumber)) {
+            throw new ResourceConflictException("A school account with this EMIS number already exists.");
+        }
 
-        School school = schoolRepository.findByRegistrationNumberIgnoreCase(emisNumber).orElseGet(School::new);
+        School school = new School();
         school.setSchoolName(schoolName);
         school.setRegistrationNumber(emisNumber);
         school.setSchoolCode(trimToNull(request.schoolCode()));
         school.setDistrictId(district.getId());
         school.setDistrict(district.getDistrictName());
-        school.setProvince(trimToNull(request.province()) == null ? district.getProvince() : request.province().trim());
-        school.setContactEmail(schoolEmail);
+        school.setProvince(province);
+        school.setContactEmail(trimToNull(schoolEmail));
         school.setContactPhone(contactNumber);
+        school.setAddress(physicalAddress);
         school.setStatus("ACTIVE".equals(status) ? "ACTIVE" : status);
         school = schoolRepository.save(school);
 
-        SchoolRegistrationRequest registration = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(emisNumber).orElse(null);
-        User schoolAdmin = registration == null ? null : userRepository.findById(registration.getUserId()).orElse(null);
+        SchoolRegistrationRequest registration = null;
+        User schoolAdmin;
         AdminCredentials credentials = null;
-        if (schoolAdmin == null) {
-            if (userRepository.existsByEmailIgnoreCase(schoolEmail)) {
-                throw new ResourceConflictException("School email already belongs to another account.");
-            }
-            credentials = createSchoolAdminAccount(school, schoolEmail, contactNumber, principalName);
-            schoolAdmin = userRepository.findByUsernameIgnoreCase(credentials.username())
-                    .orElseThrow(() -> new ResourceConflictException("School admin account could not be loaded."));
-        } else {
-            activateSchoolAdminAccount(schoolAdmin, schoolEmail, contactNumber, principalName);
+        if (trimToNull(schoolEmail) != null && userRepository.existsByEmailIgnoreCase(schoolEmail)) {
+            throw new ResourceConflictException("School email already belongs to another account.");
         }
+        credentials = createSchoolAdminAccount(school, schoolEmail, contactNumber, principalName);
+        schoolAdmin = userRepository.findByUsernameIgnoreCase(credentials.username())
+                .orElseThrow(() -> new ResourceConflictException("School admin account could not be loaded."));
 
-        if (registration == null) {
-            registration = new SchoolRegistrationRequest();
-            registration.setUserId(schoolAdmin.getId());
-            registration.setSubmittedAt(OffsetDateTime.now());
-        }
+        registration = new SchoolRegistrationRequest();
+        registration.setUserId(schoolAdmin.getId());
+        registration.setSubmittedAt(OffsetDateTime.now());
         registration.setDistrictId(district.getId());
         registration.setSchoolId(school.getId());
         registration.setSchoolName(schoolName);
         registration.setEmisNumber(emisNumber);
-        registration.setProvince(safe(school.getProvince()).isBlank() ? safe(district.getProvince()) : school.getProvince());
+        registration.setProvince(province);
         registration.setDistrictName(district.getDistrictName());
         registration.setCircuit(trimToNull(request.circuit()));
-        registration.setSchoolType(trimToNull(request.schoolType()));
-        registration.setPrincipalName(principalName);
-        registration.setPrincipalEmail(schoolEmail);
-        registration.setSchoolEmail(schoolEmail);
+        registration.setSchoolType(schoolType);
+        registration.setPrincipalName(trimToNull(principalName));
+        registration.setPrincipalEmail(trimToNull(schoolEmail));
+        registration.setSchoolEmail(trimToNull(schoolEmail));
         registration.setPhoneNumber(contactNumber);
-        registration.setPhysicalAddress("");
+        registration.setPhysicalAddress(physicalAddress);
         registration.setStatus("ACTIVE".equals(status) ? SchoolStatus.ACTIVE : SchoolStatus.PENDING_DISTRICT_APPROVAL);
         registration.setApprovedAt("ACTIVE".equals(status) ? OffsetDateTime.now() : null);
         registration.setRejectedAt(null);
@@ -1010,7 +1028,7 @@ public class AdminService {
             return roleRepository.save(role);
         });
         User user = new User();
-        user.setEmail(email.trim().toLowerCase(Locale.ROOT));
+        user.setEmail(trimToNull(email) == null ? school.getRegistrationNumber().trim().toLowerCase(Locale.ROOT) + "@school.edurite.local" : email.trim().toLowerCase(Locale.ROOT));
         user.setUsername(generateUniqueSchoolUsername(school));
         user.setPhoneNumber(trimToNull(phoneNumber));
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
@@ -1037,19 +1055,14 @@ public class AdminService {
     }
 
     private String generateUniqueSchoolUsername(School school) {
-        String base = trimToNull(school.getRegistrationNumber()) == null
-                ? safe(school.getSchoolName()).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", ".").replaceAll("^\\.+|\\.+$", "")
-                : school.getRegistrationNumber().trim().toUpperCase(Locale.ROOT);
-        if (base.isBlank()) {
-            base = "school.admin";
+        String emis = trimToNull(school.getRegistrationNumber());
+        if (emis == null) {
+            throw new ResourceConflictException("EMIS number is required for school login.");
         }
-        String candidate = base;
-        int suffix = 2;
-        while (userRepository.existsByUsernameIgnoreCase(candidate)) {
-            candidate = base + suffix;
-            suffix++;
+        if (userRepository.existsByUsernameIgnoreCase(emis)) {
+            throw new ResourceConflictException("A school account with this EMIS number already exists.");
         }
-        return candidate;
+        return emis;
     }
 
     private AdminSchoolDtos.AdminSchoolItemDto toSchoolDto(School school, AdminCredentials credentials) {
@@ -1063,7 +1076,7 @@ public class AdminService {
                         .map(User::getUsername)
                         .filter(value -> value != null && !value.isBlank())
                         .findFirst()
-                        .orElse(null)
+                        .orElse(school.getRegistrationNumber())
                 : credentials.username();
         return new AdminSchoolDtos.AdminSchoolItemDto(
                 school.getId(),
@@ -1078,6 +1091,7 @@ public class AdminService {
                 registration == null ? null : registration.getPrincipalName(),
                 school.getContactEmail(),
                 school.getContactPhone(),
+                school.getAddress(),
                 school.getStatus(),
                 !profiles.isEmpty(),
                 username,

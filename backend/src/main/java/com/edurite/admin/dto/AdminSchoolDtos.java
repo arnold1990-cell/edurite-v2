@@ -26,6 +26,7 @@ public final class AdminSchoolDtos {
             String principalName,
             String schoolEmail,
             String contactNumber,
+            String physicalAddress,
             String status,
             boolean hasSchoolAdmin,
             String username,
@@ -48,7 +49,8 @@ public final class AdminSchoolDtos {
             @Email @NotBlank String schoolEmail,
             @NotBlank String contactNumber,
             @NotBlank String principalName,
-            String schoolType,
+            @NotBlank String physicalAddress,
+            @NotBlank String schoolType,
             @NotBlank String status
     ) {}
 
