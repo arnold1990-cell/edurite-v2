@@ -1164,7 +1164,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
 
     try {
       const loginPayload = selectedRole === 'SCHOOL_ADMIN'
-        ? { schoolName: form.schoolName, emisNumber: form.emisNumber, password: form.password }
+        ? { schoolName: form.schoolName.trim() || undefined, emisNumber: form.emisNumber, password: form.password }
         : { email: form.email, password: form.password };
       const loggedInUser = await login(loginPayload, { rememberMe: form.rememberMe });
       const expectedRole = expectedRoleForSelection(selectedRole);
@@ -1361,8 +1361,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
                       setForm((current) => ({ ...current, schoolName: event.target.value }));
                     }}
                     className="h-[46px] rounded-2xl border-[#dbe3ef] bg-white pl-11 pr-4 text-sm text-[#0f172a] shadow-none focus:border-[#2563eb] focus:ring-[#bfdbfe]"
-                    placeholder="Enter school name"
-                    required
+                    placeholder="Optional school name"
                   />
                 </div>
               </label>

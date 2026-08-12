@@ -646,8 +646,8 @@ public class AuthService {
         User resolvedUser;
 
         if (schoolName != null || emisNumber != null) {
-            if (schoolName == null || emisNumber == null) {
-                throw new InvalidCredentialsException("School name and EMIS number are required.");
+            if (emisNumber == null) {
+                throw new InvalidCredentialsException("EMIS number is required.");
             }
             resolvedUser = resolveSchoolUserForLogin(schoolName, emisNumber, request.password());
             identifier = emisNumber;
@@ -1210,7 +1210,7 @@ public class AuthService {
         SchoolRegistrationRequest request = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(emisNumber)
                 .orElseThrow(() -> loginFailure(LoginAuditReason.SCHOOL_NOT_FOUND, emisNumber));
 
-        if (!schoolName.equalsIgnoreCase(request.getSchoolName())) {
+        if (schoolName != null && !schoolName.equalsIgnoreCase(request.getSchoolName())) {
             throw loginFailure(LoginAuditReason.SCHOOL_NAME_EMIS_MISMATCH, emisNumber);
         }
 

@@ -125,6 +125,43 @@ export type AdminDistrictManagementResponse = {
   items: AdminDistrict[];
 };
 
+export type AdminCredentialResponse = {
+  id: string;
+  username: string;
+  temporaryPassword: string;
+};
+
+export type AdminSchoolMetric = {
+  label: string;
+  value: string;
+  helperText: string;
+};
+
+export type AdminSchool = {
+  id: string;
+  schoolName: string;
+  emisNumber: string;
+  schoolCode?: string | null;
+  districtId?: string | null;
+  districtName?: string | null;
+  province?: string | null;
+  circuit?: string | null;
+  schoolType?: string | null;
+  principalName?: string | null;
+  schoolEmail?: string | null;
+  contactNumber?: string | null;
+  status: string;
+  hasSchoolAdmin: boolean;
+  username?: string | null;
+  temporaryPassword?: string | null;
+  createdAt: string;
+};
+
+export type AdminSchoolManagementResponse = {
+  metrics: AdminSchoolMetric[];
+  items: AdminSchool[];
+};
+
 const toParams = (params?: Record<string, string | number | boolean | undefined | null>) => (
   Object.fromEntries(Object.entries(params ?? {}).filter(([, value]) => value !== undefined && value !== null && value !== ''))
 );
@@ -150,6 +187,22 @@ export const adminService = {
     status: 'ACTIVE' | 'INACTIVE';
   }) => apiClient.put<AdminDistrict>(`/admin/districts/${districtId}`, payload).then((r) => r.data),
   createDistrictAdmin: (districtId: string) => apiClient.post<AdminDistrict>(`/admin/districts/${districtId}/create-admin`).then((r) => r.data),
+  resetDistrictPassword: (districtId: string) => apiClient.post<AdminCredentialResponse>(`/admin/districts/${districtId}/reset-password`).then((r) => r.data),
+  getSchoolManagement: () => apiClient.get<AdminSchoolManagementResponse>('/admin/school-management').then((r) => r.data),
+  whitelistSchool: (payload: {
+    schoolName: string;
+    emisNumber: string;
+    schoolCode?: string;
+    province?: string;
+    districtId: string;
+    circuit?: string;
+    schoolEmail: string;
+    contactNumber: string;
+    principalName: string;
+    schoolType?: string;
+    status: 'ACTIVE' | 'PENDING' | 'INACTIVE';
+  }) => apiClient.post<AdminSchool>('/admin/schools/whitelist', payload).then((r) => r.data),
+  resetSchoolPassword: (schoolId: string) => apiClient.post<AdminCredentialResponse>(`/admin/schools/${schoolId}/reset-password`).then((r) => r.data),
 
   getUsers: (params?: { search?: string; status?: string; accountType?: string; companyStatus?: string; includeDeleted?: boolean; page?: number; size?: number }) => apiClient
     .get<PaginatedResponse<AdminUser>>('/admin/users', { params: toParams(params) })

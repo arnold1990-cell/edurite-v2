@@ -14,6 +14,7 @@ import com.edurite.admin.dto.AdminPlatformSettingsUpdateRequest;
 import com.edurite.admin.dto.AdminRecentBursaryDto;
 import com.edurite.admin.dto.AdminRecentCompanyDto;
 import com.edurite.admin.dto.AdminRecentUserDto;
+import com.edurite.admin.dto.AdminSchoolDtos;
 import com.edurite.admin.dto.AdminStatusCountDto;
 import com.edurite.admin.dto.AdminUserDto;
 import com.edurite.admin.entity.AuditLog;
@@ -36,9 +37,13 @@ import com.edurite.district.entity.DistrictAdminProfile;
 import com.edurite.district.repository.DistrictAdminProfileRepository;
 import com.edurite.district.repository.DistrictRepository;
 import com.edurite.security.service.CurrentUserService;
+import com.edurite.school.portal.entity.School;
+import com.edurite.school.portal.entity.SchoolRegistrationRequest;
 import com.edurite.school.portal.entity.SchoolStatus;
+import com.edurite.school.portal.entity.SchoolUserProfile;
 import com.edurite.school.portal.repository.SchoolRegistrationRequestRepository;
 import com.edurite.school.portal.repository.SchoolRepository;
+import com.edurite.school.portal.repository.SchoolUserProfileRepository;
 import com.edurite.user.entity.Role;
 import com.edurite.user.entity.User;
 import com.edurite.user.entity.UserStatus;
@@ -50,6 +55,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -94,6 +100,8 @@ public class AdminService {
             "ROLE_SCHOOL_STUDENT",
             "ROLE_STUDENT"
     );
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final String TEMP_PASSWORD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -106,6 +114,7 @@ public class AdminService {
     private final DistrictAdminProfileRepository districtAdminProfileRepository;
     private final SchoolRepository schoolRepository;
     private final SchoolRegistrationRequestRepository schoolRegistrationRequestRepository;
+    private final SchoolUserProfileRepository schoolUserProfileRepository;
     private final CurrentUserService currentUserService;
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
@@ -125,6 +134,7 @@ public class AdminService {
             DistrictAdminProfileRepository districtAdminProfileRepository,
             SchoolRepository schoolRepository,
             SchoolRegistrationRequestRepository schoolRegistrationRequestRepository,
+            SchoolUserProfileRepository schoolUserProfileRepository,
             CurrentUserService currentUserService,
             PasswordEncoder passwordEncoder,
             ObjectMapper objectMapper,
@@ -143,6 +153,7 @@ public class AdminService {
         this.districtAdminProfileRepository = districtAdminProfileRepository;
         this.schoolRepository = schoolRepository;
         this.schoolRegistrationRequestRepository = schoolRegistrationRequestRepository;
+        this.schoolUserProfileRepository = schoolUserProfileRepository;
         this.currentUserService = currentUserService;
         this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
@@ -190,6 +201,14 @@ public class AdminService {
             suffix += 1;
         }
         return candidate;
+    }
+
+    private String generateTemporaryPassword() {
+        StringBuilder password = new StringBuilder();
+        for (int index = 0; index < 16; index++) {
+            password.append(TEMP_PASSWORD_ALPHABET.charAt(SECURE_RANDOM.nextInt(TEMP_PASSWORD_ALPHABET.length())));
+        }
+        return password.toString();
     }
 
     @Transactional(readOnly = true)
@@ -677,6 +696,147 @@ public class AdminService {
         return toDistrictDto(district, credentials.username(), credentials.temporaryPassword());
     }
 
+    @Transactional
+    public AdminSchoolDtos.AdminCredentialResponse resetDistrictPassword(UUID districtId, Principal principal) {
+        District district = districtRepository.findById(districtId)
+                .orElseThrow(() -> new ResourceConflictException("District not found."));
+        DistrictAdminProfile profile = districtAdminProfileRepository.findByDistrictIdAndActiveTrueAndDeletedFalse(district.getId()).stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceConflictException("District has no assigned admin account."));
+        User user = userRepository.findById(profile.getUserId())
+                .orElseThrow(() -> new ResourceConflictException("District admin account not found."));
+        String temporaryPassword = generateTemporaryPassword();
+        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
+        user.setMustChangePassword(true);
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
+        writeAudit(principal, "ADMIN_DISTRICT_PASSWORD_RESET", "DISTRICT", district.getId(), Map.of("username", safe(user.getUsername())));
+        return new AdminSchoolDtos.AdminCredentialResponse(district.getId(), user.getUsername(), temporaryPassword);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminSchoolDtos.AdminSchoolManagementResponse schoolManagement() {
+        List<School> schools = schoolRepository.findAll().stream()
+                .sorted(Comparator.comparing(School::getSchoolName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .toList();
+        long activeSchools = schools.stream().filter(school -> "ACTIVE".equalsIgnoreCase(school.getStatus())).count();
+        long pendingSchools = schools.stream().filter(school -> !"ACTIVE".equalsIgnoreCase(safe(school.getStatus()))).count();
+        long linkedSchools = schools.stream().filter(school -> school.getDistrictId() != null).count();
+        return new AdminSchoolDtos.AdminSchoolManagementResponse(
+                List.of(
+                        new AdminSchoolDtos.AdminSchoolMetricDto("Whitelisted Schools", String.valueOf(schools.size()), "Schools registered in the school portal"),
+                        new AdminSchoolDtos.AdminSchoolMetricDto("Active Schools", String.valueOf(activeSchools), "Schools enabled for login and enrolment"),
+                        new AdminSchoolDtos.AdminSchoolMetricDto("Pending Schools", String.valueOf(pendingSchools), "Schools not yet active"),
+                        new AdminSchoolDtos.AdminSchoolMetricDto("District Assignments", String.valueOf(linkedSchools), "Schools linked to a district")
+                ),
+                schools.stream().map(school -> toSchoolDto(school, null)).toList()
+        );
+    }
+
+    @Transactional
+    public AdminSchoolDtos.AdminSchoolItemDto whitelistSchool(AdminSchoolDtos.AdminWhitelistSchoolRequest request, Principal principal) {
+        String emisNumber = safe(request.emisNumber()).toUpperCase(Locale.ROOT);
+        String schoolName = safe(request.schoolName());
+        String schoolEmail = safe(request.schoolEmail()).toLowerCase(Locale.ROOT);
+        String contactNumber = safe(request.contactNumber());
+        String principalName = safe(request.principalName());
+        String status = safe(request.status()).toUpperCase(Locale.ROOT);
+        if (schoolName.isBlank() || emisNumber.isBlank() || schoolEmail.isBlank() || contactNumber.isBlank() || principalName.isBlank()) {
+            throw new ResourceConflictException("School name, EMIS, email, contact number, and principal are required.");
+        }
+        if (!Set.of("ACTIVE", "INACTIVE", "PENDING").contains(status)) {
+            throw new ResourceConflictException("School status must be Active, Pending, or Inactive.");
+        }
+        District district = districtRepository.findById(request.districtId())
+                .orElseThrow(() -> new ResourceConflictException("District not found."));
+
+        School school = schoolRepository.findByRegistrationNumberIgnoreCase(emisNumber).orElseGet(School::new);
+        school.setSchoolName(schoolName);
+        school.setRegistrationNumber(emisNumber);
+        school.setSchoolCode(trimToNull(request.schoolCode()));
+        school.setDistrictId(district.getId());
+        school.setDistrict(district.getDistrictName());
+        school.setProvince(trimToNull(request.province()) == null ? district.getProvince() : request.province().trim());
+        school.setContactEmail(schoolEmail);
+        school.setContactPhone(contactNumber);
+        school.setStatus("ACTIVE".equals(status) ? "ACTIVE" : status);
+        school = schoolRepository.save(school);
+
+        SchoolRegistrationRequest registration = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(emisNumber).orElse(null);
+        User schoolAdmin = registration == null ? null : userRepository.findById(registration.getUserId()).orElse(null);
+        AdminCredentials credentials = null;
+        if (schoolAdmin == null) {
+            if (userRepository.existsByEmailIgnoreCase(schoolEmail)) {
+                throw new ResourceConflictException("School email already belongs to another account.");
+            }
+            credentials = createSchoolAdminAccount(school, schoolEmail, contactNumber, principalName);
+            schoolAdmin = userRepository.findByUsernameIgnoreCase(credentials.username())
+                    .orElseThrow(() -> new ResourceConflictException("School admin account could not be loaded."));
+        } else {
+            activateSchoolAdminAccount(schoolAdmin, schoolEmail, contactNumber, principalName);
+        }
+
+        if (registration == null) {
+            registration = new SchoolRegistrationRequest();
+            registration.setUserId(schoolAdmin.getId());
+            registration.setSubmittedAt(OffsetDateTime.now());
+        }
+        registration.setDistrictId(district.getId());
+        registration.setSchoolId(school.getId());
+        registration.setSchoolName(schoolName);
+        registration.setEmisNumber(emisNumber);
+        registration.setProvince(safe(school.getProvince()).isBlank() ? safe(district.getProvince()) : school.getProvince());
+        registration.setDistrictName(district.getDistrictName());
+        registration.setCircuit(trimToNull(request.circuit()));
+        registration.setSchoolType(trimToNull(request.schoolType()));
+        registration.setPrincipalName(principalName);
+        registration.setPrincipalEmail(schoolEmail);
+        registration.setSchoolEmail(schoolEmail);
+        registration.setPhoneNumber(contactNumber);
+        registration.setPhysicalAddress("");
+        registration.setStatus("ACTIVE".equals(status) ? SchoolStatus.ACTIVE : SchoolStatus.PENDING_DISTRICT_APPROVAL);
+        registration.setApprovedAt("ACTIVE".equals(status) ? OffsetDateTime.now() : null);
+        registration.setRejectedAt(null);
+        registration.setRejectionReason(null);
+        schoolRegistrationRequestRepository.save(registration);
+
+        SchoolUserProfile profile = schoolUserProfileRepository.findBySchoolIdAndUserIdAndDeletedFalse(school.getId(), schoolAdmin.getId()).orElseGet(SchoolUserProfile::new);
+        profile.setSchoolId(school.getId());
+        profile.setUserId(schoolAdmin.getId());
+        profile.setRoleName("ROLE_SCHOOL_ADMIN");
+        profile.setPortalUsername(emisNumber);
+        profile.setEmployeeOrStudentNo(emisNumber);
+        profile.setInitialPassword(null);
+        profile.setActive("ACTIVE".equals(status));
+        profile.setDeleted(false);
+        schoolUserProfileRepository.save(profile);
+
+        writeAudit(principal, "ADMIN_SCHOOL_WHITELISTED", "SCHOOL", school.getId(), Map.of(
+                "emisNumber", emisNumber,
+                "districtId", district.getId(),
+                "status", status
+        ));
+        return toSchoolDto(school, credentials);
+    }
+
+    @Transactional
+    public AdminSchoolDtos.AdminCredentialResponse resetSchoolPassword(UUID schoolId, Principal principal) {
+        School school = schoolRepository.findById(schoolId)
+                .orElseThrow(() -> new ResourceConflictException("School not found."));
+        SchoolUserProfile profile = schoolUserProfileRepository.findBySchoolIdAndRoleNameAndDeletedFalse(schoolId, "ROLE_SCHOOL_ADMIN").stream()
+                .findFirst()
+                .orElseThrow(() -> new ResourceConflictException("School has no assigned admin account."));
+        User user = userRepository.findById(profile.getUserId())
+                .orElseThrow(() -> new ResourceConflictException("School admin account not found."));
+        String temporaryPassword = generateTemporaryPassword();
+        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
+        user.setMustChangePassword(true);
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
+        writeAudit(principal, "ADMIN_SCHOOL_PASSWORD_RESET", "SCHOOL", school.getId(), Map.of("username", safe(user.getUsername())));
+        return new AdminSchoolDtos.AdminCredentialResponse(school.getId(), user.getUsername(), temporaryPassword);
+    }
+
     @Transactional(readOnly = true)
     public AdminPlatformSettingsDto settings() {
         return platformSettingsService.getCurrentSettings();
@@ -808,7 +968,7 @@ public class AdminService {
                 throw new ResourceConflictException("District admin email already exists.");
             }
             String username = generateUniqueDistrictUsername(district.getDistrictName());
-            String temporaryPassword = "Temp@12345";
+            String temporaryPassword = generateTemporaryPassword();
             Role districtAdminRole = roleRepository.findByName("ROLE_DISTRICT_ADMIN").orElseGet(() -> {
                 Role role = new Role();
                 role.setName("ROLE_DISTRICT_ADMIN");
@@ -841,6 +1001,90 @@ public class AdminService {
     }
 
     private record AdminCredentials(String username, String temporaryPassword) {}
+
+    private AdminCredentials createSchoolAdminAccount(School school, String email, String phoneNumber, String principalName) {
+        String temporaryPassword = generateTemporaryPassword();
+        Role schoolAdminRole = roleRepository.findByName("ROLE_SCHOOL_ADMIN").orElseGet(() -> {
+            Role role = new Role();
+            role.setName("ROLE_SCHOOL_ADMIN");
+            return roleRepository.save(role);
+        });
+        User user = new User();
+        user.setEmail(email.trim().toLowerCase(Locale.ROOT));
+        user.setUsername(generateUniqueSchoolUsername(school));
+        user.setPhoneNumber(trimToNull(phoneNumber));
+        user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
+        user.setFirstName(trimToNull(principalName) == null ? school.getSchoolName() : principalName.trim());
+        user.setLastName("School Admin");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(true);
+        user.setMustChangePassword(true);
+        user.getRoles().add(schoolAdminRole);
+        userRepository.save(user);
+        return new AdminCredentials(user.getUsername(), temporaryPassword);
+    }
+
+    private void activateSchoolAdminAccount(User user, String email, String phoneNumber, String principalName) {
+        user.setEmail(email.trim().toLowerCase(Locale.ROOT));
+        user.setPhoneNumber(trimToNull(phoneNumber));
+        user.setFirstName(trimToNull(principalName) == null ? user.getFirstName() : principalName.trim());
+        user.setLastName("School Admin");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(true);
+        Role schoolAdminRole = roleRepository.findByName("ROLE_SCHOOL_ADMIN").orElseThrow(() -> new ResourceConflictException("School admin role is not configured."));
+        user.getRoles().add(schoolAdminRole);
+        userRepository.save(user);
+    }
+
+    private String generateUniqueSchoolUsername(School school) {
+        String base = trimToNull(school.getRegistrationNumber()) == null
+                ? safe(school.getSchoolName()).toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", ".").replaceAll("^\\.+|\\.+$", "")
+                : school.getRegistrationNumber().trim().toUpperCase(Locale.ROOT);
+        if (base.isBlank()) {
+            base = "school.admin";
+        }
+        String candidate = base;
+        int suffix = 2;
+        while (userRepository.existsByUsernameIgnoreCase(candidate)) {
+            candidate = base + suffix;
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private AdminSchoolDtos.AdminSchoolItemDto toSchoolDto(School school, AdminCredentials credentials) {
+        SchoolRegistrationRequest registration = schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(safe(school.getRegistrationNumber())).orElse(null);
+        List<SchoolUserProfile> profiles = schoolUserProfileRepository.findBySchoolIdAndRoleNameAndDeletedFalse(school.getId(), "ROLE_SCHOOL_ADMIN");
+        String username = credentials == null
+                ? profiles.stream()
+                        .map(SchoolUserProfile::getUserId)
+                        .map(userRepository::findById)
+                        .flatMap(Optional::stream)
+                        .map(User::getUsername)
+                        .filter(value -> value != null && !value.isBlank())
+                        .findFirst()
+                        .orElse(null)
+                : credentials.username();
+        return new AdminSchoolDtos.AdminSchoolItemDto(
+                school.getId(),
+                school.getSchoolName(),
+                school.getRegistrationNumber(),
+                school.getSchoolCode(),
+                school.getDistrictId(),
+                school.getDistrict(),
+                school.getProvince(),
+                registration == null ? null : registration.getCircuit(),
+                registration == null ? null : registration.getSchoolType(),
+                registration == null ? null : registration.getPrincipalName(),
+                school.getContactEmail(),
+                school.getContactPhone(),
+                school.getStatus(),
+                !profiles.isEmpty(),
+                username,
+                credentials == null ? null : credentials.temporaryPassword(),
+                school.getCreatedAt()
+        );
+    }
 
     private boolean matchesUserSearch(User user, String query) {
         String fullName = (safe(user.getFirstName()) + " " + safe(user.getLastName())).trim().toLowerCase(Locale.ROOT);

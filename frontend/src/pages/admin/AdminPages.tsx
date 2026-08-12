@@ -723,6 +723,13 @@ export const AdminDistrictManagementPage = () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'districts'] });
     },
   });
+  const resetDistrictPassword = useMutation({
+    mutationFn: (districtId: string) => adminService.resetDistrictPassword(districtId),
+    onSuccess: async (created) => {
+      setCreatedCredentials({ username: created.username, temporaryPassword: created.temporaryPassword });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'districts'] });
+    },
+  });
 
   if (districts.isLoading) return <LoadingState />;
   if (districts.error || !districts.data) return <ErrorState message="Unable to load district management." />;
@@ -836,7 +843,19 @@ export const AdminDistrictManagementPage = () => {
                   >
                     Create District Admin
                   </button>
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    className="text-emerald-700"
+                    onClick={() => {
+                      setCreatedCredentials(null);
+                      resetDistrictPassword.mutate(row.id);
+                    }}
+                    disabled={resetDistrictPassword.isPending}
+                  >
+                    Reset Password
+                  </button>
+                )}
                 <button
                   type="button"
                   className="text-amber-700"

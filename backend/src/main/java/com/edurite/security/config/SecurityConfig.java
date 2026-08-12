@@ -94,7 +94,7 @@ public class SecurityConfig {
                         // Temporary permitAll for easier integration testing of Adzuna search.
                         // Can be tightened to student auth once client-side auth flow is confirmed in QA.
                         .requestMatchers(HttpMethod.GET, "/api/v1/jobs/search", "/api/jobs/search").permitAll()
-                        .requestMatchers("/api/v1/student/**", "/api/student/**").hasAnyAuthority("ROLE_STUDENT", "STUDENT")
+                        .requestMatchers("/api/v1/student/**", "/api/student/**", "/api/v1/students/**", "/api/students/**").hasAnyAuthority("ROLE_STUDENT", "STUDENT")
                         .requestMatchers(
                                 "/api/v1/bursaries/recommendations/**",
                                 "/api/bursaries/recommendations/**",

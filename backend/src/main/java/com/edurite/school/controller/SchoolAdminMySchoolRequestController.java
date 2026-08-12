@@ -19,7 +19,9 @@ import org.springframework.web.bind.annotation.RestController;
         "/api/v1/school-admin/my-school-requests",
         "/api/school-admin/my-school-requests",
         "/api/v1/school-admin/learner-join-requests",
-        "/api/school-admin/learner-join-requests"
+        "/api/school-admin/learner-join-requests",
+        "/api/v1/school/me/enrolment-requests",
+        "/api/school/me/enrolment-requests"
 })
 public class SchoolAdminMySchoolRequestController {
 

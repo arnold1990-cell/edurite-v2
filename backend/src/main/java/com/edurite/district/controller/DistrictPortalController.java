@@ -42,6 +42,17 @@ public class DistrictPortalController {
         return districtPortalService.dashboard(context.districtId(), context.userId());
     }
 
+    @GetMapping("/me")
+    public DistrictDtos.DistrictDashboardResponse me(Principal principal) {
+        return dashboard(principal);
+    }
+
+    @GetMapping("/me/statistics")
+    public List<DistrictDtos.MetricCardDto> myStatistics(Principal principal) {
+        DistrictAccessService.AccessContext context = context(principal);
+        return districtPortalService.dashboard(context.districtId(), context.userId()).metrics();
+    }
+
     @GetMapping("/schools")
     public DistrictDtos.DistrictSchoolsResponse schools(
             Principal principal,
@@ -51,6 +62,12 @@ public class DistrictPortalController {
     ) {
         DistrictAccessService.AccessContext context = context(principal);
         return districtPortalService.schools(context.districtId(), search, riskLevel, complianceStatus);
+    }
+
+    @GetMapping("/me/schools")
+    public DistrictDtos.DistrictSchoolsResponse mySchools(Principal principal) {
+        DistrictAccessService.AccessContext context = context(principal);
+        return districtPortalService.schools(context.districtId(), null, null, null);
     }
 
     @GetMapping("/school-registration-requests")

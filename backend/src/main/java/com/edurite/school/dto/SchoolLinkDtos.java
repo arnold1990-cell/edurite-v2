@@ -8,7 +8,7 @@ public final class SchoolLinkDtos {
     private SchoolLinkDtos() {
     }
 
-    public record PublicSchoolDto(UUID id, String name, String schoolCode) {}
+    public record PublicSchoolDto(UUID id, String name, String schoolCode, String emisNumber) {}
 
     public record StudentSchoolRequest(@NotNull UUID schoolId) {}
 

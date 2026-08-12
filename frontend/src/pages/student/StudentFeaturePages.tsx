@@ -8,7 +8,9 @@ import { InstitutionLogo } from '@/components/institutions/InstitutionLogo';
 import { resolveInstitutionDisplay } from '@/lib/institutionRegistry';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { StudentCareerRoadmapsExplorerPage } from '@/pages/student/StudentCareerRoadmapsExplorerPage';
+import { adminService, type AdminSchool, type AdminSchoolManagementResponse } from '@/services/adminService';
 import { featureModulesService } from '@/services/featureModulesService';
+import { locationService } from '@/services/locationService';
 import type {
   ScholarshipApplication,
   SchoolProfile,
@@ -328,7 +330,7 @@ export const StudentCareerRoadmapsPage = StudentCareerRoadmapsExplorerPage;
 
 const schoolDefaults: SchoolProfile = { schoolName: '', country: '', city: '', contactPerson: '', contactEmail: '', notes: '' };
 
-export const AdminSchoolPortalPage = () => {
+const LegacyAdminSchoolPortalPage = () => {
   const qc = useQueryClient();
   const schools = useAppQuery({ queryKey: ['admin-schools'], queryFn: featureModulesService.adminSchools });
   const [form, setForm] = useState<SchoolProfile>(schoolDefaults);
@@ -382,6 +384,103 @@ export const AdminSchoolPortalPage = () => {
           <div className="mt-3 space-y-2">{summary.data?.students.map((student) => <p key={student.studentId} className="rounded border bg-slate-50 p-2 text-sm">{student.name || student.studentId} · {student.profileCompleteness}% profile</p>)}</div>
         </div> : null}
       </div>
+    </div>
+  </Section>;
+};
+
+const whitelistSchoolDefaults = {
+  schoolName: '',
+  emisNumber: '',
+  schoolCode: '',
+  province: '',
+  districtId: '',
+  circuit: '',
+  schoolEmail: '',
+  contactNumber: '',
+  principalName: '',
+  schoolType: '',
+  status: 'ACTIVE' as 'ACTIVE' | 'PENDING' | 'INACTIVE',
+};
+
+export const AdminSchoolPortalPage = () => {
+  const qc = useQueryClient();
+  const [form, setForm] = useState(whitelistSchoolDefaults);
+  const [createdCredentials, setCreatedCredentials] = useState<{ schoolName?: string; username?: string | null; temporaryPassword?: string | null } | null>(null);
+  const schools = useAppQuery<AdminSchoolManagementResponse>({ queryKey: ['admin', 'school-management'], queryFn: adminService.getSchoolManagement });
+  const districts = useAppQuery({ queryKey: ['locations', 'districts', 'admin-school-management'], queryFn: locationService.getDistricts });
+  const whitelist = useMutation({
+    mutationFn: () => adminService.whitelistSchool(form),
+    onSuccess: async (school) => {
+      setCreatedCredentials({ schoolName: school.schoolName, username: school.username, temporaryPassword: school.temporaryPassword });
+      setForm(whitelistSchoolDefaults);
+      await qc.invalidateQueries({ queryKey: ['admin', 'school-management'] });
+      await qc.invalidateQueries({ queryKey: ['public', 'schools'] });
+    },
+  });
+  const resetPassword = useMutation({
+    mutationFn: (school: AdminSchool) => adminService.resetSchoolPassword(school.id),
+    onSuccess: async (credentials, school) => {
+      setCreatedCredentials({ schoolName: school.schoolName, username: credentials.username, temporaryPassword: credentials.temporaryPassword });
+      await qc.invalidateQueries({ queryKey: ['admin', 'school-management'] });
+    },
+  });
+
+  if (schools.isLoading || districts.isLoading) return <LoadingState message="Loading school management..." />;
+  if (schools.isError || !schools.data) return <ErrorState message="Could not load school management." />;
+
+  return <Section title="School Management">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {schools.data.metrics.map((metric) => <div key={metric.label} className="rounded border bg-white p-4"><p className="text-xs text-slate-500">{metric.label}</p><p className="text-2xl font-semibold">{metric.value}</p><p className="text-xs text-slate-500">{metric.helperText}</p></div>)}
+    </div>
+    {createdCredentials?.temporaryPassword ? (
+      <div className="rounded border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+        <p className="font-semibold">School credentials generated</p>
+        <p className="mt-1">School: {createdCredentials.schoolName}</p>
+        <p>Username / EMIS: <span className="font-semibold">{createdCredentials.username}</span></p>
+        <p>Temporary password: <span className="font-semibold">{createdCredentials.temporaryPassword}</span></p>
+      </div>
+    ) : null}
+    <form className="grid gap-3 rounded border bg-white p-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={(event) => { event.preventDefault(); setCreatedCredentials(null); whitelist.mutate(); }}>
+      <label className={fieldClass}>School name<Input value={form.schoolName} onChange={(event) => setForm((s) => ({ ...s, schoolName: event.target.value }))} required /></label>
+      <label className={fieldClass}>EMIS number<Input value={form.emisNumber} onChange={(event) => setForm((s) => ({ ...s, emisNumber: event.target.value }))} required /></label>
+      <label className={fieldClass}>School code<Input value={form.schoolCode} onChange={(event) => setForm((s) => ({ ...s, schoolCode: event.target.value }))} /></label>
+      <label className={fieldClass}>Province<Input value={form.province} onChange={(event) => setForm((s) => ({ ...s, province: event.target.value }))} /></label>
+      <label className={fieldClass}>District<select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={form.districtId} onChange={(event) => setForm((s) => ({ ...s, districtId: event.target.value }))} required>
+        <option value="">Select district</option>
+        {(districts.data ?? []).map((district) => <option key={district.id} value={district.id}>{district.name}</option>)}
+      </select></label>
+      <label className={fieldClass}>Circuit<Input value={form.circuit} onChange={(event) => setForm((s) => ({ ...s, circuit: event.target.value }))} /></label>
+      <label className={fieldClass}>School email<Input type="email" value={form.schoolEmail} onChange={(event) => setForm((s) => ({ ...s, schoolEmail: event.target.value }))} required /></label>
+      <label className={fieldClass}>Contact number<Input value={form.contactNumber} onChange={(event) => setForm((s) => ({ ...s, contactNumber: event.target.value }))} required /></label>
+      <label className={fieldClass}>Principal / contact<Input value={form.principalName} onChange={(event) => setForm((s) => ({ ...s, principalName: event.target.value }))} required /></label>
+      <label className={fieldClass}>School type<Input value={form.schoolType} onChange={(event) => setForm((s) => ({ ...s, schoolType: event.target.value }))} /></label>
+      <label className={fieldClass}>Status<select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={form.status} onChange={(event) => setForm((s) => ({ ...s, status: event.target.value as typeof form.status }))}>
+        <option value="ACTIVE">Active</option>
+        <option value="PENDING">Pending</option>
+        <option value="INACTIVE">Inactive</option>
+      </select></label>
+      <div className="flex items-end gap-3">
+        <Button disabled={whitelist.isPending || !form.districtId}>{whitelist.isPending ? 'Whitelisting...' : 'Whitelist School'}</Button>
+      </div>
+      {whitelist.isError ? <p className="text-sm text-red-600 sm:col-span-2 lg:col-span-3">{whitelist.error.message}</p> : null}
+    </form>
+    <div className="overflow-x-auto rounded border bg-white">
+      <table className="min-w-full text-left text-sm">
+        <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <tr><th className="px-4 py-3">School</th><th className="px-4 py-3">EMIS</th><th className="px-4 py-3">Code</th><th className="px-4 py-3">District</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Username</th><th className="px-4 py-3">Actions</th></tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {schools.data.items.map((school) => <tr key={school.id}>
+            <td className="px-4 py-3 font-medium text-slate-900">{school.schoolName}</td>
+            <td className="px-4 py-3">{school.emisNumber}</td>
+            <td className="px-4 py-3">{school.schoolCode || '-'}</td>
+            <td className="px-4 py-3">{school.districtName || '-'}</td>
+            <td className="px-4 py-3"><Badge color={school.status === 'ACTIVE' ? 'emerald' : 'amber'}>{school.status}</Badge></td>
+            <td className="px-4 py-3">{school.username || '-'}</td>
+            <td className="px-4 py-3"><button type="button" className="text-primary-700" onClick={() => resetPassword.mutate(school)} disabled={resetPassword.isPending}>Reset / Generate Password</button></td>
+          </tr>)}
+        </tbody>
+      </table>
     </div>
   </Section>;
 };

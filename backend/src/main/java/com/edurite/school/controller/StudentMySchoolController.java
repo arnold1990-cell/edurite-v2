@@ -11,7 +11,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping({"/api/v1/student/my-school", "/api/student/my-school"})
+@RequestMapping({
+        "/api/v1/student/my-school",
+        "/api/student/my-school",
+        "/api/v1/students/me",
+        "/api/students/me"
+})
 public class StudentMySchoolController {
 
     private final MySchoolService mySchoolService;
@@ -20,13 +25,18 @@ public class StudentMySchoolController {
         this.mySchoolService = mySchoolService;
     }
 
-    @GetMapping("/status")
+    @GetMapping({"/status", "/school-membership"})
     public SchoolLinkDtos.StudentSchoolStatusDto status(Principal principal) {
         return mySchoolService.studentStatus(principal);
     }
 
-    @PostMapping("/request")
+    @PostMapping({"/request", "/school-requests"})
     public SchoolLinkDtos.StudentSchoolStatusDto requestJoin(Principal principal, @Valid @RequestBody SchoolLinkDtos.StudentSchoolRequest request) {
+        return mySchoolService.requestJoin(principal, request.schoolId());
+    }
+
+    @PostMapping({"/school-membership/school-requests", "/requests"})
+    public SchoolLinkDtos.StudentSchoolStatusDto requestJoinAlias(Principal principal, @Valid @RequestBody SchoolLinkDtos.StudentSchoolRequest request) {
         return mySchoolService.requestJoin(principal, request.schoolId());
     }
 }

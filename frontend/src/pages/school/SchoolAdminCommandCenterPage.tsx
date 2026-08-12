@@ -92,7 +92,7 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'Academics',
     items: [
       { label: 'Learners', section: 'learners', icon: Users },
-      { label: 'Learner Join Requests', section: 'my-school-requests', icon: Users },
+      { label: 'Enrolment', section: 'my-school-requests', icon: Users },
       { label: 'Teachers', section: 'teachers', icon: UserSquare2 },
       { label: 'Classes', section: 'classes', icon: GraduationCap },
       { label: 'Subjects', section: 'subjects', icon: BookOpen },
@@ -140,7 +140,7 @@ const sectionFromPath = (pathname: string): CommandSection => {
   if (suffix.startsWith('analytics') || suffix.startsWith('academic-insights')) return 'analytics';
   if (suffix.startsWith('ai-insights')) return 'ai-insights';
   if (suffix.startsWith('learners')) return 'learners';
-  if (suffix.startsWith('my-school-requests')) return 'my-school-requests';
+  if (suffix.startsWith('my-school-requests') || suffix.startsWith('enrolment')) return 'my-school-requests';
   if (suffix.startsWith('teachers')) return 'teachers';
   if (suffix.startsWith('classes')) return 'classes';
   if (suffix.startsWith('subjects')) return 'subjects';
@@ -1057,7 +1057,7 @@ export const SchoolAdminPortalPage = () => {
   );
 
   const renderMySchoolRequests = () => (
-    <SectionShell title="Learner Join Requests" subtitle="Review learner requests coming from the main EduRite student dashboard and approve them into this school portal.">
+    <SectionShell title="Enrolment" subtitle="Review learner requests coming from the main EduRite student dashboard and approve them into this school portal.">
       {learnerJoinRequestsQuery.isError ? <ErrorState message="Could not load learner join requests." /> : null}
       <TableShell title={`Requests (${learnerJoinRequestsQuery.data?.length ?? 0})`} action={learnerJoinRequestsQuery.isLoading ? <span className="text-xs text-slate-500">Loading pending requests...</span> : undefined}>
         <div className="hidden min-w-0 overflow-x-auto lg:block">

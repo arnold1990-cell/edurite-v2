@@ -6,6 +6,7 @@ import com.edurite.admin.dto.AdminBursaryDto;
 import com.edurite.admin.dto.AdminDistrictDtos;
 import com.edurite.admin.dto.AdminPlatformSettingsDto;
 import com.edurite.admin.dto.AdminPlatformSettingsUpdateRequest;
+import com.edurite.admin.dto.AdminSchoolDtos;
 import com.edurite.admin.dto.AdminUserDto;
 import com.edurite.admin.service.AdminService;
 import java.io.IOException;
@@ -196,6 +197,35 @@ public class AdminController {
             Principal principal
     ) {
         return adminService.createDistrictAdmin(districtId, principal);
+    }
+
+    @PostMapping("/districts/{districtId}/reset-password")
+    public AdminSchoolDtos.AdminCredentialResponse resetDistrictPassword(
+            @PathVariable UUID districtId,
+            Principal principal
+    ) {
+        return adminService.resetDistrictPassword(districtId, principal);
+    }
+
+    @GetMapping("/school-management")
+    public AdminSchoolDtos.AdminSchoolManagementResponse schoolManagement() {
+        return adminService.schoolManagement();
+    }
+
+    @PostMapping("/schools/whitelist")
+    public AdminSchoolDtos.AdminSchoolItemDto whitelistSchool(
+            @jakarta.validation.Valid @RequestBody AdminSchoolDtos.AdminWhitelistSchoolRequest request,
+            Principal principal
+    ) {
+        return adminService.whitelistSchool(request, principal);
+    }
+
+    @PostMapping("/schools/{schoolId}/reset-password")
+    public AdminSchoolDtos.AdminCredentialResponse resetSchoolPassword(
+            @PathVariable UUID schoolId,
+            Principal principal
+    ) {
+        return adminService.resetSchoolPassword(schoolId, principal);
     }
 }
 

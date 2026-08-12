@@ -238,6 +238,7 @@ export const App = () => (
           <Route path="/school/analytics" element={<SchoolAdminPortalPage />} />
           <Route path="/school/ai-insights" element={<SchoolAdminPortalPage />} />
           <Route path="/school/learners" element={<SchoolAdminPortalPage />} />
+          <Route path="/school/enrolment" element={<SchoolAdminPortalPage />} />
           <Route path="/school/my-school-requests" element={<SchoolAdminPortalPage />} />
           <Route path="/school/teachers" element={<SchoolAdminPortalPage />} />
           <Route path="/school/classes" element={<SchoolAdminPortalPage />} />

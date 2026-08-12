@@ -50,7 +50,7 @@ export type LearnerSubjectView = { subjectId: string; subjectName: string; phase
 export type LearnerTaskView = { taskId: string; taskType: string; title: string; instructions?: string; dueAt: string; maxMarks: number; term?: string };
 export type LearnerAssessmentView = { taskId: string; taskType: string; title: string; instructions?: string; dueAt: string; maxMarks: number; term?: string };
 export type LearnerProgressSummary = { totalTasks: number; submitted: number; missing: number; late: number };
-export type PublicSchool = { id: string; name: string; schoolCode: string };
+export type PublicSchool = { id: string; name: string; schoolCode: string; emisNumber?: string | null };
 export type SchoolRegistrationStatus = {
   requestId: string;
   schoolName: string;

@@ -94,7 +94,7 @@ let refreshRequest: Promise<string | null> | null = null;
 
 const normalizeApprovalStatus = (status?: string | null): ApprovalStatus | undefined => {
   if (!status) return undefined;
-  return ['PENDING', 'APPROVED', 'REJECTED', 'MORE_INFO_REQUIRED', 'SUSPENDED'].includes(status) ? status as ApprovalStatus : undefined;
+  return ['PENDING', 'APPROVED', 'REJECTED', 'MORE_INFO_REQUIRED', 'PENDING_DISTRICT_APPROVAL', 'ACTIVE', 'SUSPENDED'].includes(status) ? status as ApprovalStatus : undefined;
 };
 
 const normalizePlanType = (planType?: string | null): User['planType'] | undefined => {

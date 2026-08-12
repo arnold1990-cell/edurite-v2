@@ -184,7 +184,7 @@ public class MySchoolService {
     }
 
     private SchoolLinkDtos.PublicSchoolDto toPublicSchool(School school) {
-        return new SchoolLinkDtos.PublicSchoolDto(school.getId(), school.getSchoolName(), resolveSchoolCode(school));
+        return new SchoolLinkDtos.PublicSchoolDto(school.getId(), school.getSchoolName(), resolveSchoolCode(school), school.getRegistrationNumber());
     }
 
     private SchoolLinkDtos.StudentSchoolStatusDto toStudentStatus(StudentSchoolLink link) {

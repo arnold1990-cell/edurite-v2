@@ -14,6 +14,7 @@ import com.edurite.admin.dto.AdminAnalyticsDto;
 import com.edurite.admin.dto.AdminBulkUploadResultDto;
 import com.edurite.admin.dto.AdminPlatformSettingsDto;
 import com.edurite.admin.dto.AdminPlatformSettingsUpdateRequest;
+import com.edurite.admin.dto.AdminSchoolDtos;
 import com.edurite.admin.entity.AuditLog;
 import com.edurite.admin.entity.PlatformSetting;
 import com.edurite.admin.repository.AuditLogRepository;
@@ -28,11 +29,17 @@ import com.edurite.config.CacheInvalidationService;
 import com.edurite.company.entity.CompanyApprovalStatus;
 import com.edurite.company.entity.CompanyProfile;
 import com.edurite.company.repository.CompanyProfileRepository;
+import com.edurite.district.entity.District;
+import com.edurite.district.entity.DistrictAdminProfile;
 import com.edurite.district.repository.DistrictAdminProfileRepository;
 import com.edurite.district.repository.DistrictRepository;
 import com.edurite.security.service.CurrentUserService;
+import com.edurite.school.portal.entity.School;
+import com.edurite.school.portal.entity.SchoolRegistrationRequest;
+import com.edurite.school.portal.entity.SchoolUserProfile;
 import com.edurite.school.portal.repository.SchoolRegistrationRequestRepository;
 import com.edurite.school.portal.repository.SchoolRepository;
+import com.edurite.school.portal.repository.SchoolUserProfileRepository;
 import com.edurite.user.entity.Role;
 import com.edurite.user.entity.User;
 import com.edurite.user.entity.UserStatus;
@@ -46,6 +53,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
@@ -65,6 +73,7 @@ class AdminServiceTest {
     private final DistrictAdminProfileRepository districtAdminProfileRepository = mock(DistrictAdminProfileRepository.class);
     private final SchoolRepository schoolRepository = mock(SchoolRepository.class);
     private final SchoolRegistrationRequestRepository schoolRegistrationRequestRepository = mock(SchoolRegistrationRequestRepository.class);
+    private final SchoolUserProfileRepository schoolUserProfileRepository = mock(SchoolUserProfileRepository.class);
     private final CurrentUserService currentUserService = mock(CurrentUserService.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
     private final PlatformSettingsService platformSettingsService = mock(PlatformSettingsService.class);
@@ -89,6 +98,7 @@ class AdminServiceTest {
                 districtAdminProfileRepository,
                 schoolRepository,
                 schoolRegistrationRequestRepository,
+                schoolUserProfileRepository,
                 currentUserService,
                 passwordEncoder,
                 new ObjectMapper(),
@@ -291,6 +301,121 @@ class AdminServiceTest {
         assertThat(result.createdUsers()).hasSize(1);
     }
 
+    @Test
+    void whitelistSchoolCreatesEncodedSchoolAdminAndLinksDistrict() {
+        District district = district("OR Tambo", "DC15");
+        Role schoolAdminRole = new Role();
+        schoolAdminRole.setId(UUID.randomUUID());
+        schoolAdminRole.setName("ROLE_SCHOOL_ADMIN");
+        School[] savedSchool = new School[1];
+        User[] savedUser = new User[1];
+        SchoolUserProfile[] savedProfile = new SchoolUserProfile[1];
+
+        when(districtRepository.findById(district.getId())).thenReturn(Optional.of(district));
+        when(schoolRepository.findByRegistrationNumberIgnoreCase("200123456")).thenReturn(Optional.empty());
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("200123456")).thenReturn(Optional.empty());
+        when(userRepository.existsByEmailIgnoreCase("school@example.com")).thenReturn(false);
+        when(userRepository.existsByUsernameIgnoreCase(any())).thenReturn(false);
+        when(roleRepository.findByName("ROLE_SCHOOL_ADMIN")).thenReturn(Optional.of(schoolAdminRole));
+        when(passwordEncoder.encode(any())).thenAnswer(invocation -> "encoded-" + invocation.getArgument(0));
+        when(schoolRepository.save(any(School.class))).thenAnswer(invocation -> {
+            School school = invocation.getArgument(0);
+            school.setId(UUID.randomUUID());
+            school.setCreatedAt(OffsetDateTime.now());
+            savedSchool[0] = school;
+            return school;
+        });
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(UUID.randomUUID());
+            savedUser[0] = user;
+            return user;
+        });
+        when(userRepository.findByUsernameIgnoreCase(any())).thenAnswer(invocation -> Optional.ofNullable(savedUser[0]));
+        when(schoolRegistrationRequestRepository.save(any(SchoolRegistrationRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(schoolUserProfileRepository.findBySchoolIdAndUserIdAndDeletedFalse(any(), any())).thenReturn(Optional.empty());
+        when(schoolUserProfileRepository.save(any(SchoolUserProfile.class))).thenAnswer(invocation -> {
+            savedProfile[0] = invocation.getArgument(0);
+            return savedProfile[0];
+        });
+        when(schoolUserProfileRepository.findBySchoolIdAndRoleNameAndDeletedFalse(any(), eq("ROLE_SCHOOL_ADMIN")))
+                .thenAnswer(invocation -> savedProfile[0] == null ? List.of() : List.of(savedProfile[0]));
+
+        AdminSchoolDtos.AdminSchoolItemDto result = adminService.whitelistSchool(new AdminSchoolDtos.AdminWhitelistSchoolRequest(
+                "Bhekizulu SSS",
+                "200123456",
+                "BSS",
+                "Eastern Cape",
+                district.getId(),
+                "Circuit A",
+                "school@example.com",
+                "+26770000009",
+                "Principal One",
+                "PUBLIC",
+                "ACTIVE"
+        ), principal);
+
+        assertThat(result.temporaryPassword()).isNotBlank();
+        assertThat(savedSchool[0].getDistrictId()).isEqualTo(district.getId());
+        assertThat(savedSchool[0].getRegistrationNumber()).isEqualTo("200123456");
+        assertThat(savedUser[0].getPasswordHash()).startsWith("encoded-");
+        assertThat(savedUser[0].getPasswordHash()).doesNotContain("Temp@12345");
+        assertThat(savedProfile[0].getSchoolId()).isEqualTo(savedSchool[0].getId());
+        assertThat(savedProfile[0].getRoleName()).isEqualTo("ROLE_SCHOOL_ADMIN");
+    }
+
+    @Test
+    void resetDistrictPasswordGeneratesEncodedTemporaryPassword() {
+        District district = district("North", "N01");
+        User districtUser = userWithRole("district@example.com", "ROLE_DISTRICT_ADMIN", UserStatus.ACTIVE, false);
+        districtUser.setUsername("north.admin");
+        DistrictAdminProfile profile = new DistrictAdminProfile();
+        profile.setDistrictId(district.getId());
+        profile.setUserId(districtUser.getId());
+        profile.setActive(true);
+        profile.setDeleted(false);
+        when(districtRepository.findById(district.getId())).thenReturn(Optional.of(district));
+        when(districtAdminProfileRepository.findByDistrictIdAndActiveTrueAndDeletedFalse(district.getId())).thenReturn(List.of(profile));
+        when(userRepository.findById(districtUser.getId())).thenReturn(Optional.of(districtUser));
+        when(passwordEncoder.encode(any())).thenAnswer(invocation -> "encoded-" + invocation.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var credentials = adminService.resetDistrictPassword(district.getId(), principal);
+
+        assertThat(credentials.username()).isEqualTo("north.admin");
+        assertThat(credentials.temporaryPassword()).hasSize(16);
+        assertThat(districtUser.getPasswordHash()).isEqualTo("encoded-" + credentials.temporaryPassword());
+        assertThat(districtUser.getPasswordHash()).doesNotContain("Temp@12345");
+        assertThat(districtUser.isMustChangePassword()).isTrue();
+    }
+
+    @Test
+    void resetSchoolPasswordIsScopedToExistingSchoolAdminProfile() {
+        School school = new School();
+        school.setId(UUID.randomUUID());
+        school.setSchoolName("Scoped School");
+        User schoolUser = userWithRole("school@example.com", "ROLE_SCHOOL_ADMIN", UserStatus.ACTIVE, false);
+        schoolUser.setUsername("200123456");
+        SchoolUserProfile profile = new SchoolUserProfile();
+        profile.setSchoolId(school.getId());
+        profile.setUserId(schoolUser.getId());
+        profile.setRoleName("ROLE_SCHOOL_ADMIN");
+        profile.setActive(true);
+        profile.setDeleted(false);
+        when(schoolRepository.findById(school.getId())).thenReturn(Optional.of(school));
+        when(schoolUserProfileRepository.findBySchoolIdAndRoleNameAndDeletedFalse(school.getId(), "ROLE_SCHOOL_ADMIN")).thenReturn(List.of(profile));
+        when(userRepository.findById(schoolUser.getId())).thenReturn(Optional.of(schoolUser));
+        when(passwordEncoder.encode(any())).thenAnswer(invocation -> "encoded-" + invocation.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        var credentials = adminService.resetSchoolPassword(school.getId(), principal);
+
+        assertThat(credentials.username()).isEqualTo("200123456");
+        assertThat(credentials.temporaryPassword()).hasSize(16);
+        assertThat(schoolUser.getPasswordHash()).isEqualTo("encoded-" + credentials.temporaryPassword());
+        assertThat(schoolUser.isMustChangePassword()).isTrue();
+    }
+
     private User userWithRole(String email, String roleName, UserStatus status, boolean deleted) {
         Role role = new Role();
         role.setId(UUID.randomUUID());
@@ -351,6 +476,18 @@ class AdminServiceTest {
         record.setStatus("SUBMITTED");
         record.setCreatedAt(OffsetDateTime.now().minusDays(1));
         return record;
+    }
+
+    private District district(String name, String code) {
+        District district = new District();
+        district.setId(UUID.randomUUID());
+        district.setDistrictName(name);
+        district.setDistrictCode(code);
+        district.setProvince("Eastern Cape");
+        district.setActive(true);
+        district.setStatus("ACTIVE");
+        district.setLicensingStatus("ACTIVE");
+        return district;
     }
 }
 

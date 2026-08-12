@@ -739,7 +739,7 @@ export const StudentMySchoolPage = () => {
   const filteredSchools = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
     if (!query) return schools;
-    return schools.filter((school) => `${school.name} ${school.schoolCode}`.toLowerCase().includes(query));
+    return schools.filter((school) => `${school.name} ${school.schoolCode} ${school.emisNumber ?? ''}`.toLowerCase().includes(query));
   }, [schools, searchTerm]);
   const selectedSchool = filteredSchools.find((school) => school.id === selectedSchoolId)
     ?? schools.find((school) => school.id === selectedSchoolId)
@@ -831,7 +831,7 @@ export const StudentMySchoolPage = () => {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 className="mt-2 h-11 rounded-2xl"
-                placeholder="Search by school name or code"
+                placeholder="Search by school name, code, or EMIS"
                 disabled={!canSubmitJoinRequest}
               />
             </label>
@@ -856,6 +856,7 @@ export const StudentMySchoolPage = () => {
               <div className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
                 <p className="font-semibold text-slate-900">{selectedSchool.name}</p>
                 <p className="mt-1">School code: {selectedSchool.schoolCode}</p>
+                {selectedSchool.emisNumber ? <p className="mt-1">EMIS: {selectedSchool.emisNumber}</p> : null}
               </div>
             ) : null}
 
