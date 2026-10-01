@@ -22,7 +22,6 @@ export default defineConfig(({ mode }) => {
       Object.entries(process.env).filter(([key]) => key.startsWith('VITE_')),
     ),
   };
-  console.log('Loaded VITE vars:', mergedViteEnv);
 
   const frontendEnv = loadEnv(mode, process.cwd(), '');
   const workspaceEnv = loadEnv(mode, resolve(process.cwd(), '..'), '');

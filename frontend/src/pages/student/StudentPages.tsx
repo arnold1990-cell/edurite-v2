@@ -2,7 +2,7 @@ import { AiGuidance } from '@/components/student/guidance/AiGuidance';
 import { StudentProfileView } from '@/components/student/profile/StudentProfileView';
 import { StudentDashboard as ReferenceStudentDashboard } from '@/components/student/dashboard/StudentDashboard';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { useAuth } from '@/hooks/useAuth';
@@ -1766,15 +1766,28 @@ export const StudentCareerDetailsPage = () => {
   </Section>;
 };
 
-export const StudentApplicationsPage = () => {
+export const StudentApplicationsPage = ({ savedOnly = false, applicationsOnly = false }: { savedOnly?: boolean; applicationsOnly?: boolean }) => {
   const qc = useQueryClient();
-  const [filters, setFilters] = useState({ q: '', qualificationLevel: '', region: '', eligibility: '' });
+  const [params] = useSearchParams();
+  const [filters, setFilters] = useState({ q: params.get('q') || '', qualificationLevel: '', region: '', eligibility: '' });
   const apps = useAppQuery({ queryKey: ['apps'], queryFn: applicationService.listMine });
   const bursaries = useAppQuery({ queryKey: ['burs-search', filters], queryFn: () => bursaryService.search({ q: filters.q, qualification: filters.qualificationLevel, region: filters.region, eligibility: filters.eligibility }) });
   const saved = useAppQuery({ queryKey: ['saved-bursary-ids'], queryFn: studentService.savedBursaries });
   const recommendations = useAppQuery({ queryKey: ['recs-bursary-finder'], queryFn: bursaryService.recommended });
   const toggle = useMutation({ mutationFn: ({ id, exists }: { id: string; exists: boolean }) => exists ? studentService.unsaveBursary(id) : studentService.saveBursary(id), onSuccess: () => qc.invalidateQueries({ queryKey: ['saved-bursary-ids'] }) });
-  return <Section title="Bursary Finder">
+  const submit = useMutation({ mutationFn: applicationService.submit, onSuccess: () => qc.invalidateQueries({ queryKey: ['apps'] }) });
+  const applicationList = <section className="space-y-3"><h2 className="font-semibold">My applications</h2>
+    {apps.isLoading && <LoadingState message="Loading applications..." />}
+    {apps.isError && <ErrorState message="Could not load applications." />}
+    {(apps.data ?? []).map(app => <article className="card p-4" key={app.id}><h3>{bursaries.data?.items.find(item => item.externalId === app.bursaryId)?.title || `Bursary application ${app.bursaryId}`}</h3><p>Status: {app.status}</p><p>Submitted: {new Date(app.createdAt).toLocaleDateString()}</p></article>)}
+    {!apps.isLoading && !apps.isError && !apps.data?.length && <p>No applications yet. Browse the Bursaries section to apply.</p>}
+  </section>;
+  if (applicationsOnly) return <Section title="Funding Applications">{applicationList}</Section>;
+  return <Section title={savedOnly ? 'Saved Bursaries' : 'Bursary Finder'}>
+    {bursaries.isLoading && <LoadingState message="Loading bursaries..." />}
+    {bursaries.isError && <ErrorState message="Could not load bursaries." />}
+    {(toggle.isError || submit.isError) && <p role="alert">The action could not be completed. Please try again.</p>}
+    {submit.isSuccess && <p role="status">Application submitted.</p>}
     <div className="rounded border p-3">
       <h3 className="font-semibold mb-2">AI Recommended Bursaries</h3>
                 {(recommendations.data ?? []).slice(0, 3).map((item) => <p key={item.externalId}>• {item.title} ({item.relevanceScore}%)</p>)}
@@ -1786,11 +1799,11 @@ export const StudentApplicationsPage = () => {
       <Input placeholder="Region" value={filters.region} onChange={(e) => setFilters((s) => ({ ...s, region: e.target.value }))} />
       <Input placeholder="Eligibility" value={filters.eligibility} onChange={(e) => setFilters((s) => ({ ...s, eligibility: e.target.value }))} />
     </div>
-    {((bursaries.data?.items ?? []) as Array<any>).map((b) => {
-      const exists = (saved.data ?? []).includes(b.id);
-      return <div key={b.id} className="flex justify-between border p-2 rounded"><span>{b.title} - {b.region}</span><div className="space-x-2"><Button onClick={() => toggle.mutate({ id: b.id, exists })}>{exists ? 'Saved' : 'Bookmark'}</Button><Button onClick={() => applicationService.submit(b.id)}>Apply</Button></div></div>;
+    {(bursaries.data?.items ?? []).filter(b => !savedOnly || (saved.data ?? []).includes(b.externalId)).map((b) => {
+      const exists = (saved.data ?? []).includes(b.externalId);
+      return <div key={b.externalId} className="flex flex-wrap gap-3 justify-between border p-3 rounded"><span>{b.title} - {b.region}</span><div className="space-x-2">{['OFFICIAL_PROVIDER', 'COMPANY_PROVIDER'].includes(b.sourceType) ? <><Button disabled={toggle.isPending} onClick={() => toggle.mutate({ id: b.externalId, exists })}>{exists ? 'Saved' : 'Bookmark'}</Button><Button disabled={submit.isPending || apps.data?.some(app => app.bursaryId === b.externalId)} onClick={() => submit.mutate(b.externalId)}>{apps.data?.some(app => app.bursaryId === b.externalId) ? 'Applied' : 'Apply'}</Button></> : b.applicationLink ? <a href={b.applicationLink} target="_blank" rel="noreferrer">Apply with provider</a> : <span>Check with provider for application details</span>}</div></div>;
     })}
-    <p className="font-medium">My applications: {(apps.data ?? []).length}</p>
+    {!savedOnly && applicationList}
   </Section>;
 };
 
@@ -2544,11 +2557,11 @@ export const StudentLearningCentrePage = () => {
   if (recommended.isError && catalogue.isError) return <ErrorState message="Could not load learning centre resources right now." />;
 
   return <section className="student-page-section">
-    <div className="rounded-2xl bg-gradient-to-r from-[#081739] via-[#0d2a63] to-[#13408f] p-5 text-white shadow-2xl shadow-blue-950/30 sm:p-7">
+    <div className="card ed-learning-panel p-5 text-slate-900 sm:p-6">
       <div className="space-y-4">
         <div>
-          <h1 className="text-2xl font-bold sm:text-3xl lg:text-4xl">Learning Centre</h1>
-          <p className="mt-2 max-w-3xl text-sm text-blue-100 sm:text-base">Personalized learning resources powered by EduRite AI.</p>
+          <h1 className="student-page-title">Learning Centre</h1>
+          <p className="mt-2 max-w-3xl text-sm text-blue-100 sm:text-base">Find subject resources, past papers and support for your study plan.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button className="w-full cursor-pointer rounded-2xl bg-white/15 text-white backdrop-blur hover:bg-white/25 sm:w-auto" onClick={() => applyQuickFilter('Course')}>Browse Courses</Button>
@@ -2600,7 +2613,7 @@ export const StudentLearningCentrePage = () => {
       </div>
     </div>
 
-    <div className="rounded-2xl bg-gradient-to-br from-[#0A0E2B] via-[#10235A] to-[#13408f] p-4 text-white shadow-xl shadow-slate-950/30 sm:p-5">
+    <div className="card ed-learning-panel p-4 text-slate-900 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold sm:text-xl">YouTube Learning Videos</h2>
@@ -3414,20 +3427,20 @@ export const StudentSubscriptionPage = () => {
         const isCurrent = plan.code === currentPlanCode;
         return <article
           key={plan.code}
-          className={`relative flex h-full flex-col gap-5 overflow-hidden rounded-[20px] border border-slate-200 bg-white p-6 shadow-[0_10px_30px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_40px_rgba(37,99,235,0.12)] ${plan.premium ? 'lg:scale-[1.02] ring-1 ring-blue-100' : ''}`}
+          className="card relative flex h-full flex-col gap-5 overflow-hidden p-6"
         >
-          {plan.premium ? <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#2563EB] via-[#60A5FA] to-[#93C5FD]" /> : null}
+          {plan.premium ? <div className="absolute inset-x-0 top-0 h-1 bg-orange-500" /> : null}
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-xl font-bold text-[#1E293B]">{plan.name}</h3>
-                {plan.premium ? <Badge color="blue">Most Popular</Badge> : plan.recommended ? <Badge color="blue">Recommended</Badge> : null}
+                {plan.premium ? <Badge color="slate">Premium</Badge> : plan.recommended ? <Badge color="blue">Recommended</Badge> : null}
                 {isCurrent ? <Badge color="emerald">Current</Badge> : null}
               </div>
               {plan.description ? <p className="mt-2 text-sm leading-6 text-[#64748B]">{plan.description}</p> : null}
             </div>
             <div className="rounded-2xl bg-[#F8FAFF] px-4 py-3 text-right">
-              <p className="text-2xl font-bold text-[#2563EB]">{plan.premium ? 'R49.99 / month' : formatPlanPrice(Number(plan.amount), plan.currency, plan.billingPeriod ?? plan.billingInterval)}</p>
+              <p className="text-2xl font-bold text-slate-900">{plan.premium ? 'R49.99 / month' : formatPlanPrice(Number(plan.amount), plan.currency, plan.billingPeriod ?? plan.billingInterval)}</p>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{plan.billingPeriod ?? plan.billingInterval}</p>
             </div>
           </div>
@@ -3441,7 +3454,7 @@ export const StudentSubscriptionPage = () => {
           )}
           <div className="mt-auto">
             {isPaid ? <div className="space-y-2">
-              <Button onClick={() => payFastInitiate.mutate({ planCode: plan.code })} disabled={actionInProgress} className="inline-flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#2563EB] text-white hover:bg-[#1D4ED8]">
+              <Button onClick={() => payFastInitiate.mutate({ planCode: plan.code })} disabled={actionInProgress} className="inline-flex w-full items-center justify-center gap-2 rounded-[12px] bg-primary-600 text-white hover:bg-primary-700">
                 <CircleDollarSign size={16} />
                 Pay with PayFast
               </Button>

@@ -284,7 +284,7 @@ const universityDefaults: UniversityApplication = {
   documentReferences: '',
 };
 
-export const StudentUniversityApplicationsPage = () => {
+export const StudentUniversityApplicationsPage = ({ savedOnly = false }: { savedOnly?: boolean }) => {
   const qc = useQueryClient();
   const apps = useAppQuery({ queryKey: ['university-applications'], queryFn: featureModulesService.universityApplications });
   const [form, setForm] = useState<UniversityApplication>(universityDefaults);
@@ -314,7 +314,7 @@ export const StudentUniversityApplicationsPage = () => {
       <Button className="w-full sm:w-fit" disabled={save.isPending}>{editingId ? 'Update application' : 'Add application'}</Button>
     </form>
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-      {(apps.data ?? []).map((app) => {
+      {(apps.data ?? []).filter(app => !savedOnly || app.applicationStatus === 'DRAFT' || app.applicationStatus === 'READY').map((app) => {
         const institution = resolveInstitutionDisplay({ name: app.universityName, country: app.country });
         return <article key={app.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><InstitutionLogo src={institution.logoUrl} institutionName={institution.displayName} abbreviation={institution.abbreviation} size={56} className="rounded-2xl" /><div><h3 className="font-semibold text-slate-900">{app.universityName}</h3><p className="text-sm text-slate-500">{app.programmeName} · {app.country || institution.country || 'Country not set'}</p></div></div><Badge color={statusColor(app.applicationStatus)}>{app.applicationStatus}</Badge></div>

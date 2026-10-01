@@ -72,6 +72,8 @@ export const StudentCareerRoadmapsExplorerPage = () => {
   ]);
   const [profileSubjects, setProfileSubjects] = useState<SubjectRow[]>([]);
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>('Roadmap');
+  const section = params.get('section');
+  useEffect(() => { setActiveTab(section === 'learning-path' || section === 'study-plan' ? 'AI Study Plan' : section === 'readiness' ? 'APS Readiness' : 'Roadmap'); }, [section]);
   const [generated, setGenerated] = useState<CareerRoadmapGenerateResponse | null>(null);
   const [generatedFingerprint, setGeneratedFingerprint] = useState('');
   const [savedSnapshot, setSavedSnapshot] = useState(false);
@@ -175,7 +177,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
     const savedFingerprint = activeFingerprint.split('|');
     savedFingerprint[2] = item.careerName.trim().toLowerCase();
     setGeneratedFingerprint(savedFingerprint.join('|'));
-    setActiveTab('Roadmap');
+    setActiveTab(section === 'learning-path' || section === 'study-plan' ? 'AI Study Plan' : section === 'readiness' ? 'APS Readiness' : 'Roadmap');
     setActionFeedback({ type: 'success', message: 'Viewing a saved snapshot. Regenerate to check current results.' });
   };
 
@@ -189,7 +191,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
     setHistory(previous => [item,...previous.filter(name => name !== item)].slice(0,8));
     setCareerName(item);
     setGenerated(null);
-    setActiveTab('Roadmap');
+    setActiveTab(section === 'learning-path' || section === 'study-plan' ? 'AI Study Plan' : section === 'readiness' ? 'APS Readiness' : 'Roadmap');
     setActionFeedback(null);
   };
 

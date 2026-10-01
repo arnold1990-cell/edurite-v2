@@ -1,3 +1,7 @@
+import { StudentProfileSectionsPage, StudentCareerExplorerPage, StudentLearningResourcesPage } from '@/pages/student/StudentSectionPages';
+import { StudentRedirect } from '@/routes/StudentRedirect';
+import { StudentAppShell } from '@/components/student/StudentAppShell';
+import { StudentInstitutionsPage, StudentProgressPage, StudentFundingPage, StudentStudyOptionsPage, StudentMessagesPage, StudentNotFoundPage } from '@/pages/student/StudentSectionPages';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { PublicLayout } from '@/components/layout/PublicLayout';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -11,9 +15,9 @@ import { AccountChangePasswordPage } from '@/pages/account/AccountPages';
 import { AboutPage, BursariesPage, BursaryDetailsPage, CareerDetailsPage, CareersPage, CourseDetailsPage, CoursesPage, InstitutionDetailsPage, InstitutionsPage, PricingPage } from '@/pages/public/PublicPages';
 import { PrivacyPolicyPage, TermsAndConditionsPage } from '@/pages/public/PolicyPages';
 import { ForgotPasswordPage, LoginPage, RegisterCompanyPage, RegisterSchoolPage, RegisterStudentPage, ResetPasswordPage, VerifyEmailNoticePage, VerifyEmailPage } from '@/pages/public/AuthPages';
-import { StudentAcademicProfilePage, StudentApplicationsPage, StudentBursaryRecommendationsPage, StudentCareerDetailsPage, StudentCareerRecommendationsPage, StudentCollegesTvetsPage, StudentDashboardPage, StudentDocumentsPage, StudentExperiencePage, StudentLearningCentrePage, StudentMySchoolPage, StudentNotificationsPage, StudentProfilePage, StudentPsychometricPage, StudentQualificationsPage, StudentRewardsPage, StudentSettingsPage, StudentSubscriptionPage } from '@/pages/student/StudentPages';
+import { StudentCareerDetailsPage, StudentDashboardPage, StudentNotificationsPage, StudentProfilePage, StudentSettingsPage, StudentSubscriptionPage } from '@/pages/student/StudentPages';
+import { AdminSchoolPortalPage } from '@/pages/student/StudentFeaturePages';
 import { StudentUniversityAdmissionRequirementsPage, StudentUniversityProgrammesPage } from '@/pages/student/StudentUniversityInfoPages';
-import { AdminSchoolPortalPage, StudentAiTutorPage, StudentCareerRoadmapsPage, StudentCvBuilderPage, StudentScholarshipAssistantPage, StudentUniversityApplicationsPage } from '@/pages/student/StudentFeaturePages';
 import { CompanyApplicantsPage, CompanyBursariesPage, CompanyCreateBursaryPage, CompanyDashboardPage, CompanyEditBursaryPage, CompanyNotificationsPage, CompanyPendingApprovalPage, CompanyProfilePage, CompanySettingsPage, CompanyShortlistedPage, CompanyTalentSearchPage, CompanyVerificationDocsPage } from '@/pages/company/CompanyPages';
 import { AdminAnalyticsPage, AdminAuditLogsPage, AdminBursaryModerationPage, AdminCompanyReviewPage, AdminDashboardPage, AdminDistrictManagementPage, AdminNotificationTemplatesPage, AdminNotificationsPage, AdminPaymentsPage, AdminPendingApprovalsPage, AdminRolesPage, AdminSettingsPage, AdminSubscriptionsPage, AdminUsersPage } from '@/pages/admin/AdminPages';
 import { SchoolPendingApprovalPage, SchoolStudentDashboardPage } from '@/pages/school/SchoolPages';
@@ -53,6 +57,7 @@ const AccountRouteLayout = () => {
     return <DistrictAdminLayout />;
   }
 
+  if (primaryRole === 'STUDENT') return <StudentRedirect to="/student/settings/password" />;
   return <DashboardLayout />;
 };
 
@@ -132,37 +137,66 @@ export const App = () => (
       </Route>
 
       <Route element={<RequireRole role="STUDENT" />}>
-        <Route element={<DashboardLayout />}>
-          <Route path="/student/dashboard" element={<StudentDashboardPage />} />
-          <Route path="/student/profile" element={<StudentProfilePage />} />
-          <Route path="/student/careers" element={<Navigate to="/student/explore" replace />} />
-          <Route path="/student/recommendations/careers" element={<Navigate to="/student/explore" replace />} />
-          <Route path="/student/academic-profile" element={<StudentAcademicProfilePage />} />
-          <Route path="/student/documents" element={<StudentDocumentsPage />} />
-          <Route path="/student/qualifications" element={<StudentQualificationsPage />} />
-          <Route path="/student/experience" element={<StudentExperiencePage />} />
-          <Route path="/student/recommendations/bursaries" element={<StudentBursaryRecommendationsPage />} />
-          <Route path="/student/psychometric" element={<StudentPsychometricPage />} />
-          <Route path="/student/cv-builder" element={<StudentCvBuilderPage />} />
-          <Route path="/student/ai-tutor" element={<StudentAiTutorPage />} />
-          <Route path="/student/learning-centre" element={<StudentLearningCentrePage />} />
-          <Route path="/student/rewards" element={<StudentRewardsPage />} />
-          <Route path="/student/careers/:id" element={<StudentCareerDetailsPage />} />
-          <Route path="/student/ai-guidance" element={<StudentCareerRecommendationsPage />} />
-          <Route path="/student/explore" element={<StudentCareerRoadmapsPage />} />
-          <Route path="/student/career-roadmaps" element={<StudentCareerRoadmapsPage />} />
-          <Route path="/student/saved" element={<Navigate to="/student/explore?category=Opportunities" replace />} />
-          <Route path="/student/applications" element={<StudentApplicationsPage />} />
-          <Route path="/student/scholarships" element={<StudentScholarshipAssistantPage />} />
-          <Route path="/student/universities" element={<Navigate to="/student/explore?category=Institutions" replace />} />
-          <Route path="/student/universities/:slug/programmes" element={<StudentUniversityProgrammesPage />} />
-          <Route path="/student/universities/:slug/admission-requirements" element={<StudentUniversityAdmissionRequirementsPage />} />
-          <Route path="/student/colleges-tvets" element={<StudentCollegesTvetsPage />} />
-          <Route path="/student/university-applications" element={<StudentUniversityApplicationsPage />} />
-          <Route path="/student/notifications" element={<StudentNotificationsPage />} />
-          <Route path="/student/subscription" element={<StudentSubscriptionPage />} />
-          <Route path="/student/settings" element={<StudentSettingsPage />} />
-          <Route path="/student/my-school" element={<StudentMySchoolPage />} />
+        <Route path="/student" element={<StudentAppShell />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<StudentDashboardPage />} />
+          <Route path="profile" element={<StudentProfileSectionsPage />} />
+          <Route path="careers" element={<StudentRedirect to="/student/career-explorer" />} />
+          <Route path="recommendations/careers" element={<StudentRedirect to="/student/learning?section=guidance" />} />
+          <Route path="academic-profile" element={<StudentRedirect to="/student/profile?section=academic" />} />
+          <Route path="documents" element={<StudentRedirect to="/student/profile?section=documents" />} />
+          <Route path="qualifications" element={<StudentRedirect to="/student/profile?section=career" />} />
+          <Route path="experience" element={<StudentRedirect to="/student/profile?section=career" />} />
+          <Route path="recommendations/bursaries" element={<StudentRedirect to="/student/funding?section=matches" />} />
+          <Route path="psychometric" element={<StudentRedirect to="/student/career-explorer?section=career-match" />} />
+          <Route path="cv-builder" element={<StudentRedirect to="/student/profile?section=cv" />} />
+          <Route path="ai-tutor" element={<StudentRedirect to="/student/learning?section=tutor" />} />
+          <Route path="interview-prep" element={<StudentRedirect to="/student/learning?section=tutor" />} />
+          <Route path="learning-centre" element={<StudentRedirect to="/student/learning?section=centre" />} />
+          <Route path="rewards" element={<StudentRedirect to="/student/progress?section=rewards" />} />
+          <Route path="careers/:id" element={<StudentCareerDetailsPage />} />
+          <Route path="ai-guidance" element={<StudentRedirect to="/student/learning?section=guidance" />} />
+          <Route path="explore" element={<StudentRedirect to="/student/career-explorer" />} />
+          <Route path="career-roadmaps" element={<StudentRedirect to="/student/career-explorer?section=career-path" />} />
+          <Route path="saved" element={<StudentRedirect to="/student/funding?section=opportunities" />} />
+          <Route path="applications" element={<StudentRedirect to="/student/funding?section=bursaries" />} />
+          <Route path="scholarships" element={<StudentRedirect to="/student/funding?section=scholarships" />} />
+          <Route path="universities" element={<StudentRedirect to="/student/institutions?section=universities" />} />
+          <Route path="universities/:slug/programmes" element={<StudentUniversityProgrammesPage />} />
+          <Route path="universities/:slug/admission-requirements" element={<StudentUniversityAdmissionRequirementsPage />} />
+          <Route path="colleges-tvets" element={<StudentRedirect to="/student/institutions?section=colleges-tvets" />} />
+          <Route path="university-applications" element={<StudentRedirect to="/student/institutions?section=applications" />} />
+          <Route path="notifications" element={<StudentNotificationsPage />} />
+          <Route path="subscription" element={<StudentSubscriptionPage />} />
+          <Route path="settings" element={<StudentSettingsPage />} />
+          <Route path="my-school" element={<StudentRedirect to="/student/profile?section=school" />} />
+          <Route path="career-explorer" element={<StudentCareerExplorerPage />} />
+          <Route path="study-options" element={<StudentStudyOptionsPage />} />
+          <Route path="funding" element={<StudentFundingPage />} />
+          <Route path="institutions" element={<StudentInstitutionsPage />} />
+          <Route path="learning" element={<StudentLearningResourcesPage />} />
+          <Route path="progress" element={<StudentProgressPage />} />
+          <Route path="goals" element={<StudentProfilePage />} />
+          <Route path="messages" element={<StudentMessagesPage />} />
+          <Route path="profile/cv" element={<StudentRedirect to="/student/profile?section=cv" />} />
+          <Route path="funding/saved" element={<StudentRedirect to="/student/funding?section=saved" />} />
+          <Route path="institutions/universities" element={<StudentRedirect to="/student/institutions?section=universities" />} />
+          <Route path="learning/tutor" element={<StudentRedirect to="/student/learning?section=tutor" />} />
+          <Route path="career-explorer/interests" element={<StudentRedirect to="/student/career-explorer?section=interests" />} />
+          <Route path="career-explorer/match" element={<StudentRedirect to="/student/career-explorer?section=guidance" />} />
+          <Route path="progress/rewards" element={<StudentRedirect to="/student/progress?section=rewards" />} />
+          <Route path="funding/applications" element={<StudentRedirect to="/student/funding?section=applications" />} />
+          <Route path="funding/scholarships" element={<StudentRedirect to="/student/funding?section=scholarships" />} />
+          <Route path="funding/matches" element={<StudentRedirect to="/student/funding?section=matches" />} />
+          <Route path="institutions/colleges-tvets" element={<StudentRedirect to="/student/institutions?section=colleges-tvets" />} />
+          <Route path="institutions/applications" element={<StudentRedirect to="/student/institutions?section=applications" />} />
+          <Route path="settings/password" element={<AccountChangePasswordPage />} />
+          <Route path="psychometric-test" element={<StudentRedirect to="/student/career-explorer?section=career-match" />} />
+          <Route path="career-guidance" element={<StudentRedirect to="/student/career-explorer?section=guidance" />} />
+          <Route path="opportunities" element={<StudentRedirect to="/student/funding?section=opportunities" />} />
+          <Route path="bursaries" element={<StudentRedirect to="/student/funding?section=bursaries" />} />
+          <Route path="scholarship-assistant" element={<StudentRedirect to="/student/funding?section=scholarships" />} />
+          <Route path="*" element={<StudentNotFoundPage />} />
         </Route>
       </Route>
 
