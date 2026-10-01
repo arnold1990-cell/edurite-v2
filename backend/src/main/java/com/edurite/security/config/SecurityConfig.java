@@ -189,13 +189,15 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://192.168.1.120:5173,http://192.168.1.120:5174,http://edurite.org,http://www.edurite.org,https://edurite.org,https://www.edurite.org,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}") String allowedOriginsCsv
+            @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175,http://192.168.1.120:5173,http://192.168.1.120:5174,http://edurite.org,http://www.edurite.org,https://edurite.org,https://www.edurite.org,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}") String allowedOriginsCsv
     ) {
         Set<String> requiredOrigins = new LinkedHashSet<>(List.of(
                 "http://localhost:5173",
                 "http://localhost:5174",
+                "http://localhost:5175",
                 "http://127.0.0.1:5173",
                 "http://127.0.0.1:5174",
+                "http://127.0.0.1:5175",
                 "http://192.168.1.120:5173",
                 "http://192.168.1.120:5174",
                 "https://edurite.org",
@@ -213,6 +215,10 @@ public class SecurityConfig {
 
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(allowedOrigins);
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:*",
+                "http://127.0.0.1:*"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
         configuration.setExposedHeaders(List.of("Authorization"));

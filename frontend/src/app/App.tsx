@@ -11,7 +11,7 @@ import { AccountChangePasswordPage } from '@/pages/account/AccountPages';
 import { AboutPage, BursariesPage, BursaryDetailsPage, CareerDetailsPage, CareersPage, CourseDetailsPage, CoursesPage, InstitutionDetailsPage, InstitutionsPage, PricingPage } from '@/pages/public/PublicPages';
 import { PrivacyPolicyPage, TermsAndConditionsPage } from '@/pages/public/PolicyPages';
 import { ForgotPasswordPage, LoginPage, RegisterCompanyPage, RegisterSchoolPage, RegisterStudentPage, ResetPasswordPage, VerifyEmailNoticePage, VerifyEmailPage } from '@/pages/public/AuthPages';
-import { StudentAcademicProfilePage, StudentApplicationsPage, StudentBursaryRecommendationsPage, StudentCareerDetailsPage, StudentCareerRecommendationsPage, StudentCollegesTvetsPage, StudentDashboardPage, StudentDocumentsPage, StudentExperiencePage, StudentLearningCentrePage, StudentMySchoolPage, StudentNotificationsPage, StudentProfilePage, StudentPsychometricPage, StudentQualificationsPage, StudentRewardsPage, StudentSavedPage, StudentSettingsPage, StudentSubscriptionPage, StudentUniversitiesPage } from '@/pages/student/StudentPages';
+import { StudentAcademicProfilePage, StudentApplicationsPage, StudentBursaryRecommendationsPage, StudentCareerDetailsPage, StudentCareerRecommendationsPage, StudentCollegesTvetsPage, StudentDashboardPage, StudentDocumentsPage, StudentExperiencePage, StudentLearningCentrePage, StudentMySchoolPage, StudentNotificationsPage, StudentProfilePage, StudentPsychometricPage, StudentQualificationsPage, StudentRewardsPage, StudentSettingsPage, StudentSubscriptionPage } from '@/pages/student/StudentPages';
 import { StudentUniversityAdmissionRequirementsPage, StudentUniversityProgrammesPage } from '@/pages/student/StudentUniversityInfoPages';
 import { AdminSchoolPortalPage, StudentAiTutorPage, StudentCareerRoadmapsPage, StudentCvBuilderPage, StudentScholarshipAssistantPage, StudentUniversityApplicationsPage } from '@/pages/student/StudentFeaturePages';
 import { CompanyApplicantsPage, CompanyBursariesPage, CompanyCreateBursaryPage, CompanyDashboardPage, CompanyEditBursaryPage, CompanyNotificationsPage, CompanyPendingApprovalPage, CompanyProfilePage, CompanySettingsPage, CompanyShortlistedPage, CompanyTalentSearchPage, CompanyVerificationDocsPage } from '@/pages/company/CompanyPages';
@@ -135,11 +135,12 @@ export const App = () => (
         <Route element={<DashboardLayout />}>
           <Route path="/student/dashboard" element={<StudentDashboardPage />} />
           <Route path="/student/profile" element={<StudentProfilePage />} />
+          <Route path="/student/careers" element={<Navigate to="/student/explore" replace />} />
+          <Route path="/student/recommendations/careers" element={<Navigate to="/student/explore" replace />} />
           <Route path="/student/academic-profile" element={<StudentAcademicProfilePage />} />
           <Route path="/student/documents" element={<StudentDocumentsPage />} />
           <Route path="/student/qualifications" element={<StudentQualificationsPage />} />
           <Route path="/student/experience" element={<StudentExperiencePage />} />
-          <Route path="/student/recommendations/careers" element={<StudentCareerRecommendationsPage />} />
           <Route path="/student/recommendations/bursaries" element={<StudentBursaryRecommendationsPage />} />
           <Route path="/student/psychometric" element={<StudentPsychometricPage />} />
           <Route path="/student/cv-builder" element={<StudentCvBuilderPage />} />
@@ -147,11 +148,13 @@ export const App = () => (
           <Route path="/student/learning-centre" element={<StudentLearningCentrePage />} />
           <Route path="/student/rewards" element={<StudentRewardsPage />} />
           <Route path="/student/careers/:id" element={<StudentCareerDetailsPage />} />
+          <Route path="/student/ai-guidance" element={<StudentCareerRecommendationsPage />} />
+          <Route path="/student/explore" element={<StudentCareerRoadmapsPage />} />
           <Route path="/student/career-roadmaps" element={<StudentCareerRoadmapsPage />} />
-          <Route path="/student/saved" element={<StudentSavedPage />} />
+          <Route path="/student/saved" element={<Navigate to="/student/explore?category=Opportunities" replace />} />
           <Route path="/student/applications" element={<StudentApplicationsPage />} />
           <Route path="/student/scholarships" element={<StudentScholarshipAssistantPage />} />
-          <Route path="/student/universities" element={<StudentUniversitiesPage />} />
+          <Route path="/student/universities" element={<Navigate to="/student/explore?category=Institutions" replace />} />
           <Route path="/student/universities/:slug/programmes" element={<StudentUniversityProgrammesPage />} />
           <Route path="/student/universities/:slug/admission-requirements" element={<StudentUniversityAdmissionRequirementsPage />} />
           <Route path="/student/colleges-tvets" element={<StudentCollegesTvetsPage />} />

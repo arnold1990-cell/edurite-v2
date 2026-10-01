@@ -9,6 +9,8 @@ import com.edurite.admin.dto.AdminPlatformSettingsUpdateRequest;
 import com.edurite.admin.dto.AdminSchoolDtos;
 import com.edurite.admin.dto.AdminUserDto;
 import com.edurite.admin.service.AdminService;
+import com.edurite.school.dto.RegisteredSchoolDtos;
+import com.edurite.school.service.RegisteredSchoolDirectoryService;
 import java.io.IOException;
 import java.security.Principal;
 import java.time.LocalDate;
@@ -36,9 +38,11 @@ import org.springframework.web.multipart.MultipartFile;
 public class AdminController {
 
     private final AdminService adminService;
+    private final RegisteredSchoolDirectoryService registeredSchoolDirectoryService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, RegisteredSchoolDirectoryService registeredSchoolDirectoryService) {
         this.adminService = adminService;
+        this.registeredSchoolDirectoryService = registeredSchoolDirectoryService;
     }
 
     @GetMapping("/users")
@@ -210,6 +214,16 @@ public class AdminController {
     @GetMapping("/school-management")
     public AdminSchoolDtos.AdminSchoolManagementResponse schoolManagement() {
         return adminService.schoolManagement();
+    }
+
+    @GetMapping("/school-directory")
+    public RegisteredSchoolDtos.RegisteredSchoolSearchResponse schoolDirectory(
+            @RequestParam UUID provinceId,
+            @RequestParam UUID districtId,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "25") int limit
+    ) {
+        return registeredSchoolDirectoryService.search(provinceId, districtId, search, limit);
     }
 
     @PostMapping("/schools/whitelist")

@@ -150,6 +150,7 @@ export type AdminSchool = {
   principalName?: string | null;
   schoolEmail?: string | null;
   contactNumber?: string | null;
+  physicalAddress?: string | null;
   status: string;
   hasSchoolAdmin: boolean;
   username?: string | null;
@@ -160,6 +161,29 @@ export type AdminSchool = {
 export type AdminSchoolManagementResponse = {
   metrics: AdminSchoolMetric[];
   items: AdminSchool[];
+};
+
+export type RegisteredSchool = {
+  id: string;
+  schoolName: string;
+  emisNumber: string;
+  schoolCode?: string | null;
+  provinceId?: string | null;
+  districtId?: string | null;
+  province: string;
+  district: string;
+  circuit?: string | null;
+  schoolType?: string | null;
+  physicalAddress?: string | null;
+  principalName?: string | null;
+  schoolEmail?: string | null;
+  contactNumber?: string | null;
+  source?: string | null;
+  registeredStatus?: string | null;
+};
+
+export type RegisteredSchoolSearchResponse = {
+  items: RegisteredSchool[];
 };
 
 const toParams = (params?: Record<string, string | number | boolean | undefined | null>) => (
@@ -189,16 +213,22 @@ export const adminService = {
   createDistrictAdmin: (districtId: string) => apiClient.post<AdminDistrict>(`/admin/districts/${districtId}/create-admin`).then((r) => r.data),
   resetDistrictPassword: (districtId: string) => apiClient.post<AdminCredentialResponse>(`/admin/districts/${districtId}/reset-password`).then((r) => r.data),
   getSchoolManagement: () => apiClient.get<AdminSchoolManagementResponse>('/admin/school-management').then((r) => r.data),
+  searchSchoolDirectory: (params: { provinceId: string; districtId: string; search?: string; limit?: number }) => apiClient
+    .get<RegisteredSchoolSearchResponse>('/admin/school-directory', { params: toParams(params) })
+    .then((r) => r.data),
   whitelistSchool: (payload: {
     schoolName: string;
     emisNumber: string;
     schoolCode?: string;
     province?: string;
     districtId: string;
+    registeredSchoolId?: string;
+    entrySource?: 'DIRECTORY' | 'MANUAL';
     circuit?: string;
     schoolEmail: string;
     contactNumber: string;
     principalName: string;
+    physicalAddress: string;
     schoolType?: string;
     status: 'ACTIVE' | 'PENDING' | 'INACTIVE';
   }) => apiClient.post<AdminSchool>('/admin/schools/whitelist', payload).then((r) => r.data),

@@ -1,6 +1,7 @@
 package com.edurite.admin;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -29,6 +30,7 @@ import com.edurite.config.CacheInvalidationService;
 import com.edurite.company.entity.CompanyApprovalStatus;
 import com.edurite.company.entity.CompanyProfile;
 import com.edurite.company.repository.CompanyProfileRepository;
+import com.edurite.common.exception.ResourceConflictException;
 import com.edurite.district.entity.District;
 import com.edurite.district.entity.DistrictAdminProfile;
 import com.edurite.district.repository.DistrictAdminProfileRepository;
@@ -40,6 +42,8 @@ import com.edurite.school.portal.entity.SchoolUserProfile;
 import com.edurite.school.portal.repository.SchoolRegistrationRequestRepository;
 import com.edurite.school.portal.repository.SchoolRepository;
 import com.edurite.school.portal.repository.SchoolUserProfileRepository;
+import com.edurite.school.entity.RegisteredSchool;
+import com.edurite.school.service.RegisteredSchoolDirectoryService;
 import com.edurite.user.entity.Role;
 import com.edurite.user.entity.User;
 import com.edurite.user.entity.UserStatus;
@@ -79,6 +83,7 @@ class AdminServiceTest {
     private final PlatformSettingsService platformSettingsService = mock(PlatformSettingsService.class);
     private final AccountService accountService = mock(AccountService.class);
     private final CacheInvalidationService cacheInvalidationService = mock(CacheInvalidationService.class);
+    private final RegisteredSchoolDirectoryService registeredSchoolDirectoryService = mock(RegisteredSchoolDirectoryService.class);
 
     private AdminService adminService;
     private User actor;
@@ -104,7 +109,8 @@ class AdminServiceTest {
                 new ObjectMapper(),
                 platformSettingsService,
                 accountService,
-                cacheInvalidationService
+                cacheInvalidationService,
+                registeredSchoolDirectoryService
         );
         actor = userWithRole("admin@edurite.local", "ROLE_ADMIN", UserStatus.ACTIVE, false);
         actor.setId(UUID.randomUUID());
@@ -347,11 +353,14 @@ class AdminServiceTest {
                 "BSS",
                 "Eastern Cape",
                 district.getId(),
+                null,
+                null,
                 "Circuit A",
                 "school@example.com",
-                "+26770000009",
+                "+27821234567",
                 "Principal One",
-                "PUBLIC",
+                "123 School Road",
+                "Secondary School",
                 "ACTIVE"
         ), principal);
 
@@ -360,8 +369,70 @@ class AdminServiceTest {
         assertThat(savedSchool[0].getRegistrationNumber()).isEqualTo("200123456");
         assertThat(savedUser[0].getPasswordHash()).startsWith("encoded-");
         assertThat(savedUser[0].getPasswordHash()).doesNotContain("Temp@12345");
+        assertThat(savedUser[0].getUsername()).isEqualTo("200123456");
+        assertThat(savedUser[0].isMustChangePassword()).isTrue();
+        assertThat(savedUser[0].getPasswordHash()).isEqualTo("encoded-" + result.temporaryPassword());
         assertThat(savedProfile[0].getSchoolId()).isEqualTo(savedSchool[0].getId());
+        assertThat(savedProfile[0].getUserId()).isEqualTo(savedUser[0].getId());
         assertThat(savedProfile[0].getRoleName()).isEqualTo("ROLE_SCHOOL_ADMIN");
+        assertThat(savedProfile[0].getPortalUsername()).isEqualTo("200123456");
+    }
+
+    @Test
+    void whitelistSchoolRejectsDistrictOutsideSelectedProvince() {
+        District district = district("OR Tambo", "DC15");
+        when(districtRepository.findById(district.getId())).thenReturn(Optional.of(district));
+
+        assertThatThrownBy(() -> adminService.whitelistSchool(new AdminSchoolDtos.AdminWhitelistSchoolRequest(
+                "Bhekizulu SSS",
+                "200123456",
+                "BSS",
+                "Gauteng",
+                district.getId(),
+                null,
+                null,
+                "Circuit A",
+                "school@example.com",
+                "+27821234567",
+                "Principal One",
+                "123 School Road",
+                "Secondary School",
+                "ACTIVE"
+        ), principal))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("Selected district does not belong to the selected province.");
+    }
+
+    @Test
+    void whitelistSchoolRejectsDirectorySchoolMismatch() {
+        District district = district("OR Tambo", "DC15");
+        RegisteredSchool registeredSchool = new RegisteredSchool();
+        registeredSchool.setId(UUID.randomUUID());
+        registeredSchool.setSchoolName("Directory School");
+        registeredSchool.setEmisNumber("200200857");
+        registeredSchool.setProvince("Eastern Cape");
+        registeredSchool.setDistrictId(UUID.randomUUID());
+        when(districtRepository.findById(district.getId())).thenReturn(Optional.of(district));
+        when(registeredSchoolDirectoryService.requireActive(registeredSchool.getId())).thenReturn(registeredSchool);
+
+        assertThatThrownBy(() -> adminService.whitelistSchool(new AdminSchoolDtos.AdminWhitelistSchoolRequest(
+                "Directory School",
+                "200200857",
+                "DIR",
+                "Eastern Cape",
+                district.getId(),
+                registeredSchool.getId(),
+                "DIRECTORY",
+                "Circuit A",
+                "school@example.com",
+                "+27821234567",
+                "Principal One",
+                "123 School Road",
+                "Secondary School",
+                "ACTIVE"
+        ), principal))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("Selected registered school does not match");
     }
 
     @Test

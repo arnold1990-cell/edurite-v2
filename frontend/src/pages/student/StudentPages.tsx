@@ -1,4 +1,7 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { AiGuidance } from '@/components/student/guidance/AiGuidance';
+import { StudentProfileView } from '@/components/student/profile/StudentProfileView';
+import { StudentDashboard as ReferenceStudentDashboard } from '@/components/student/dashboard/StudentDashboard';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppQuery } from '@/hooks/useAppQuery';
@@ -490,228 +493,14 @@ const PremiumStudentDashboard = ({
 };
 
 export const StudentDashboardPage = () => {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const dashboard = useAppQuery<StudentDashboard>({ queryKey: ['dash'], queryFn: studentService.getDashboard });
-  const recs = useAppQuery({ queryKey: ['recs'], queryFn: recommendationService.mine });
-  const progress = useAppQuery({ queryKey: ['progress-score'], queryFn: featureModulesService.progressScore });
-  const mySchoolStatus = useAppQuery({ queryKey: ['student', 'my-school', 'status'], queryFn: schoolService.getMySchoolStatus, staleTime: 60_000 });
   const [activeTab, setActiveTab] = useState<PremiumDashboardTab>('OVERVIEW');
-
-  if (dashboard.isLoading) return <LoadingState />;
-  if (dashboard.isError) return <ErrorState message="Could not load dashboard. Please refresh and try again." />;
-  const d = dashboard.data;
-  if (!d) return <ErrorState message="Could not load dashboard details. Please refresh and try again." />;
-
-  const careers = (recs.data?.suggestedCareers?.slice(0, 3) ?? []).map((item) => ({ id: item.id, title: item.title }));
-  const bursaries = (recs.data?.suggestedBursaries?.slice(0, 3) ?? []).map((item) => ({ id: item.id, title: item.title }));
-  const planType = resolveDashboardPlanType(d);
-  const firstName = user?.fullName?.split(/\s+/)[0] || 'Student';
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
-  const progressValue = Math.min(100, Math.max(0, d.profileCompleteness));
-  const streak = Number((d as StudentDashboard & { currentStreak?: number; streak?: number }).currentStreak ?? (d as StudentDashboard & { streak?: number }).streak ?? 0);
-  const schoolStatus = mySchoolStatus.data?.status ?? 'NONE';
-  const pendingDeadlines = [
-    `${d.activeApplications} active applications`,
-    `${d.notifications} unread notifications`,
-  ];
-  const profileRecommendations = d.recommendedImprovements?.length
-    ? d.recommendedImprovements.slice(0, 4)
-    : (d.recommendedImprovementActions ?? []).slice(0, 4).map((item) => item.title);
-
-  return <Section title="Student Dashboard" description="Track your profile, recommendations, applications, and rewards from one workspace.">
-    <div className="student-hero-card">
-      <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-        <div className="pointer-events-none absolute -right-8 -top-10 hidden h-44 w-44 rounded-full bg-gradient-to-br from-blue-100 to-orange-100 blur-2xl md:block" />
-        <div className="relative min-w-0">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-semibold text-primary-700">
-            <Sparkles size={14} />
-            {planType} workspace
-          </div>
-          <h2 className="text-2xl font-bold tracking-normal text-slate-950 md:text-3xl">{greeting}, {firstName}</h2>
-          <p className="text-xl font-semibold text-slate-900 md:text-2xl">Welcome back!</p>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Your profile is {d.profileCompleteness}% complete with {d.points} reward points and {d.notifications} unread alerts.</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link to="/student/profile" className="rounded-2xl bg-gradient-to-r from-[#0B5BFF] to-[#1E8BFF] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-110">Continue Your Journey</Link>
-            <Link to="/student/recommendations/careers" className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Ask AI Assistant</Link>
-          </div>
-        </div>
-        <div className="relative grid min-w-0 gap-3 sm:grid-cols-3 lg:w-[560px]">
-          <div className="flex items-center gap-3 rounded-[24px] border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4">
-            <div className="relative grid h-16 w-16 place-items-center rounded-full bg-white shadow-sm">
-              <div className="absolute inset-0 rounded-full" style={{ background: `conic-gradient(#1E8BFF ${progressValue}%, #E2E8F0 0)` }} />
-              <div className="absolute inset-[5px] rounded-full bg-white" />
-              <span className="relative text-xs font-bold text-slate-900">{progressValue}%</span>
-            </div>
-            <div>
-              <p className="text-xs font-medium uppercase text-slate-500">Profile completion</p>
-              <p className="text-base font-semibold text-slate-900">Progress</p>
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-4">
-            <p className="text-xs font-medium uppercase text-slate-500">Reward points</p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">{d.points}</p>
-            <p className="mt-1 text-xs text-slate-500">Keep learning to earn more</p>
-          </div>
-          <div className="rounded-[24px] border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4">
-            <p className="text-xs font-medium uppercase text-slate-500">Current streak</p>
-            <p className="mt-2 text-2xl font-bold text-slate-950">{streak} days</p>
-            <p className="mt-1 text-xs text-slate-500">Stay consistent</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div className="student-soft-card bg-gradient-to-br from-blue-50 to-white">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Profile Completeness</p>
-        <div className="mt-2 flex items-center justify-between"><p className="text-3xl font-bold text-slate-950">{d.profileCompleteness}%</p><UserCircle2 size={20} className="text-blue-500" /></div>
-      </div>
-      <div className="student-soft-card bg-gradient-to-br from-indigo-50 to-white">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Applications</p>
-        <div className="mt-2 flex items-center justify-between"><p className="text-3xl font-bold text-slate-950">{d.savedBursaries}</p><GraduationCap size={20} className="text-indigo-500" /></div>
-      </div>
-      <div className="student-soft-card bg-gradient-to-br from-cyan-50 to-white">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Applications in Progress</p>
-        <div className="mt-2 flex items-center justify-between"><p className="text-3xl font-bold text-slate-950">{d.activeApplications}</p><Clock3 size={20} className="text-cyan-600" /></div>
-      </div>
-      <div className="student-soft-card bg-gradient-to-br from-orange-50 to-white">
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reward Points</p>
-        <div className="mt-2 flex items-center justify-between"><p className="text-3xl font-bold text-slate-950">{d.points}</p><CircleDollarSign size={20} className="text-orange-500" /></div>
-      </div>
-    </div>
-    <article id="my-school-section" className="student-soft-card scroll-mt-28">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-base font-semibold text-slate-900">My School</h3>
-          <p className="mt-1 text-sm text-slate-600">View your school link status and open the full My School workspace without leaving your student dashboard.</p>
-        </div>
-        <Badge color={schoolStatusBadgeColor(schoolStatus)}>{schoolStatusLabel(schoolStatus)}</Badge>
-      </div>
-      <div className="mt-4 space-y-3 text-sm text-slate-600">
-        {mySchoolStatus.isLoading ? <p>Checking school link status...</p> : null}
-        {!mySchoolStatus.isLoading && schoolStatus === 'NONE' ? <p>No school is linked to your AI Career Guidance account yet.</p> : null}
-        {schoolStatus === 'PENDING' ? (
-          <>
-            <p>{mySchoolStatus.data?.message ?? 'Your school request is pending approval.'}</p>
-            <p className="text-xs text-slate-500">Requested school: {mySchoolStatus.data?.school?.name ?? 'Selected school'}</p>
-          </>
-        ) : null}
-        {schoolStatus === 'APPROVED' ? (
-          <>
-            <p className="text-slate-700">{mySchoolStatus.data?.message ?? 'Your school link is active.'}</p>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">School</p>
-                <p className="mt-1 font-semibold text-slate-900">{mySchoolStatus.data?.school?.name ?? 'Linked school'}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">School Username</p>
-                <p className="mt-1 font-semibold text-slate-900">{mySchoolStatus.data?.generatedUsername ?? 'Pending generation'}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 md:col-span-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Grade / Class</p>
-                <p className="mt-1 font-semibold text-slate-900">{schoolGradeClassLabel(mySchoolStatus.data)}</p>
-              </div>
-            </div>
-          </>
-        ) : null}
-        {schoolStatus === 'REJECTED' ? <p>{mySchoolStatus.data?.message ?? 'Your previous school request was rejected.'}</p> : null}
-        <div className="flex flex-wrap gap-2">
-          <Button type="button" className="h-10 rounded-2xl bg-[#0B5BFF] px-4 hover:bg-[#0849cb]" onClick={() => navigate('/student/my-school')}>
-            Open My School
-          </Button>
-          {schoolStatus === 'APPROVED' ? (
-            <Button type="button" className="h-10 rounded-2xl bg-slate-900 px-4 hover:bg-slate-800" onClick={() => navigate('/school-student/dashboard')}>
-              School Portal
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    </article>
-    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-      <article className="student-soft-card">
-        <h3 className="text-base font-semibold text-slate-900">AI Recommendations for You</h3>
-        <div className="mt-3 space-y-2 text-sm text-slate-600">
-          {profileRecommendations.length ? profileRecommendations.map((item) => <p key={item}>- {item}</p>) : <p>No recommendations yet. Complete more profile details for personalized AI suggestions.</p>}
-        </div>
-      </article>
-      <article className="student-soft-card">
-        <h3 className="text-base font-semibold text-slate-900">Top Career Matches</h3>
-        <div className="mt-3 space-y-2 text-sm text-slate-600">
-          {careers.length ? careers.map((item) => <p key={item.id}>- {item.title}</p>) : <p>No career matches available yet.</p>}
-        </div>
-      </article>
-      <article className="student-soft-card">
-        <h3 className="text-base font-semibold text-slate-900">Upcoming Deadlines</h3>
-        <div className="mt-3 space-y-2 text-sm text-slate-600">
-          {pendingDeadlines.map((item) => <p key={item}>- {item}</p>)}
-        </div>
-      </article>
-      <article className="student-soft-card">
-        <h3 className="text-base font-semibold text-slate-900">Recent AI Tutor Sessions</h3>
-        <div className="mt-3 space-y-2 text-sm text-slate-600">
-          <p>- Continue tutoring to build your study streak.</p>
-          <Link to="/student/ai-tutor" className="inline-flex font-semibold text-primary-700 hover:text-primary-600">Open AI Tutor</Link>
-        </div>
-      </article>
-      <article className="student-soft-card">
-        <h3 className="text-base font-semibold text-slate-900">Trending Bursaries</h3>
-        <div className="mt-3 space-y-2 text-sm text-slate-600">
-          {bursaries.length ? bursaries.map((item) => <p key={item.id}>- {item.title}</p>) : <p>No trending bursaries available yet.</p>}
-        </div>
-      </article>
-      <article className="student-soft-card">
-        <h3 className="text-base font-semibold text-slate-900">Learning Progress</h3>
-        <div className="mt-3 space-y-2 text-sm text-slate-600">
-          <p>- Overall score: {progress.data?.overallPercentage ?? 0}%</p>
-          <p>- Saved opportunities: {d.savedOpportunities}</p>
-          <p>- Notifications: {d.notifications}</p>
-        </div>
-      </article>
-    </div>
-    {planType === 'PREMIUM' ? (
-      <PremiumStudentDashboard
-        dashboard={d}
-        careers={careers}
-        bursaries={bursaries}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-      />
-    ) : (
-      <BasicStudentDashboard
-        dashboard={d}
-        careers={careers}
-        bursaries={bursaries}
-      />
-    )}
-    {d.plan ? (
-      <div className="rounded border border-primary-200 bg-primary-50 p-4 text-sm text-primary-900">
-        <p className="font-semibold">Current plan: {d.plan.tier}</p>
-        <p className="mt-1">{d.plan.premium ? 'Premium features are unlocked for your account.' : d.plan.upgradeMessage}</p>
-      </div>
-    ) : null}
-    {progress.data ? (
-      <div className="space-y-3 rounded border bg-white p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-semibold">Platform Progress Score</h3>
-          <Badge color={progress.data.overallColor === 'green' ? 'emerald' : progress.data.overallColor === 'orange' ? 'amber' : 'slate'}>{progress.data.overallPercentage}%</Badge>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {progress.data.cards.map((card) => (
-            <div key={card.key} className="rounded border p-3">
-              <p className="text-xs text-slate-500">{card.label}</p>
-              <p className="text-2xl font-semibold">{card.percentage}%</p>
-              <Badge color={card.color === 'green' ? 'emerald' : card.color === 'orange' ? 'amber' : 'slate'}>{card.color}</Badge>
-            </div>
-          ))}
-        </div>
-        <div className="text-sm text-slate-600">
-          {progress.data.recommendations.map((item) => <p key={item}>- {item}</p>)}
-        </div>
-      </div>
-    ) : null}
-  </Section>;
+  return <ReferenceStudentDashboard renderDetails={(dashboard, recommendations) => {
+    const careers = recommendations?.suggestedCareers ?? [];
+    const bursaries = recommendations?.suggestedBursaries ?? [];
+    return resolveDashboardPlanType(dashboard) === 'PREMIUM'
+      ? <PremiumStudentDashboard dashboard={dashboard} careers={careers} bursaries={bursaries} activeTab={activeTab} onTabChange={setActiveTab} />
+      : <BasicStudentDashboard dashboard={dashboard} careers={careers} bursaries={bursaries} />;
+  }} />;
 };
 
 export const StudentMySchoolPage = () => {
@@ -920,6 +709,7 @@ export const StudentProfilePage = () => {
   const qc = useQueryClient();
   const { user, syncStudentProfileState } = useAuth();
   const profile = useAppQuery({ queryKey: ['me'], queryFn: studentService.getMe });
+  const linkedSchool = useAppQuery({ queryKey: ['student', 'my-school', 'status'], queryFn: schoolService.getMySchoolStatus, staleTime: 60_000 });
   const recommendations = useAppQuery({
     queryKey: ['profile-ai-recommendations-fallback'],
     queryFn: recommendationService.mine,
@@ -927,7 +717,9 @@ export const StudentProfilePage = () => {
     staleTime: 5 * 60_000,
   });
   const savedProfiles = useAppQuery({ queryKey: ['me', 'saved-profiles'], queryFn: studentService.listSavedProfiles });
-  const [form, setForm] = useState<Record<string, string>>({});
+  const draftDirty = useRef(false);
+  const [form, setFormState] = useState<Record<string, string>>({});
+  const setForm: typeof setFormState = (next) => { draftDirty.current = true; setFormState(next); };
   const [subjectRows, setSubjectRows] = useState<StudentSubjectAchievement[]>([{ subjectName: '', achievementLevel: null }]);
   const [profileVersionName, setProfileVersionName] = useState('');
   const [selectedCvName, setSelectedCvName] = useState('');
@@ -937,6 +729,8 @@ export const StudentProfilePage = () => {
   const invalidateProfileDerivedQueries = () => {
     qc.invalidateQueries({ queryKey: ['me'] });
     qc.invalidateQueries({ queryKey: ['dash'] });
+    qc.invalidateQueries({ queryKey: ['progress-score'] });
+    qc.invalidateQueries({ queryKey: ['recs'] });
     qc.invalidateQueries({ queryKey: ['student-aps-profile'] });
     qc.invalidateQueries({ queryKey: ['student-career-roadmaps-saved'] });
     qc.invalidateQueries({ queryKey: ['profile-ai-readiness'] });
@@ -967,8 +761,8 @@ export const StudentProfilePage = () => {
   };
 
   useEffect(() => {
-    if (!profile.data) return;
-    setForm(toFormState(profile.data));
+    if (!profile.data || draftDirty.current) return;
+    setFormState(toFormState(profile.data));
     setSubjectRows(toSubjectRows(profile.data));
   }, [profile.data]);
 
@@ -1011,8 +805,10 @@ export const StudentProfilePage = () => {
       interests: parseList(form.interests ?? ''),
     }),
     onSuccess: (updatedProfile) => {
-      setForm(toFormState(updatedProfile));
+      draftDirty.current = false;
+      setFormState(toFormState(updatedProfile));
       setSubjectRows(toSubjectRows(updatedProfile));
+      qc.setQueryData(['me'], updatedProfile);
       syncStudentProfileState({
         profileCompleted: updatedProfile.profileCompleted,
         profileCompleteness: updatedProfile.profileCompleteness,
@@ -1055,8 +851,10 @@ export const StudentProfilePage = () => {
   const applySavedProfile = useMutation({
     mutationFn: (savedProfileId: string) => studentService.applySavedProfile(savedProfileId),
     onSuccess: (updatedProfile) => {
-      setForm(toFormState(updatedProfile));
+      draftDirty.current = false;
+      setFormState(toFormState(updatedProfile));
       setSubjectRows(toSubjectRows(updatedProfile));
+      qc.setQueryData(['me'], updatedProfile);
       syncStudentProfileState({
         profileCompleted: updatedProfile.profileCompleted,
         profileCompleteness: updatedProfile.profileCompleteness,
@@ -1157,10 +955,12 @@ export const StudentProfilePage = () => {
 
   const savedProfileDetailById = useMemo(() => new Map((savedProfileDetails.data ?? []).map((item) => [item.id, item])), [savedProfileDetails.data]);
   const setSubjectField = (index: number, patch: Partial<StudentSubjectAchievement>) => {
+    draftDirty.current = true;
     setSubjectRows((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
   };
-  const addSubjectRow = () => setSubjectRows((current) => [...current, { subjectName: '', achievementLevel: null }]);
+  const addSubjectRow = () => { draftDirty.current = true; setSubjectRows((current) => [...current, { subjectName: '', achievementLevel: null }]); };
   const removeSubjectRow = (index: number) => {
+    draftDirty.current = true;
     setSubjectRows((current) => {
       const next = current.filter((_, rowIndex) => rowIndex !== index);
       return next.length ? next : [{ subjectName: '', achievementLevel: null }];
@@ -1171,30 +971,15 @@ export const StudentProfilePage = () => {
   if (profile.isLoading) return <LoadingState />;
   if (profile.isError) return <ErrorState message="Could not load your profile. Please refresh and try again." />;
 
-  const initials = getInitials(value('firstName'), value('lastName'));
+  if (!p) return <ErrorState message="Could not load your profile." />;
+  const documentName = (url?: string) => {
+    if (!url) return '';
+    try { return decodeURIComponent(url.split('?')[0].split('/').pop() || 'Uploaded document'); }
+    catch { return 'Uploaded document'; }
+  };
 
-  return <Section title="My Profile">
-    <article className="overflow-hidden rounded-2xl border border-primary-100 bg-gradient-to-r from-white via-primary-50/40 to-blue-50/50 shadow-sm transition">
-      <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-xl font-bold text-primary-700">{initials}</div>
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">Student profile summary</p>
-            <h2 className="text-2xl font-semibold text-slate-900">{`${value('firstName')} ${value('lastName')}`.trim() || 'Your Profile'}</h2>
-              <p className="text-sm text-slate-600">{value('selectedGrade') || 'Grade not selected yet'}{value('qualificationLevel') ? ` • ${value('qualificationLevel')}` : ''}</p>
-          </div>
-        </div>
-        <div className="rounded-xl border border-primary-100 bg-white/90 p-3 text-sm shadow-sm">
-          <p className="font-semibold text-slate-800">Profile completion</p>
-          <p className="text-xs text-slate-500">{profileCompleteness}% complete</p>
-          <div className="mt-2 h-2 w-56 overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full rounded-full bg-primary-600 transition-all duration-500" style={{ width: `${profileCompleteness}%` }} />
-          </div>
-        </div>
-      </div>
-    </article>
 
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+  const personalContent = (    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <div className="mb-4 flex items-center gap-2">
         <UserCircle2 className="h-5 w-5 text-primary-600" />
         <h3 className="text-lg font-semibold text-slate-900">Personal Information</h3>
@@ -1208,29 +993,12 @@ export const StudentProfilePage = () => {
         <label className="space-y-1 text-sm font-medium text-slate-700">Location<Input className="transition focus:shadow-sm" placeholder="Location" value={value('location')} onChange={(e) => setForm((s) => ({ ...s, location: e.target.value }))} /></label>
         <label className="space-y-1 text-sm font-medium text-slate-700 sm:col-span-2">Bio<Input className="transition focus:shadow-sm" placeholder="Bio" value={value('bio')} onChange={(e) => setForm((s) => ({ ...s, bio: e.target.value }))} /></label>
       </div>
-    </article>
-
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-      <div className="mb-4 flex items-center gap-2">
-        <GraduationCap className="h-5 w-5 text-primary-600" />
-        <h3 className="text-lg font-semibold text-slate-900">Academic Information</h3>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
-        <label className="space-y-1 text-sm font-medium text-slate-700">Grade
-          <select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm transition outline-none focus:ring-2 focus:ring-primary-500" value={value('selectedGrade')} onChange={(e) => setForm((s) => ({ ...s, selectedGrade: e.target.value }))}>
-            <option value="">Select grade</option>
-            {STUDENT_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}
-          </select>
-        </label>
-        <label className="space-y-1 text-sm font-medium text-slate-700">Qualification level<Input className="transition focus:shadow-sm" placeholder="Qualification level" value={value('qualificationLevel')} onChange={(e) => setForm((s) => ({ ...s, qualificationLevel: e.target.value }))} /></label>
-        <label className="space-y-1 text-sm font-medium text-slate-700 sm:col-span-2">Career goals<Input className="transition focus:shadow-sm" placeholder="Career goals" value={value('careerGoals')} onChange={(e) => setForm((s) => ({ ...s, careerGoals: e.target.value }))} /></label>
-        <label className="space-y-1 text-sm font-medium text-slate-700">Qualifications (comma separated)<Input className="transition focus:shadow-sm" placeholder="Qualifications (comma separated)" value={value('qualifications')} onChange={(e) => setForm((s) => ({ ...s, qualifications: e.target.value }))} /></label>
-        <label className="space-y-1 text-sm font-medium text-slate-700">Experience (comma separated)<Input className="transition focus:shadow-sm" placeholder="Experience (comma separated)" value={value('experience')} onChange={(e) => setForm((s) => ({ ...s, experience: e.target.value }))} /></label>
-        <label className="space-y-1 text-sm font-medium text-slate-700">Skills (comma separated)<Input className="transition focus:shadow-sm" placeholder="Skills (comma separated)" value={value('skills')} onChange={(e) => setForm((s) => ({ ...s, skills: e.target.value }))} /></label>
-        <label className="space-y-1 text-sm font-medium text-slate-700">Interests (comma separated)<Input className="transition focus:shadow-sm" placeholder="Interests (comma separated)" value={value('interests')} onChange={(e) => setForm((s) => ({ ...s, interests: e.target.value }))} /></label>
-      </div>
-    </article>
-
+    </article>);
+  const academicContent = <>
+    <article className="ep-form-card"><h3>Academic Information</h3><div className="ep-editor-fields">
+      <label className="ep-field"><span>Grade</span><select value={value('selectedGrade')} onChange={(event) => setForm((current) => ({ ...current, selectedGrade: event.target.value }))}><option value="">Select grade</option>{STUDENT_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select></label>
+      <label className="ep-field"><span>Qualification level</span><Input value={value('qualificationLevel')} onChange={(event) => setForm((current) => ({ ...current, qualificationLevel: event.target.value }))} /></label>
+    </div></article>
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <div className="mb-3 flex items-center justify-between">
         <div>
@@ -1242,27 +1010,27 @@ export const StudentProfilePage = () => {
       <div className="space-y-3">
         {subjectRows.map((row, index) => {
           const selectedElsewhere = new Set(subjectRows.filter((_, rowIndex) => rowIndex !== index).map((item) => item.subjectName));
-          return <div key={`${index}-${row.subjectName || 'empty'}`} className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 md:grid-cols-[1fr_220px_auto] md:items-end">
+          return <div key={index} className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 md:grid-cols-[1fr_220px_auto] md:items-end">
             <label className="space-y-1 text-sm font-medium text-slate-700">Subject
-              <select className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500" value={row.subjectName} onChange={(e) => setSubjectField(index, { subjectName: e.target.value })}>
+              <select aria-label="Subject" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500" value={row.subjectName} onChange={(e) => setSubjectField(index, { subjectName: e.target.value })}>
                 <option value="">{subjectPlaceholder}</option>
                 {currentSubjectOptions.map((subject) => <option key={subject} value={subject} disabled={selectedElsewhere.has(subject)}>{subject}</option>)}
               </select>
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700">Achievement level
-              <select className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500" value={row.achievementLevel ?? ''} onChange={(e) => setSubjectField(index, { achievementLevel: e.target.value ? Number(e.target.value) : null })}>
+              <select aria-label="Achievement level" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500" value={row.achievementLevel ?? ''} onChange={(e) => setSubjectField(index, { achievementLevel: e.target.value ? Number(e.target.value) : null })}>
                 <option value="">Select level</option>
                 {ACHIEVEMENT_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}
               </select>
             </label>
-            <Button type="button" className="bg-rose-600 hover:bg-rose-500" onClick={() => removeSubjectRow(index)} disabled={subjectRows.length === 1}>Remove</Button>
+            <Button type="button" aria-label={`Remove subject ${index + 1}`} className="bg-rose-600 hover:bg-rose-500" onClick={() => removeSubjectRow(index)} disabled={subjectRows.length === 1}>Remove<span className="sr-only"> subject {index + 1}</span></Button>
           </div>;
         })}
       </div>
       <p className="mt-2 text-xs text-slate-500">Achievement levels follow the NSC scale from Level 1 to Level 7.</p>
     </article>
-
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+  </>;
+  const readinessContent = (    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <h3 className="text-lg font-semibold text-slate-900">Profile Strength / Readiness Breakdown</h3>
       <div className={`mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-2 ${isPremiumStudent ? 'xl:grid-cols-4 2xl:grid-cols-5' : ''}`}>
         <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><p className="text-xs uppercase tracking-wide text-slate-500">Profile completeness</p><p className="mt-1 text-xl font-semibold text-slate-900">{profileCompleteness}%</p></div>
@@ -1271,9 +1039,8 @@ export const StudentProfilePage = () => {
         {isPremiumStudent ? <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><p className="text-xs uppercase tracking-wide text-slate-500">Qualification readiness</p><p className="mt-1 text-xl font-semibold text-slate-900">{qualificationReadinessScore}%</p></div> : null}
         {isPremiumStudent ? <div className="rounded-xl border border-slate-200 bg-slate-50 p-3"><p className="text-xs uppercase tracking-wide text-slate-500">Document completeness</p><p className="mt-1 text-xl font-semibold text-slate-900">{documentCompletenessScore}%</p></div> : null}
       </div>
-    </article>
-
-    {isPremiumStudent ? (
+    </article>);
+  const guidanceContent = <>{isPremiumStudent ? (
       <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -1329,28 +1096,28 @@ export const StudentProfilePage = () => {
         <p className="mt-1 text-sm text-primary-800">Unlock academic, qualification, and AI guidance insights with Premium.</p>
         <Link to="/student/subscription" className="mt-2 inline-block text-sm font-semibold text-primary-700 hover:text-primary-600">View plans</Link>
       </article>
-    )}
-
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+    )}</>;
+  const documentsContent = (    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <h3 className="text-lg font-semibold text-slate-900">Documents</h3>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
         <label className="block cursor-pointer rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4 transition hover:border-primary-300 hover:bg-primary-50/40">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-medium text-slate-800">CV Upload</p>
-              <p className="text-xs text-slate-500">{selectedCvName || 'Choose PDF/DOC/DOCX'}</p>
+              <p className="text-xs text-slate-500">{selectedCvName || documentName(p?.cvFileUrl) || 'Choose PDF/DOC/DOCX'}</p>
               <p className={`mt-2 text-xs font-semibold ${p?.cvFileUrl ? 'text-emerald-700' : 'text-slate-500'}`}>{p?.cvFileUrl ? 'Uploaded' : 'Not uploaded yet'}</p>
             </div>
             {p?.cvFileUrl ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <FileUp className="h-5 w-5 text-slate-500" />}
           </div>
           <input
-            type="file"
-            className="hidden"
+            type="file" accept=".pdf,.doc,.docx"
+            className="ep-file-input" disabled={cvUpload.isPending || transcriptUpload.isPending}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
               setSelectedCvName(file.name);
               cvUpload.mutate(file);
+              e.currentTarget.value = '';
             }}
           />
         </label>
@@ -1358,31 +1125,33 @@ export const StudentProfilePage = () => {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="font-medium text-slate-800">Transcript Upload</p>
-              <p className="text-xs text-slate-500">{selectedTranscriptName || 'Choose PDF/DOC/DOCX'}</p>
+              <p className="text-xs text-slate-500">{selectedTranscriptName || documentName(p?.transcriptFileUrl) || 'Choose PDF/DOC/DOCX'}</p>
               <p className={`mt-2 text-xs font-semibold ${p?.transcriptFileUrl ? 'text-emerald-700' : 'text-slate-500'}`}>{p?.transcriptFileUrl ? 'Uploaded' : 'Not uploaded yet'}</p>
             </div>
             {p?.transcriptFileUrl ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <FileUp className="h-5 w-5 text-slate-500" />}
           </div>
           <input
-            type="file"
-            className="hidden"
+            type="file" accept=".pdf,.doc,.docx"
+            className="ep-file-input" disabled={cvUpload.isPending || transcriptUpload.isPending}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file) return;
               setSelectedTranscriptName(file.name);
               transcriptUpload.mutate(file);
+              e.currentTarget.value = '';
             }}
           />
         </label>
       </div>
+      {(cvUpload.isPending || transcriptUpload.isPending) && <p role="status">Uploading document...</p>}
+      {(cvUpload.isSuccess || transcriptUpload.isSuccess) && <p role="status">Document uploaded successfully.</p>}
       {(cvUpload.isError || transcriptUpload.isError) ? <p className="mt-2 text-sm text-red-600">Could not upload one of your documents. Please try again.</p> : null}
-    </article>
-
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+    </article>);
+  const savedProfilesContent = (    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <h3 className="text-lg font-semibold text-slate-900">Saved Profile Versions</h3>
       <div className="mt-3 grid gap-2 md:grid-cols-[1fr_auto]">
-        <Input placeholder="Profile name (example: Engineering Track)" value={profileVersionName} onChange={(e) => setProfileVersionName(e.target.value)} />
-        <Button onClick={() => saveProfileVersion.mutate()} disabled={saveProfileVersion.isPending || !profileVersionName.trim()}>
+        <Input aria-label="Profile version name" placeholder="Profile name (example: Engineering Track)" value={profileVersionName} onChange={(e) => setProfileVersionName(e.target.value)} />
+        <Button type="button" onClick={() => saveProfileVersion.mutate()} disabled={saveProfileVersion.isPending || !profileVersionName.trim()}>
           {saveProfileVersion.isPending ? 'Saving...' : 'Save As New Profile'}
         </Button>
       </div>
@@ -1407,10 +1176,10 @@ export const StudentProfilePage = () => {
             {subjectSummary.length ? <p className="mt-1 text-xs text-slate-600">{subjectSummary.join(' • ')}</p> : null}
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => applySavedProfile.mutate(saved.id)} disabled={applySavedProfile.isPending || deleteSavedProfile.isPending}>
+                <Button type="button" onClick={() => applySavedProfile.mutate(saved.id)} disabled={applySavedProfile.isPending || deleteSavedProfile.isPending}>
                   {applySavedProfile.isPending ? 'Applying...' : 'Use This Profile'}
                 </Button>
-                <Button onClick={() => deleteSavedProfile.mutate(saved.id)} disabled={applySavedProfile.isPending || deleteSavedProfile.isPending} className="bg-slate-700 hover:bg-slate-600">
+                <Button type="button" onClick={() => deleteSavedProfile.mutate(saved.id)} disabled={applySavedProfile.isPending || deleteSavedProfile.isPending} className="bg-slate-700 hover:bg-slate-600">
                   {deleteSavedProfile.isPending ? 'Deleting...' : 'Delete'}
                 </Button>
               </div>
@@ -1421,16 +1190,23 @@ export const StudentProfilePage = () => {
       {!savedProfiles.isLoading && !savedProfiles.data?.length ? <p className="mt-2 text-sm text-slate-500">No saved profiles yet. Save this one so you can reuse it later.</p> : null}
       {applySavedProfile.isError ? <p className="mt-2 text-sm text-red-600">Could not apply saved profile right now.</p> : null}
       {deleteSavedProfile.isError ? <p className="mt-2 text-sm text-red-600">Could not delete saved profile right now.</p> : null}
-    </article>
-
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div className="flex items-center gap-2 text-sm text-slate-600">
-        {(update.isSuccess || cvUpload.isSuccess || transcriptUpload.isSuccess) ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertTriangle className="h-4 w-4 text-slate-400" />}
-        <span>{update.isSuccess ? 'Profile saved successfully.' : 'Remember to save profile changes after editing.'}</span>
-      </div>
-      <Button onClick={() => update.mutate()} disabled={update.isPending}>{update.isPending ? 'Saving profile...' : 'Save profile'}</Button>
-    </div>
-  </Section>;
+    </article>);
+  return <StudentProfileView
+    profile={p}
+    authenticatedName={user?.fullName}
+    schoolName={linkedSchool.data?.status === 'APPROVED' ? linkedSchool.data.school?.name : undefined}
+    form={form}
+    onChange={(field, nextValue) => { update.reset(); setForm((current) => ({ ...current, [field]: nextValue })); }}
+    onSave={() => update.mutateAsync()}
+    saving={update.isPending}
+    saveError={update.isError ? update.error.message || 'Could not save your profile. Please try again.' : undefined}
+    personalContent={personalContent}
+    academicContent={academicContent}
+    readinessContent={readinessContent}
+    guidanceContent={guidanceContent}
+    documentsContent={documentsContent}
+    savedProfilesContent={savedProfilesContent}
+  />;
 };
 
 export const StudentAcademicProfilePage = StudentProfilePage;
@@ -1438,10 +1214,11 @@ export const StudentDocumentsPage = StudentProfilePage;
 export const StudentQualificationsPage = StudentProfilePage;
 export const StudentExperiencePage = StudentProfilePage;
 
-export const StudentCareerRecommendationsPage = () => {
+export const StudentCareerRecommendationsPage = ({ onDemand = true }: { onDemand?: boolean }) => {
   const isDemoMode = aiGuidanceService.demoModeEnabled;
   const profile = useAppQuery({ queryKey: ['me'], queryFn: studentService.getMe });
   const [guidanceMode, setGuidanceMode] = useState<'FAST' | 'DEEP'>('FAST');
+  const [guidanceRequest, setGuidanceRequest] = useState(onDemand ? 0 : 1);
   const subscription = useAppQuery({ queryKey: ['sub'], queryFn: subscriptionService.current });
   const isPremium = Boolean(subscription.data?.premiumAccess) || (subscription.data?.planCode === 'PLAN_PREMIUM' && subscription.data?.status === 'ACTIVE');
 
@@ -1455,6 +1232,9 @@ export const StudentCareerRecommendationsPage = () => {
   const qualificationLevel = currentProfile?.qualificationLevel?.trim() ?? '';
   const careerInterest = (currentProfile?.interests ?? []).map((item) => item.trim()).filter(Boolean).join(', ');
   const targetProgram = currentProfile?.careerGoals?.trim() || careerInterest;
+  const subjectSignals = (currentProfile?.subjectAchievements ?? [])
+    .filter((item) => item.subjectName)
+    .map((item) => `${item.subjectName}${item.achievementLevel ? ` level ${item.achievementLevel}` : ''}`);
   const guidanceMaxRecommendations = guidanceMode === 'FAST' ? 3 : 10;
   const profileReadinessMessage = !currentProfile
     ? 'Student profile is required before requesting AI guidance.'
@@ -1464,7 +1244,7 @@ export const StudentCareerRecommendationsPage = () => {
 
   const defaultSources = useAppQuery({
     queryKey: ['default-university-sources'],
-    enabled: !aiGuidanceService.demoModeEnabled,
+    enabled: !aiGuidanceService.demoModeEnabled && guidanceRequest > 0,
     queryFn: aiGuidanceService.getDefaultUniversitySources,
     staleTime: 30 * 60_000,
     gcTime: 60 * 60_000,
@@ -1472,13 +1252,13 @@ export const StudentCareerRecommendationsPage = () => {
   });
 
   const aiAdvice = useAppQuery({
-    queryKey: ['ai-guidance-university-sources', guidanceMode, currentProfile?.id, currentProfile?.profileCompleteness, qualificationLevel, careerInterest, targetProgram],
-    enabled: Boolean(currentProfile) && !aiGuidanceService.demoModeEnabled && !profileReadinessMessage,
+    queryKey: ['ai-guidance-university-sources', guidanceRequest, guidanceMode, currentProfile?.id, currentProfile?.profileCompleteness, qualificationLevel, careerInterest, targetProgram, onDemand ? subjectSignals.join('|') : ''],
+    enabled: Boolean(currentProfile) && guidanceRequest > 0 && !aiGuidanceService.demoModeEnabled && !profileReadinessMessage,
     queryFn: async () => aiGuidanceService.analyseUniversitySources({
       urls: [], // Empty list triggers backend default-source mode.
-      targetProgram,
-      careerInterest,
-      qualificationLevel,
+      targetProgram: onDemand ? [targetProgram, currentProfile?.selectedGrade].filter(Boolean).join(' | ') : targetProgram,
+      careerInterest: onDemand ? [careerInterest, (currentProfile?.skills ?? []).join(', '), subjectSignals.join(', ')].filter(Boolean).join(' | ') : careerInterest,
+      qualificationLevel: onDemand ? [qualificationLevel, currentProfile?.selectedGrade, currentProfile?.location].filter(Boolean).join(' | ') : qualificationLevel,
       maxRecommendations: guidanceMaxRecommendations,
     }),
     retry: false,
@@ -1498,7 +1278,7 @@ export const StudentCareerRecommendationsPage = () => {
   if (profile.isError) return <ErrorState message="Could not load your profile. Please refresh and try again." />;
 
   const isSearching = !isDemoMode && (aiAdvice.isLoading || aiAdvice.isFetching || defaultSources.isLoading || defaultSources.isFetching);
-  if (!isDemoMode && profileReadinessMessage) return <ErrorState message={profileReadinessMessage} />;
+  if (!onDemand && !isDemoMode && profileReadinessMessage) return <ErrorState message={profileReadinessMessage} />;
 
   const hasAiRequestError = !isDemoMode && aiAdvice.isError;
 
@@ -1576,7 +1356,8 @@ export const StudentCareerRecommendationsPage = () => {
     </article>)}</div>;
   };
 
-  return <Section title="AI Guidance">
+  const guidanceDetails = <Section title="AI Guidance">
+    {!onDemand && <>
     <div className="relative overflow-hidden rounded-[28px] border border-blue-900/30 bg-[#081739] p-5 text-white shadow-xl shadow-slate-900/20 md:p-6">
       <div className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full bg-gradient-to-br from-blue-500/35 to-orange-400/30 blur-2xl" />
       <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1624,9 +1405,11 @@ export const StudentCareerRecommendationsPage = () => {
         </div>
       </div>
     </div>}
+    {onDemand && !isDemoMode ? <Button type="button" onClick={() => setGuidanceRequest((count) => count + 1)} disabled={isSearching || Boolean(profileReadinessMessage)}>{guidanceRequest ? 'Regenerate guidance' : 'Generate my guidance'}</Button> : null}
+    </>}
     {!aiPremiumUnlocked ? <p className="text-xs text-amber-700">Deep AI mode and expanded insights are available on Premium subscriptions.</p> : null}
     {isSearching ? <div className="rounded-[22px] border border-blue-200 bg-blue-50/70 p-4"><LoadingState message="Searching for guidance results..." detail={guidanceMode === 'FAST' ? 'Fast mode is prioritising quick source retrieval.' : 'Deep mode is checking more sources for broader coverage.'} /></div> : null}
-    {!isDemoMode && <>
+    {!isDemoMode && guidanceRequest > 0 && <>
       {aiUnavailable && <div className="rounded-[22px] border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 shadow-sm">
         <span className="font-semibold">{AI_ERROR_MESSAGE}</span>
       </div>}
@@ -1720,8 +1503,14 @@ export const StudentCareerRecommendationsPage = () => {
       </div>
     ) : null}
   </Section>;
+  if (!onDemand) return guidanceDetails;
+  return <AiGuidance qualifications={aiPremiumUnlocked && !aiUnavailable ? programmes.map(programme => evaluateProgrammeQualification(programme, currentProfile?.subjectAchievements ?? [], careers.map(career => career.name))) : []} profile={currentProfile} advice={aiUnavailable ? undefined : aiAdvice.data} careers={aiUnavailable ? [] : visibleCareers} premium={aiPremiumUnlocked} loading={isSearching} error={profileReadinessMessage || (guidanceRequest > 0 && aiUnavailable ? AI_ERROR_MESSAGE : null)} details={guidanceDetails} controls={<>
+    <span>Guidance:</span><button type="button" aria-pressed={guidanceMode === 'FAST'} onClick={() => setGuidanceMode('FAST')}>Fast</button><button type="button" aria-pressed={guidanceMode === 'DEEP'} disabled={!isPremium} onClick={() => setGuidanceMode('DEEP')}>Deep</button>
+    <button type="button" className="ec-generate" disabled={isSearching || Boolean(profileReadinessMessage)} onClick={() => setGuidanceRequest(count => count + 1)}>{guidanceRequest ? 'Regenerate guidance' : 'Generate my guidance'}</button>
+    {!isPremium && <Link to="/student/subscription">Premium unlocks Deep guidance</Link>}
+  </>} />;
 };
-export const StudentBursaryRecommendationsPage = StudentCareerRecommendationsPage;
+export const StudentBursaryRecommendationsPage = () => <StudentCareerRecommendationsPage onDemand={false} />;
 
 export const StudentSavedPage = () => {
   const navigate = useNavigate();

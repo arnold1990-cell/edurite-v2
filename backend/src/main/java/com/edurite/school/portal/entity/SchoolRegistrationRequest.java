@@ -32,6 +32,12 @@ public class SchoolRegistrationRequest extends BaseEntity {
     @Column(name = "school_id")
     private UUID schoolId;
 
+    @Column(name = "registered_school_id")
+    private UUID registeredSchoolId;
+
+    @Column(name = "entry_source", nullable = false)
+    private String entrySource = "MANUAL";
+
     @Column(name = "school_name", nullable = false)
     private String schoolName;
 

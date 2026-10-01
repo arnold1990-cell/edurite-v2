@@ -44,6 +44,8 @@ import com.edurite.school.portal.entity.SchoolUserProfile;
 import com.edurite.school.portal.repository.SchoolRegistrationRequestRepository;
 import com.edurite.school.portal.repository.SchoolRepository;
 import com.edurite.school.portal.repository.SchoolUserProfileRepository;
+import com.edurite.school.entity.RegisteredSchool;
+import com.edurite.school.service.RegisteredSchoolDirectoryService;
 import com.edurite.school.service.SchoolWhitelistOptions;
 import com.edurite.school.service.SouthAfricanMobileNumber;
 import com.edurite.user.entity.Role;
@@ -123,6 +125,7 @@ public class AdminService {
     private final PlatformSettingsService platformSettingsService;
     private final AccountService accountService;
     private final CacheInvalidationService cacheInvalidationService;
+    private final RegisteredSchoolDirectoryService registeredSchoolDirectoryService;
 
     public AdminService(
             UserRepository userRepository,
@@ -142,7 +145,8 @@ public class AdminService {
             ObjectMapper objectMapper,
             PlatformSettingsService platformSettingsService,
             AccountService accountService,
-            CacheInvalidationService cacheInvalidationService
+            CacheInvalidationService cacheInvalidationService,
+            RegisteredSchoolDirectoryService registeredSchoolDirectoryService
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -162,6 +166,7 @@ public class AdminService {
         this.platformSettingsService = platformSettingsService;
         this.accountService = accountService;
         this.cacheInvalidationService = cacheInvalidationService;
+        this.registeredSchoolDirectoryService = registeredSchoolDirectoryService;
     }
 
     private String safe(String value) {
@@ -765,6 +770,17 @@ public class AdminService {
         if (!sameText(district.getProvince(), province)) {
             throw new ResourceConflictException("Selected district does not belong to the selected province.");
         }
+        RegisteredSchool registeredSchool = null;
+        String entrySource = "MANUAL";
+        if (request.registeredSchoolId() != null) {
+            registeredSchool = registeredSchoolDirectoryService.requireActive(request.registeredSchoolId());
+            if (!registeredSchool.getDistrictId().equals(district.getId())
+                    || !sameText(registeredSchool.getProvince(), province)
+                    || !sameText(registeredSchool.getEmisNumber(), emisNumber)) {
+                throw new ResourceConflictException("Selected registered school does not match the submitted province, district, and EMIS number.");
+            }
+            entrySource = "DIRECTORY";
+        }
         if (schoolRepository.findByRegistrationNumberIgnoreCase(emisNumber).isPresent()
                 || schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase(emisNumber).isPresent()) {
             throw new ResourceConflictException("A school with this EMIS number already exists.");
@@ -801,6 +817,8 @@ public class AdminService {
         registration.setSubmittedAt(OffsetDateTime.now());
         registration.setDistrictId(district.getId());
         registration.setSchoolId(school.getId());
+        registration.setRegisteredSchoolId(registeredSchool == null ? null : registeredSchool.getId());
+        registration.setEntrySource(entrySource);
         registration.setSchoolName(schoolName);
         registration.setEmisNumber(emisNumber);
         registration.setProvince(province);

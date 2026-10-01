@@ -200,6 +200,7 @@ class AuthServiceSchoolRegistrationTest {
         registrationRequest.setSchoolName("EduRite");
         registrationRequest.setEmisNumber("99999999");
         registrationRequest.setStatus(SchoolStatus.ACTIVE);
+        registrationRequest.setEntrySource("DIRECTORY");
 
         when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("99999999")).thenReturn(Optional.of(registrationRequest));
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -215,8 +216,59 @@ class AuthServiceSchoolRegistrationTest {
 
         AuthResponse response = authService.login(new LoginRequest(null, "EduRite", "99999999", "Admin@123"));
 
+        assertThat(response.accessToken()).isEqualTo("access-token");
+        assertThat(response.refreshToken()).isEqualTo("refresh-token");
+        assertThat(response.primaryRole()).isEqualTo("ROLE_SCHOOL_ADMIN");
+        assertThat(response.user().roles()).contains("ROLE_SCHOOL_ADMIN");
         assertThat(response.user().schoolName()).isEqualTo("EduRite");
         assertThat(response.user().approvalStatus()).isEqualTo("ACTIVE");
+    }
+
+    @Test
+    void manualSchoolLoginWithEmisAndGeneratedPasswordReturnsSchoolAdminSession() {
+        UUID userId = UUID.randomUUID();
+        User user = new User();
+        user.setId(userId);
+        user.setEmail("manual.school@edurite.local");
+        user.setUsername("200123456");
+        user.setPasswordHash("encoded-generated-password");
+        user.setFirstName("Manual");
+        user.setLastName("School Admin");
+        user.setStatus(UserStatus.ACTIVE);
+        user.setEmailVerified(true);
+        user.setMustChangePassword(true);
+        Role role = new Role();
+        role.setName("ROLE_SCHOOL_ADMIN");
+        user.setRoles(Set.of(role));
+
+        SchoolRegistrationRequest registrationRequest = new SchoolRegistrationRequest();
+        registrationRequest.setUserId(userId);
+        registrationRequest.setSchoolId(UUID.randomUUID());
+        registrationRequest.setSchoolName("Manual School");
+        registrationRequest.setEmisNumber("200123456");
+        registrationRequest.setStatus(SchoolStatus.ACTIVE);
+        registrationRequest.setEntrySource("MANUAL");
+
+        when(schoolRegistrationRequestRepository.findByEmisNumberIgnoreCase("200123456")).thenReturn(Optional.of(registrationRequest));
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Generated@123", "encoded-generated-password")).thenReturn(true);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(companyProfileRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(schoolRegistrationRequestRepository.findByUserId(userId)).thenReturn(Optional.of(registrationRequest));
+        when(studentProfileRepository.findByUserId(userId)).thenReturn(Optional.empty());
+        when(studentPlanAccessService.hasPremiumAccess(userId)).thenReturn(false);
+        when(jwtService.generateAccessToken(any(User.class), anyCollection(), anyString(), anyString())).thenReturn("manual-access-token");
+        when(jwtService.generateRefreshToken(any(User.class))).thenReturn("manual-refresh-token");
+        when(jwtService.accessTokenExpirationSeconds()).thenReturn(3600L);
+
+        AuthResponse response = authService.login(new LoginRequest(null, "Manual School", "200123456", "Generated@123"));
+
+        assertThat(response.accessToken()).isEqualTo("manual-access-token");
+        assertThat(response.refreshToken()).isEqualTo("manual-refresh-token");
+        assertThat(response.primaryRole()).isEqualTo("ROLE_SCHOOL_ADMIN");
+        assertThat(response.mustChangePassword()).isTrue();
+        assertThat(response.user().username()).isEqualTo("200123456");
+        assertThat(response.user().schoolName()).isEqualTo("Manual School");
     }
 
     @Test

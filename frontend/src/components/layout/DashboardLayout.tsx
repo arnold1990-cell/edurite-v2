@@ -1,3 +1,4 @@
+import { StudentDashboardLayout } from '@/components/student/dashboard/StudentDashboardLayout';
 import {
   Bell,
   BookOpen,
@@ -271,7 +272,7 @@ export const DashboardLayout = () => {
       Opportunities: ['opportunities', 'jobs'],
       'Bursary Finder': ['bursary', 'bursaries', 'finder'],
       'Scholarship Assistant': ['scholarship', 'assistant'],
-      Universities: ['university', 'universities'],
+      Universities: ['university', 'universities', 'institutions'],
       'Learning Centre': ['learning', 'centre', 'center', 'courses', 'study materials', 'past papers', 'revision notes', 'video lessons', 'ai study assistant', 'learning resources', 'exam preparation', 'skills development', 'coding tutorials'],
       'University Applications': ['university', 'applications', 'admissions'],
       Subscription: ['subscription', 'plan', 'premium'],
@@ -343,7 +344,7 @@ export const DashboardLayout = () => {
       <input
         type="search"
         aria-label="Search dashboard"
-        placeholder="Search dashboard"
+        placeholder={isStudent && ['/student/ai-guidance', '/student/explore', '/student/career-roadmaps', '/student/universities', '/student/dashboard', '/student/recommendations/careers', '/student/profile', '/student/academic-profile', '/student/documents', '/student/qualifications', '/student/experience'].includes(location.pathname.replace(/\/$/, '')) ? 'Search careers, courses, bursaries, institutions...' : 'Search dashboard'}
         value={searchTerm}
         onChange={(event) => {
           setSearchTerm(event.target.value);
@@ -420,6 +421,10 @@ export const DashboardLayout = () => {
         </main>
       </div>
     );
+  }
+
+  if (isStudent && ['/student/ai-guidance', '/student/explore', '/student/career-roadmaps', '/student/universities', '/student/dashboard', '/student/recommendations/careers', '/student/profile', '/student/academic-profile', '/student/documents', '/student/qualifications', '/student/experience'].includes(location.pathname.replace(/\/$/, ''))) {
+    return <StudentDashboardLayout unreadCount={unreadCount} />;
   }
 
   if (isStudent) {

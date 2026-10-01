@@ -8,7 +8,7 @@ import { InstitutionLogo } from '@/components/institutions/InstitutionLogo';
 import { resolveInstitutionDisplay } from '@/lib/institutionRegistry';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { StudentCareerRoadmapsExplorerPage } from '@/pages/student/StudentCareerRoadmapsExplorerPage';
-import { adminService, type AdminSchool, type AdminSchoolManagementResponse } from '@/services/adminService';
+import { adminService, type AdminSchool, type AdminSchoolManagementResponse, type RegisteredSchool } from '@/services/adminService';
 import { featureModulesService } from '@/services/featureModulesService';
 import { locationService } from '@/services/locationService';
 import type {
@@ -398,21 +398,62 @@ const whitelistSchoolDefaults = {
   schoolEmail: '',
   contactNumber: '',
   principalName: '',
+  physicalAddress: '',
   schoolType: '',
   status: 'ACTIVE' as 'ACTIVE' | 'PENDING' | 'INACTIVE',
 };
 
+const schoolTypeOptions = [
+  'Primary School',
+  'Secondary School',
+  'Combined School',
+  'Special School',
+  'Independent School',
+  'Other',
+] as const;
+
 export const AdminSchoolPortalPage = () => {
   const qc = useQueryClient();
   const [form, setForm] = useState(whitelistSchoolDefaults);
+  const [provinceError, setProvinceError] = useState('');
+  const [schoolTypeError, setSchoolTypeError] = useState('');
+  const [manualSchoolEntry, setManualSchoolEntry] = useState(false);
+  const [schoolSearch, setSchoolSearch] = useState('');
+  const [selectedRegisteredSchool, setSelectedRegisteredSchool] = useState<RegisteredSchool | null>(null);
   const [createdCredentials, setCreatedCredentials] = useState<{ schoolName?: string; username?: string | null; temporaryPassword?: string | null } | null>(null);
   const schools = useAppQuery<AdminSchoolManagementResponse>({ queryKey: ['admin', 'school-management'], queryFn: adminService.getSchoolManagement });
-  const districts = useAppQuery({ queryKey: ['locations', 'districts', 'admin-school-management'], queryFn: locationService.getDistricts });
+  const provinces = useAppQuery({ queryKey: ['locations', 'provinces', 'admin-school-management'], queryFn: locationService.getProvinces });
+  const selectedProvince = useMemo(() => (provinces.data ?? []).find((province) => province.name === form.province), [form.province, provinces.data]);
+  const districts = useAppQuery({
+    queryKey: ['locations', 'districts', 'admin-school-management', selectedProvince?.id],
+    queryFn: () => locationService.getDistrictsByProvince(selectedProvince?.id ?? ''),
+    enabled: Boolean(selectedProvince?.id),
+  });
+  const selectedDistrict = useMemo(() => (districts.data ?? []).find((district) => district.id === form.districtId), [districts.data, form.districtId]);
+  const schoolDirectory = useAppQuery({
+    queryKey: ['admin', 'school-directory', selectedProvince?.id, form.districtId, schoolSearch],
+    queryFn: () => adminService.searchSchoolDirectory({
+      provinceId: selectedProvince?.id ?? '',
+      districtId: form.districtId,
+      search: schoolSearch,
+      limit: 25,
+    }),
+    enabled: Boolean(selectedProvince?.id && form.districtId && !manualSchoolEntry),
+  });
   const whitelist = useMutation({
-    mutationFn: () => adminService.whitelistSchool(form),
+    mutationFn: () => adminService.whitelistSchool({
+      ...form,
+      registeredSchoolId: selectedRegisteredSchool?.id,
+      entrySource: selectedRegisteredSchool ? 'DIRECTORY' : 'MANUAL',
+    }),
     onSuccess: async (school) => {
       setCreatedCredentials({ schoolName: school.schoolName, username: school.username, temporaryPassword: school.temporaryPassword });
+      setProvinceError('');
+      setSchoolTypeError('');
       setForm(whitelistSchoolDefaults);
+      setManualSchoolEntry(false);
+      setSchoolSearch('');
+      setSelectedRegisteredSchool(null);
       await qc.invalidateQueries({ queryKey: ['admin', 'school-management'] });
       await qc.invalidateQueries({ queryKey: ['public', 'schools'] });
     },
@@ -425,8 +466,44 @@ export const AdminSchoolPortalPage = () => {
     },
   });
 
-  if (schools.isLoading || districts.isLoading) return <LoadingState message="Loading school management..." />;
-  if (schools.isError || !schools.data) return <ErrorState message="Could not load school management." />;
+  if (schools.isLoading || provinces.isLoading) return <LoadingState message="Loading school management..." />;
+  if (schools.isError || provinces.isError || !schools.data) return <ErrorState message="Could not load school management." />;
+
+  const clearSchoolDetails = (preserveLocation: boolean) => {
+    setSelectedRegisteredSchool(null);
+    setSchoolSearch('');
+    setForm((current) => ({
+      ...current,
+      ...(preserveLocation ? {} : { province: '', districtId: '' }),
+      schoolName: '',
+      emisNumber: '',
+      schoolCode: '',
+      circuit: '',
+      schoolEmail: '',
+      contactNumber: '',
+      principalName: '',
+      physicalAddress: '',
+      schoolType: '',
+    }));
+  };
+  const applyRegisteredSchool = (school: RegisteredSchool) => {
+    setSelectedRegisteredSchool(school);
+    setManualSchoolEntry(false);
+    setSchoolSearch(`${school.schoolName} ${school.emisNumber}`);
+    setSchoolTypeError('');
+    setForm((current) => ({
+      ...current,
+      schoolName: school.schoolName,
+      emisNumber: school.emisNumber,
+      schoolCode: school.schoolCode ?? current.schoolCode,
+      circuit: school.circuit ?? current.circuit,
+      schoolEmail: school.schoolEmail ?? current.schoolEmail,
+      contactNumber: school.contactNumber ?? current.contactNumber,
+      principalName: school.principalName ?? current.principalName,
+      physicalAddress: school.physicalAddress ?? current.physicalAddress,
+      schoolType: school.schoolType ?? current.schoolType,
+    }));
+  };
 
   return <Section title="School Management">
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -440,27 +517,68 @@ export const AdminSchoolPortalPage = () => {
         <p>Temporary password: <span className="font-semibold">{createdCredentials.temporaryPassword}</span></p>
       </div>
     ) : null}
-    <form className="grid gap-3 rounded border bg-white p-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={(event) => { event.preventDefault(); setCreatedCredentials(null); whitelist.mutate(); }}>
+    <form className="grid gap-3 rounded border bg-white p-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={(event) => {
+      event.preventDefault();
+      setCreatedCredentials(null);
+      const missingProvince = !form.province;
+      const missingSchoolType = !form.schoolType;
+      setProvinceError(missingProvince ? 'Please select a province.' : '');
+      setSchoolTypeError(missingSchoolType ? 'Please select a school type.' : '');
+      if (missingProvince || missingSchoolType) {
+        return;
+      }
+      whitelist.mutate();
+    }}>
       <label className={fieldClass}>School name<Input value={form.schoolName} onChange={(event) => setForm((s) => ({ ...s, schoolName: event.target.value }))} required /></label>
-      <label className={fieldClass}>EMIS number<Input value={form.emisNumber} onChange={(event) => setForm((s) => ({ ...s, emisNumber: event.target.value }))} required /></label>
+      <label className={fieldClass}>EMIS number<Input value={form.emisNumber} onChange={(event) => setForm((s) => ({ ...s, emisNumber: event.target.value }))} required disabled={Boolean(selectedRegisteredSchool)} /></label>
       <label className={fieldClass}>School code<Input value={form.schoolCode} onChange={(event) => setForm((s) => ({ ...s, schoolCode: event.target.value }))} /></label>
-      <label className={fieldClass}>Province<Input value={form.province} onChange={(event) => setForm((s) => ({ ...s, province: event.target.value }))} /></label>
-      <label className={fieldClass}>District<select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={form.districtId} onChange={(event) => setForm((s) => ({ ...s, districtId: event.target.value }))} required>
+      <label className={fieldClass}>Province<select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={form.province} onChange={(event) => { setProvinceError(''); setManualSchoolEntry(false); setSelectedRegisteredSchool(null); setSchoolSearch(''); setForm((s) => ({ ...s, province: event.target.value, districtId: '', schoolName: '', emisNumber: '', schoolCode: '', circuit: '', schoolEmail: '', contactNumber: '', principalName: '', physicalAddress: '', schoolType: '' })); }} aria-required="true" aria-invalid={Boolean(provinceError)}>
+        <option value="">Select province</option>
+        {(provinces.data ?? []).map((province) => <option key={province.id} value={province.name}>{province.name}</option>)}
+      </select>
+        {provinceError ? <p className="mt-1 text-xs text-red-600">{provinceError}</p> : null}
+      </label>
+      <label className={fieldClass}>District<select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={form.districtId} onChange={(event) => { setManualSchoolEntry(false); clearSchoolDetails(true); setForm((s) => ({ ...s, districtId: event.target.value })); }} required disabled={!selectedProvince || districts.isLoading}>
         <option value="">Select district</option>
         {(districts.data ?? []).map((district) => <option key={district.id} value={district.id}>{district.name}</option>)}
       </select></label>
+      <div className={`${fieldClass} sm:col-span-2 lg:col-span-1`}>
+        <label>Registered School<Input value={schoolSearch} onChange={(event) => { const value = event.target.value; setSchoolSearch(value); if (selectedRegisteredSchool) { setSelectedRegisteredSchool(null); setForm((current) => ({ ...current, schoolName: '', emisNumber: '', schoolCode: '', circuit: '', schoolEmail: '', contactNumber: '', principalName: '', physicalAddress: '', schoolType: '' })); } }} placeholder="Search school name or EMIS" disabled={!selectedDistrict || manualSchoolEntry} /></label>
+        {!selectedDistrict ? <p className="mt-1 text-xs text-slate-500">Select a district first.</p> : null}
+        {schoolDirectory.isLoading ? <p className="mt-1 text-xs text-slate-500">Searching registered schools...</p> : null}
+        {!manualSchoolEntry && selectedDistrict && (schoolDirectory.data?.items ?? []).length > 0 ? (
+          <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+            {(schoolDirectory.data?.items ?? []).map((school) => (
+              <button key={school.id} type="button" className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50" onClick={() => applyRegisteredSchool(school)}>
+                <span className="font-medium text-slate-900">{school.schoolName}</span>
+                <span className="block text-xs text-slate-500">EMIS {school.emisNumber}{school.schoolCode ? ` | ${school.schoolCode}` : ''}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {!manualSchoolEntry && selectedDistrict && !schoolDirectory.isLoading && (schoolDirectory.data?.items ?? []).length === 0 ? <p className="mt-1 text-xs text-slate-500">No registered schools found.</p> : null}
+        <button type="button" className="mt-2 text-xs font-semibold text-primary-700 hover:text-primary-800" onClick={() => { setManualSchoolEntry(true); setSelectedRegisteredSchool(null); setSchoolSearch(''); }}>Can't find the school? Add School Manually</button>
+        {selectedRegisteredSchool ? <p className="mt-1 text-xs text-emerald-700">Selected from registered school directory.</p> : null}
+        {manualSchoolEntry ? <p className="mt-1 text-xs text-amber-700">Manual entry. EMIS is not externally verified by EduRite.</p> : null}
+      </div>
       <label className={fieldClass}>Circuit<Input value={form.circuit} onChange={(event) => setForm((s) => ({ ...s, circuit: event.target.value }))} /></label>
       <label className={fieldClass}>School email<Input type="email" value={form.schoolEmail} onChange={(event) => setForm((s) => ({ ...s, schoolEmail: event.target.value }))} required /></label>
       <label className={fieldClass}>Contact number<Input value={form.contactNumber} onChange={(event) => setForm((s) => ({ ...s, contactNumber: event.target.value }))} required /></label>
       <label className={fieldClass}>Principal / contact<Input value={form.principalName} onChange={(event) => setForm((s) => ({ ...s, principalName: event.target.value }))} required /></label>
-      <label className={fieldClass}>School type<Input value={form.schoolType} onChange={(event) => setForm((s) => ({ ...s, schoolType: event.target.value }))} /></label>
+      <label className={fieldClass}>Physical address<Input value={form.physicalAddress} onChange={(event) => setForm((s) => ({ ...s, physicalAddress: event.target.value }))} required /></label>
+      <label className={fieldClass}>School type<select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={form.schoolType} onChange={(event) => { setSchoolTypeError(''); setForm((s) => ({ ...s, schoolType: event.target.value })); }} aria-required="true" aria-invalid={Boolean(schoolTypeError)}>
+        <option value="">Select school type</option>
+        {schoolTypeOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+      </select>
+        {schoolTypeError ? <p className="mt-1 text-xs text-red-600">{schoolTypeError}</p> : null}
+      </label>
       <label className={fieldClass}>Status<select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={form.status} onChange={(event) => setForm((s) => ({ ...s, status: event.target.value as typeof form.status }))}>
         <option value="ACTIVE">Active</option>
         <option value="PENDING">Pending</option>
         <option value="INACTIVE">Inactive</option>
       </select></label>
       <div className="flex items-end gap-3">
-        <Button disabled={whitelist.isPending || !form.districtId}>{whitelist.isPending ? 'Whitelisting...' : 'Whitelist School'}</Button>
+        <Button disabled={whitelist.isPending}>{whitelist.isPending ? 'Whitelisting...' : 'Whitelist School'}</Button>
       </div>
       {whitelist.isError ? <p className="text-sm text-red-600 sm:col-span-2 lg:col-span-3">{whitelist.error.message}</p> : null}
     </form>

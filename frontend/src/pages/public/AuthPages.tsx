@@ -213,6 +213,14 @@ const GOOGLE_CLIENT_ID = sanitizeClientId(import.meta.env.VITE_GOOGLE_CLIENT_ID 
 const GOOGLE_SIGNIN_ENABLED = parseEnvBoolean(import.meta.env.VITE_GOOGLE_SIGNIN_ENABLED ?? import.meta.env.VITE_GOOGLE_OAUTH_ENABLED)
   || Boolean(GOOGLE_CLIENT_ID);
 const GOOGLE_SCRIPT_ID = 'google-identity-services-script';
+const GOOGLE_LOCAL_DEV_PORTS = new Set(['5173', '5174']);
+const isGoogleOriginAllowed = () => {
+  if (!import.meta.env.DEV) return true;
+  if (typeof window === 'undefined') return true;
+  const { hostname, port } = window.location;
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') return true;
+  return GOOGLE_LOCAL_DEV_PORTS.has(port);
+};
 
 declare global {
   interface Window {
@@ -707,7 +715,8 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
   const googleSectionEnabled = role !== 'ADMIN' && GOOGLE_SIGNIN_ENABLED;
   const googleClientConfigured = Boolean(GOOGLE_CLIENT_ID);
   const googleClientLooksValid = GOOGLE_CLIENT_ID_PATTERN.test(GOOGLE_CLIENT_ID);
-  const googleSignInAvailable = googleSectionEnabled && googleClientConfigured && googleClientLooksValid;
+  const googleOriginAllowed = isGoogleOriginAllowed();
+  const googleSignInAvailable = googleSectionEnabled && googleClientConfigured && googleClientLooksValid && googleOriginAllowed;
   const googleLoginRole: 'STUDENT' | 'COMPANY' = role === 'COMPANY' ? 'COMPANY' : 'STUDENT';
 
   const routeAuthenticatedUser = useCallback(async (loggedInUser: User) => {
@@ -810,8 +819,13 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
 
     if (!googleClientLooksValid) {
       console.warn('[auth] Google sign-in client ID looks invalid. Expected *.apps.googleusercontent.com.', { clientId: GOOGLE_CLIENT_ID });
+      return;
     }
-  }, [googleClientConfigured, googleClientLooksValid, googleSectionEnabled]);
+
+    if (!googleOriginAllowed) {
+      console.warn('[auth] Google sign-in disabled for this localhost origin. Use email/password or run Vite on a Google-authorized dev port.', { origin: window.location.origin });
+    }
+  }, [googleClientConfigured, googleClientLooksValid, googleOriginAllowed, googleSectionEnabled]);
 
   useEffect(() => {
     if (!googleSignInAvailable || !googleButtonRef.current) {
@@ -1091,7 +1105,8 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
   const googleSectionEnabled = role !== 'ADMIN' && GOOGLE_SIGNIN_ENABLED;
   const googleClientConfigured = Boolean(GOOGLE_CLIENT_ID);
   const googleClientLooksValid = GOOGLE_CLIENT_ID_PATTERN.test(GOOGLE_CLIENT_ID);
-  const googleSignInAvailable = googleSectionEnabled && googleClientConfigured && googleClientLooksValid;
+  const googleOriginAllowed = isGoogleOriginAllowed();
+  const googleSignInAvailable = googleSectionEnabled && googleClientConfigured && googleClientLooksValid && googleOriginAllowed;
   const googleLoginRole: 'STUDENT' | 'COMPANY' = role === 'COMPANY' ? 'COMPANY' : 'STUDENT';
   const selectedRole: SelectedRoleOption = role === 'ADMIN'
     ? 'PLATFORM_ADMIN'
@@ -1194,8 +1209,13 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
     }
     if (!googleClientLooksValid) {
       console.warn('[auth] Google sign-in client ID looks invalid. Expected *.apps.googleusercontent.com.', { clientId: GOOGLE_CLIENT_ID });
+      return;
     }
-  }, [googleClientConfigured, googleClientLooksValid, googleSectionEnabled]);
+
+    if (!googleOriginAllowed) {
+      console.warn('[auth] Google sign-in disabled for this localhost origin. Use email/password or run Vite on a Google-authorized dev port.', { origin: window.location.origin });
+    }
+  }, [googleClientConfigured, googleClientLooksValid, googleOriginAllowed, googleSectionEnabled]);
 
   useEffect(() => {
     authStore.clearLegacyCredentials();

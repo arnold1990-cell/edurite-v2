@@ -45,6 +45,8 @@ public final class AdminSchoolDtos {
             String schoolCode,
             String province,
             @NotNull UUID districtId,
+            UUID registeredSchoolId,
+            String entrySource,
             String circuit,
             @Email @NotBlank String schoolEmail,
             @NotBlank String contactNumber,

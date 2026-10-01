@@ -21,11 +21,8 @@ public final class SchoolWhitelistOptions {
     public static final List<String> SUPPORTED_SCHOOL_TYPES = List.of(
             "Primary School",
             "Secondary School",
-            "High School",
-            "Senior Secondary School",
             "Combined School",
             "Special School",
-            "Technical School",
             "Independent School",
             "Other"
     );

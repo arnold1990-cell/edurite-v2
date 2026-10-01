@@ -68,6 +68,8 @@ export default defineConfig(({ mode }) => {
     ]),
   );
 
+  const backendProxyTarget = 'http://127.0.0.1:8080';
+
   return {
     plugins: [react()],
     define: {
@@ -107,19 +109,19 @@ export default defineConfig(({ mode }) => {
       allowedHosts,
       proxy: {
         '/api': {
-          target: 'http://localhost:8080',
+          target: backendProxyTarget,
           changeOrigin: true,
           timeout: 120000,
           proxyTimeout: 120000,
         },
         '/oauth2': {
-          target: 'http://localhost:8080',
+          target: backendProxyTarget,
           changeOrigin: true,
           timeout: 120000,
           proxyTimeout: 120000,
         },
         '/login/oauth2': {
-          target: 'http://localhost:8080',
+          target: backendProxyTarget,
           changeOrigin: true,
           timeout: 120000,
           proxyTimeout: 120000,
