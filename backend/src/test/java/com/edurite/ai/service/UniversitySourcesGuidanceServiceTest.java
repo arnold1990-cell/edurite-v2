@@ -60,6 +60,9 @@ class UniversitySourcesGuidanceServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(studentPlanAccessService.getCurrentPlan(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
+            studentPlanAccessService.hasPremiumAccess(invocation.getArgument(0)) ? com.edurite.subscription.entity.PlanType.PREMIUM : com.edurite.subscription.entity.PlanType.BASIC);
+
         lenient().when(registryService.getActiveUniversities()).thenReturn(List.of());
         lenient().when(registryService.configuredUniversityCount()).thenReturn(0);
         when(studentPlanAccessService.resolveByUserId(any())).thenReturn(

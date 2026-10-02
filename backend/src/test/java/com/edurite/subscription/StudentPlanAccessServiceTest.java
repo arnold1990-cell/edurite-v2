@@ -59,6 +59,7 @@ class StudentPlanAccessServiceTest {
         UUID userId = UUID.randomUUID();
         SubscriptionRecord subscription = new SubscriptionRecord();
         subscription.setPlanCode("PLAN_PREMIUM");
+        subscription.setEndDate(java.time.LocalDate.now().plusMonths(1));
         subscription.setStatus("ACTIVE");
         subscription.setTrialStartDate(OffsetDateTime.now().minusMonths(3));
         subscription.setTrialEndDate(OffsetDateTime.now().minusMonths(2));

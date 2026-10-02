@@ -1034,9 +1034,7 @@ public class AuthService {
     }
 
     private String resolveAndSyncPlanType(User user) {
-        PlanType resolvedPlanType = studentPlanAccessService.hasPremiumAccess(user.getId())
-                ? PlanType.PREMIUM
-                : PlanType.BASIC;
+        PlanType resolvedPlanType = studentPlanAccessService.getCurrentPlan(user.getId());
         if (user.getPlanType() != resolvedPlanType) {
             user.setPlanType(resolvedPlanType);
             userRepository.save(user);

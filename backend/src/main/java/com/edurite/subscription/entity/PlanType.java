@@ -4,7 +4,8 @@ import java.util.Locale;
 
 public enum PlanType {
     BASIC,
-    PREMIUM;
+    PREMIUM,
+    PRO;
 
     public static PlanType fromPlanCode(String planCode) {
         if (planCode == null || planCode.isBlank()) {
@@ -16,7 +17,8 @@ public enum PlanType {
             normalized = normalized.substring("PLAN_".length());
         }
 
-        if ("PREMIUM".equals(normalized)) {
+        if (normalized.startsWith("PRO")) return PRO;
+        if ("TRIAL".equals(normalized) || normalized.startsWith("PREMIUM")) {
             return PREMIUM;
         }
         return BASIC;

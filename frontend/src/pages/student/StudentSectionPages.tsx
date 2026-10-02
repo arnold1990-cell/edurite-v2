@@ -1,3 +1,4 @@
+import { AccessBadge } from '@/features/subscriptions/access';
 import { StudentProfilePage, StudentMySchoolPage, StudentCareerRecommendationsPage, StudentPsychometricPage, StudentLearningCentrePage, StudentSavedPage, StudentApplicationsPage, StudentBursaryRecommendationsPage, StudentRewardsPage } from './StudentPages';
 import { StudentCvBuilderPage, StudentAiTutorPage, StudentScholarshipAssistantPage, StudentUniversityApplicationsPage, StudentCareerRoadmapsPage } from './StudentFeaturePages';
 import { StudentUniversitiesPage } from './StudentUniversitiesPage';
@@ -23,7 +24,7 @@ export function InstitutionsOverview() { const [params] = useSearchParams(); ret
 function useSection(fallback: string) { const [params] = useSearchParams(); return params.get('section') || fallback; }
 function ModuleOverview({ module }: { module: string }) {
   const group = studentSections.find(item => item.to === `/student/${module}`)!;
-  return <div className="ed-feature-grid">{group.links.slice(1).map(([label, path]) => <Link className="card p-5" key={path} to={`/student/${path}`}><h2 className="font-semibold">{label}</h2><span>Open {label.toLowerCase()} →</span></Link>)}</div>;
+  return <div className="ed-feature-grid">{group.links.slice(1).map(([label, path]) => <Link className="card p-5" key={path} to={`/student/${path}`}><h2 className="font-semibold">{label}<AccessBadge to={`/student/${path}`} /></h2><span>Open {label.toLowerCase()} →</span></Link>)}</div>;
 }
 export function StudentProfileSectionsPage() {
   const section = useSection('overview');

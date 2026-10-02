@@ -33,6 +33,9 @@ class RecommendationServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(studentPlanAccessService.getCurrentPlan(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
+            studentPlanAccessService.hasPremiumAccess(invocation.getArgument(0)) ? com.edurite.subscription.entity.PlanType.PREMIUM : com.edurite.subscription.entity.PlanType.BASIC);
+
         recommendationService = new RecommendationService(studentService, studentPlanAccessService, psychometricService);
         principal = () -> "student@example.com";
 

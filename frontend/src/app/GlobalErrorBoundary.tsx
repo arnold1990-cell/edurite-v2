@@ -1,3 +1,4 @@
+import { EduRiteLogo } from '@/components/common/EduRiteLogo';
 import React from 'react';
 
 type GlobalErrorBoundaryState = {
@@ -28,7 +29,7 @@ export class GlobalErrorBoundary extends React.Component<React.PropsWithChildren
       return (
         <div className="min-h-screen bg-slate-950 px-6 py-16 text-white">
           <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col justify-center rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-300">EduRite</p>
+            <EduRiteLogo size="medium" surface="light" />
             <h1 className="mt-4 text-3xl font-semibold text-white">We could not load this page.</h1>
             <p className="mt-4 text-base leading-7 text-slate-200">
               An unexpected startup error stopped the application before it finished rendering.

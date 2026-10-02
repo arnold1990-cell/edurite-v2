@@ -23,7 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { notificationService } from '@/services/notificationService';
 import type { Role } from '@/types';
-import { DashboardLogo } from '@/components/common/DashboardLogo';
+import { EduRiteLogo } from '@/components/common/EduRiteLogo';
 
 type NavItem = { to: string; label: string; icon?: LucideIcon };
 
@@ -358,10 +358,7 @@ export const DashboardLayout = () => {
       <aside className={`fixed inset-y-0 left-0 z-20 flex h-screen w-[260px] shrink-0 flex-col bg-[#081739] px-4 py-4 text-white shadow-2xl shadow-slate-950/30 transition-transform duration-200 md:sticky md:top-0 md:w-[72px] md:px-2 lg:w-[260px] lg:px-4 md:translate-x-0 ${open ? 'visible translate-x-0' : 'invisible -translate-x-full md:visible'}`}>
         <div className="flex-shrink-0">
           <Link to={homePath} className="mb-4 block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70" aria-label="EduRite home" onClick={() => setOpen(false)}>
-            <DashboardLogo className="hidden h-12 w-auto object-contain lg:block" />
-            <div className="hidden h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white/10 px-1 md:flex lg:hidden">
-              <DashboardLogo className="block h-8 w-auto object-contain" />
-            </div>
+            <EduRiteLogo size="small" surface="light" />
           </Link>
         </div>
         <nav className="sidebar-nav min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">

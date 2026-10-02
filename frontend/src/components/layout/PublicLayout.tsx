@@ -126,18 +126,13 @@ export const PublicLayout = () => {
       <header className={`border-b border-slate-200 bg-white ${isAuthRoute ? 'shadow-[0_10px_30px_-24px_rgba(15,23,42,0.25)]' : ''}`}>
         <div
           className={`mx-auto flex w-full justify-between ${isAuthRoute ? (isLoginRoute ? 'max-w-none items-center gap-3 px-4 py-2.5 sm:px-6 md:px-8 lg:px-10' : 'max-w-none items-end gap-6 px-4 pb-0 pt-0 sm:px-6 md:px-8 lg:px-10') : 'max-w-[1280px] items-center gap-6 px-4 py-4 md:px-6'}`}
-          style={isAuthRoute ? { minHeight: isLoginRoute ? 'clamp(84px, 9vw, 104px)' : 'clamp(140px, 16vw, 176px)' } : undefined}
+          style={isAuthRoute ? { minHeight: '72px' } : undefined}
         >
-          <Link
-            to="/"
-            aria-label="EduRite home"
-            className={`flex shrink-0 items-center justify-center ${isAuthRoute ? (isLoginRoute ? 'min-h-[64px]' : 'mb-0 min-h-[120px] pb-0 pt-0 self-end') : 'min-h-[72px]'}`}
-          >
-            <EduRiteLogo
-              className={`${isAuthRoute ? (isLoginRoute ? 'block h-16 w-auto object-contain' : 'block h-24 w-auto object-contain align-bottom') : 'block h-12 w-auto object-contain md:h-14'}`}
-              style={isAuthRoute ? { height: isLoginRoute ? 'clamp(64px, 7vw, 82px)' : 'clamp(92px, 11vw, 120px)', width: 'auto', objectFit: 'contain' } : undefined}
-            />
-          </Link>
+          {isAuthRoute ? <span aria-hidden="true" /> : (
+            <Link to="/" aria-label="EduRite home" className="flex shrink-0 items-center">
+              <EduRiteLogo size="small" />
+            </Link>
+          )}
 
           <nav className={`flex items-center ${isLoginRoute ? 'gap-2 sm:gap-3' : 'gap-3 sm:gap-4'} ${isAuthRoute ? 'self-center' : ''}`}>
             <Link to="/auth/register/student" className={`inline-flex items-center rounded-xl bg-primary-600 font-semibold text-white shadow-[0_16px_34px_-18px_rgba(37,99,235,0.85)] transition hover:bg-primary-700 ${isLoginRoute ? 'h-10 px-4 text-xs sm:text-sm' : 'h-11 px-5 text-sm'}`}>

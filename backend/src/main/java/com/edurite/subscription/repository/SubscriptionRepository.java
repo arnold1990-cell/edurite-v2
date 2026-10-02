@@ -13,6 +13,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface SubscriptionRepository extends JpaRepository<SubscriptionRecord, UUID> {
     Optional<SubscriptionRecord> findTopByUserIdOrderByCreatedAtDesc(UUID userId);
     List<SubscriptionRecord> findAllByOrderByCreatedAtDesc();
+    List<SubscriptionRecord> findByUserIdOrderByCreatedAtDesc(UUID userId);
+    Optional<SubscriptionRecord> findTopByUserIdAndStatusOrderByCreatedAtDesc(UUID userId, String status);
     long countByStatus(String status);
 }
 

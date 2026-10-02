@@ -30,7 +30,7 @@ Missing marks are not inferred from NSC levels. Missing scores show a dash. Goal
 ## Image/data replacement points
 
 - **Hero:** `classroomPhoto` import in `StudentDashboard.tsx` uses the existing `src/assets/edurite-classroom-login-bg.png`. The exact reference portrait is unavailable. Replace this import with an approved local production portrait; `.ed-hero-photo` controls the right-side crop. No image generation was used.
-- **Brand:** existing `edurite-dashboard-logo.jpeg`, with EduRite wordmark/tagline set alongside it.
+- **Brand:** shared `EduRiteLogo` component using `src/assets/branding/edurite-logo.png`.
 - **Quick links/course art:** existing local career/course/bursary photos are decorative category images, not claimed to depict a specific recommended course or institution.
 - **Career thumbnails:** neutral icons until the recommendation API supplies real thumbnail URLs.
 - **Avatar:** authenticated initials; the existing User/StudentProfile contract has no avatar URL.

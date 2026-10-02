@@ -7,6 +7,7 @@ import { StudentAppShell } from '@/components/student/StudentAppShell';
 import { studentSections } from '@/components/student/StudentSectionNavigation';
 import { StudentRedirect } from './StudentRedirect';
 
+vi.mock('@/features/subscriptions/access', () => ({ StudentRouteAccess: ({ children }: { children: React.ReactNode }) => children, AccessBadge: () => null, AiUsageDisplay: () => null }));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { fullName: 'Test Student' }, logout: vi.fn() }) }));
 vi.mock('@/hooks/useAppQuery', () => ({ useAppQuery: () => ({ data: undefined }) }));
 vi.mock('@/components/student/career/ExploreSearch', () => ({ ExploreSearch: () => <input aria-label="Search careers" /> }));

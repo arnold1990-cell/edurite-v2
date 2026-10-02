@@ -95,6 +95,7 @@ class SubscriptionServiceTest {
                 "http://localhost:8080"
         );
 
+        when(studentPlanAccessService.getCurrentPlan(any())).thenReturn(PlanType.BASIC);
         user = new User();
         user.setId(UUID.randomUUID());
         principal = () -> user.getEmail() == null ? "student@example.com" : user.getEmail();
@@ -110,6 +111,9 @@ class SubscriptionServiceTest {
             SubscriptionRecord subscription = invocation.getArgument(0);
             if (subscription.getId() == null) {
                 subscription.setId(UUID.randomUUID());
+            }
+            if ("ACTIVE".equals(subscription.getStatus())) {
+                when(studentPlanAccessService.getCurrentPlan(subscription.getUserId())).thenReturn(PlanType.fromPlanCode(subscription.getPlanCode()));
             }
             return subscription;
         });
@@ -268,7 +272,7 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void plansNormalizesPremiumPriceTo49_99() {
+    void plansNormalizesPremiumPriceTo59() {
         PricingPlan premium = premiumPlan();
         premium.setAmount(new BigDecimal("35.00"));
         when(pricingPlanRepository.findByActiveTrueOrderByDisplayOrderAsc()).thenReturn(List.of(premium));
@@ -276,7 +280,7 @@ class SubscriptionServiceTest {
         var plans = subscriptionService.plans();
 
         assertThat(plans).hasSize(1);
-        assertThat(plans.getFirst().amount()).isEqualByComparingTo("49.99");
+        assertThat(plans.getFirst().amount()).isEqualByComparingTo("59.00");
         verify(pricingPlanRepository).save(premium);
     }
 
@@ -293,7 +297,7 @@ class SubscriptionServiceTest {
         payment.setReference("PAY-ITN-1");
         payment.setProvider("payfast");
         payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("49.99"));
+        payment.setAmount(new BigDecimal("59.00"));
         payment.setCurrency("ZAR");
 
         LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
@@ -337,7 +341,7 @@ class SubscriptionServiceTest {
         payment.setReference("PAY-ITN-2");
         payment.setProvider("payfast");
         payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("49.99"));
+        payment.setAmount(new BigDecimal("59.00"));
         payment.setCurrency("ZAR");
 
         LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
@@ -379,7 +383,7 @@ class SubscriptionServiceTest {
         payment.setReference("PAY-ITN-3");
         payment.setProvider("payfast");
         payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("49.99"));
+        payment.setAmount(new BigDecimal("59.00"));
         payment.setCurrency("ZAR");
 
         LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
@@ -440,7 +444,7 @@ class SubscriptionServiceTest {
         payment.setReference("PAY-ITN-5");
         payment.setProvider("payfast");
         payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("49.99"));
+        payment.setAmount(new BigDecimal("59.00"));
         payment.setCurrency("ZAR");
 
         LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
@@ -467,7 +471,7 @@ class SubscriptionServiceTest {
 
         assertThat(response).containsEntry("verified", true);
         assertThat(payment.getStatus()).isEqualTo("PENDING");
-        assertThat(subscription.getStatus()).isEqualTo("PENDING");
+        assertThat(subscription.getStatus()).isEqualTo("ACTIVE");
     }
 
     @Test
@@ -511,7 +515,7 @@ class SubscriptionServiceTest {
         payment.setReference("PAY-MANUAL-ITN-1");
         payment.setProvider("payfast");
         payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("49.99"));
+        payment.setAmount(new BigDecimal("59.00"));
         payment.setCurrency("ZAR");
 
         com.edurite.subscription.entity.PaymentEventRecord event = new com.edurite.subscription.entity.PaymentEventRecord();
@@ -608,7 +612,7 @@ class SubscriptionServiceTest {
         plan.setCode("PLAN_PREMIUM");
         plan.setName("Premium");
         plan.setDescription("Advanced guidance");
-        plan.setAmount(new BigDecimal("49.99"));
+        plan.setAmount(new BigDecimal("59.00"));
         plan.setCurrency("ZAR");
         plan.setBillingInterval("MONTHLY");
         plan.setFeatures("[]");

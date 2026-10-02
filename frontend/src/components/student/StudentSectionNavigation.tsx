@@ -1,3 +1,4 @@
+import { AccessBadge } from '@/features/subscriptions/access';
 import { Link, useLocation } from 'react-router-dom';
 
 export const studentSections = [
@@ -294,6 +295,6 @@ export function StudentSectionNavigation() {
   const profileTabs: Record<string, string> = { academic: 'academic', interests: 'interests', career: 'career', settings: 'documents', overview: 'overview' };
   const selected = new URLSearchParams(search).get('section') || (pathname === '/student/profile' ? profileTabs[new URLSearchParams(search).get('tab') || ''] : undefined) || new URLSearchParams(section.links[0][1].split('?')[1]).get('section');
   return <div className="ed-section-heading"><h1>{section.label}</h1><nav className="ed-section-navigation" aria-label={`${section.label} sections`}>
-    {section.links.map(([label, path]) => <Link key={path} to={`/student/${path}`} aria-current={new URLSearchParams(path.split('?')[1]).get('section') === selected ? 'page' : undefined}>{label}</Link>)}
+    {section.links.map(([label, path]) => <Link key={path} to={`/student/${path}`} aria-current={new URLSearchParams(path.split('?')[1]).get('section') === selected ? 'page' : undefined}>{label}<AccessBadge to={`/student/${path}`} /></Link>)}
   </nav></div>;
 }

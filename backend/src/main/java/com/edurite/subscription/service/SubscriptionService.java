@@ -54,7 +54,7 @@ public class SubscriptionService {
     private static final Logger log = LoggerFactory.getLogger(SubscriptionService.class);
     private static final String PLAN_BASIC = "PLAN_BASIC";
     private static final String PLAN_PREMIUM = "PLAN_PREMIUM";
-    private static final BigDecimal PREMIUM_MONTHLY_PRICE = new BigDecimal("49.99");
+    private static final BigDecimal PREMIUM_MONTHLY_PRICE = new BigDecimal("59.00");
     private static final String STATUS_COMPLETED = "COMPLETED";
     private static final String STATUS_PENDING = "PENDING";
     private static final String STATUS_CANCELLED = "CANCELLED";
@@ -117,7 +117,7 @@ public class SubscriptionService {
 
     public SubscriptionRecord current(Principal principal) {
         User user = currentUserService.requireUser(principal);
-        SubscriptionRecord subscription = subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId())
+        SubscriptionRecord subscription = java.util.Optional.ofNullable(studentPlanAccessService.currentRecord(user.getId()))
                 .orElseGet(() -> createDefaultSubscription(user.getId()));
         subscription = ensurePermanentPremiumOverride(subscription);
         return decorateSubscriptionAccess(subscription);
@@ -192,8 +192,20 @@ public class SubscriptionService {
             throw new ResourceConflictException("Paid plans require either PayPal or PayFast.");
         }
 
-        SubscriptionRecord subscription = subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId())
-                .orElseGet(() -> createDefaultSubscription(user.getId()));
+        // Serialize checkout per account. A pending purchase never replaces active access.
+        userRepository.lockForSubscription(user.getId());
+        PlanType target = PlanType.fromPlanCode(plan.getCode());
+        PlanType effective = studentPlanAccessService.getCurrentPlan(user.getId());
+        if (target == effective && !"PLAN_TRIAL".equals(studentPlanAccessService.resolveByUserId(user.getId()).planCode())) {
+            throw new ResourceConflictException("This is already your active plan.");
+        }
+        SubscriptionRecord pending = subscriptionRepository.findTopByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), STATUS_PENDING).orElse(null);
+        if (pending != null && plan.getCode().equals(pending.getPlanCode())) {
+            throw new ResourceConflictException("A checkout for this plan is already pending. Complete or cancel it first.");
+        }
+        SubscriptionRecord subscription = new SubscriptionRecord();
+        subscription.setUserId(user.getId());
+        subscription.setTrialUsed(true);
         subscription.setPlanCode(plan.getCode());
         subscription.setProvider(providerCode);
         subscription.setStatus(STATUS_PENDING);
@@ -302,13 +314,14 @@ public class SubscriptionService {
             return toPaymentStatusResponse(payment, subscription, "Payment was already processed.");
         }
 
-        String providerCode = normalizeProviderCode(firstNonBlank(request.provider(), payment.getProvider()));
+        String providerCode = normalizeProviderCode(payment.getProvider());
+        if (request.provider() != null && !providerCode.equals(normalizeProviderCode(request.provider()))) throw new ResourceConflictException("Payment provider does not match checkout.");
         PaymentProvider provider = paymentProviderFactory.resolve(providerCode);
 
         PaymentConfirmationResult confirmationResult = provider.confirmPayment(new PaymentConfirmationContext(
                 payment.getReference(),
-                firstNonBlank(request.orderId(), payment.getProviderOrderId()),
-                firstNonBlank(request.sessionId(), payment.getProviderSessionId()),
+                payment.getProviderOrderId(),
+                payment.getProviderSessionId(),
                 payment.getProviderPaymentId(),
                 request.token(),
                 request.payerId(),
@@ -325,8 +338,8 @@ public class SubscriptionService {
                 "Interactive payment confirmation received: paymentReference={}, provider={}, providerOrderId={}, providerSessionId={}",
                 payment.getReference(),
                 providerCode,
-                firstNonBlank(request.orderId(), payment.getProviderOrderId()),
-                firstNonBlank(request.sessionId(), payment.getProviderSessionId())
+                payment.getProviderOrderId(),
+                payment.getProviderSessionId()
         );
         applyConfirmationResult(subscription, payment, confirmationResult, true);
         paymentRepository.save(payment);
@@ -492,6 +505,7 @@ public class SubscriptionService {
         }
 
         PaymentRecord payment = context.payment();
+        if (!normalizedProvider.equals(normalizeProviderCode(payment.getProvider()))) throw new ResourceConflictException("Payment provider does not match checkout.");
         SubscriptionRecord subscription = context.subscription();
         if (isTerminal(payment.getStatus()) && payment.getConfirmedAt() != null) {
             return Map.of(
@@ -582,7 +596,8 @@ public class SubscriptionService {
         PaymentRecord payment = webhookResult.paymentReference() == null
                 ? null
                 : paymentRepository.findTopByReferenceOrderByCreatedAtDesc(webhookResult.paymentReference()).orElse(null);
-        boolean webhookVerified = webhookResult.verified();
+        boolean webhookVerified = webhookResult.verified() && payment != null
+                && normalizedProvider.equals(normalizeProviderCode(payment.getProvider()));
         if (webhookVerified && PROVIDER_PAYFAST.equals(normalizedProvider) && payment != null) {
             webhookVerified = validatePayFastWebhookPayment(payment, webhookResult.payload());
         }
@@ -816,6 +831,15 @@ public class SubscriptionService {
             subscription.setLastPaymentAt(OffsetDateTime.now());
             return;
         }
+        userRepository.lockForSubscription(subscription.getUserId());
+        for (SubscriptionRecord previous : subscriptionRepository.findByUserIdOrderByCreatedAtDesc(subscription.getUserId())) {
+            if (!previous.getId().equals(subscription.getId()) && STATUS_ACTIVE.equals(previous.getStatus())) {
+                previous.setStatus(STATUS_CANCELLED);
+                previous.setCancelAtPeriodEnd(false);
+                previous.setTrialEndDate(OffsetDateTime.now());
+                subscriptionRepository.save(previous);
+            }
+        }
         LocalDate today = LocalDate.now();
         LocalDate endDate = calculateEndDate(today, billingInterval);
         subscription.setStatus(STATUS_ACTIVE);
@@ -910,6 +934,7 @@ public class SubscriptionService {
         return switch (normalized) {
             case "BASIC", PLAN_BASIC -> PLAN_BASIC;
             case "PREMIUM", PLAN_PREMIUM -> PLAN_PREMIUM;
+            case "PRO" -> "PLAN_PRO";
             default -> normalized;
         };
     }
@@ -1241,10 +1266,7 @@ public class SubscriptionService {
         if (studentPlanAccessService.isPermanentPremiumOverride(subscription.getUserId())) {
             return PlanType.PREMIUM;
         }
-        String planCode = subscription.getPlanCode() == null ? "" : subscription.getPlanCode().trim().toUpperCase(Locale.ROOT);
-        String status = subscription.getStatus() == null ? "" : subscription.getStatus().trim().toUpperCase(Locale.ROOT);
-        boolean premiumActive = (PLAN_PREMIUM.equals(planCode) || "PREMIUM".equals(planCode)) && STATUS_ACTIVE.equals(status);
-        return premiumActive ? PlanType.PREMIUM : PlanType.BASIC;
+        return studentPlanAccessService.getCurrentPlan(subscription.getUserId());
     }
 
     private SubscriptionRecord ensurePermanentPremiumOverride(SubscriptionRecord subscription) {

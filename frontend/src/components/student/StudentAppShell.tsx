@@ -1,3 +1,4 @@
+import { StudentRouteAccess, AiUsageDisplay } from '@/features/subscriptions/access';
 import { ExploreSearch } from '@/components/student/career/ExploreSearch';
 import '@/components/student/career/explore-workspace.css';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -6,7 +7,7 @@ import { Bell, BookOpen, Bot, Building2, ChevronDown, ChevronRight, Compass, Gra
 import { useAuth } from '@/hooks/useAuth';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { studentService } from '@/services/studentService';
-import logo from '@/assets/edurite-dashboard-logo.jpeg';
+import { EduRiteLogo } from '@/components/common/EduRiteLogo';
 import './dashboard/student-dashboard.css';
 import './student-shell.css';
 import { notificationService } from '@/services/notificationService';
@@ -82,7 +83,7 @@ export function StudentAppShell() {
     <div className={`ed-scrim ${open ? 'is-open' : ''}`} aria-hidden="true" onClick={() => setOpen(false)} />
     <aside ref={drawer} id="student-dashboard-navigation" className={`ed-sidebar ${open ? 'is-open' : ''}`} role="dialog" aria-modal={open || undefined} aria-hidden={!open} aria-label="Student navigation" {...(!open ? { inert: '' } : {})} onClick={(event) => { if ((event.target as HTMLElement).closest('a')) setOpen(false); }}>
       <button className="ed-drawer-close" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={22} /></button>
-      <Link to="/student/dashboard" className="ed-brand"><img src={logo} alt="" /><span><strong>EduRite</strong><small>Education done right</small></span></Link>
+      <Link to="/student/dashboard" className="ed-brand"><EduRiteLogo size="medium" /></Link>
       <nav>{navigation.map(({ label, to, icon: Icon }) => to.startsWith('#')
         ? <a key={to} href={to} onClick={() => setOpen(false)}><Icon size={19} /><span>{label}</span></a>
         : <Link key={to} to={to} className={isCurrent(to) ? 'is-active' : ''} aria-current={isCurrent(to) ? 'page' : undefined} onClick={() => setOpen(false)}><Icon size={19} /><span>{label}</span></Link>)}
@@ -96,7 +97,7 @@ export function StudentAppShell() {
         <Link to="/student/notifications" className="ed-notifications" aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}><Bell size={22} />{unreadCount > 0 && <span />}</Link>
         <details ref={account} className="ed-account"><summary><span className="ed-avatar" aria-hidden="true">{initials}</span><span className="ed-account-name"><strong>{name}</strong><small>{profile.data?.selectedGrade || 'Student'}</small></span><ChevronDown size={15} /></summary><div className="ed-account-menu"><Link to="/student/profile"><UserRound size={15} />My Profile</Link><Link to="/student/subscription"><Wallet size={15} />Subscription</Link><Link to="/student/notifications"><Bell size={15} />Notifications</Link><Link to="/student/settings"><Settings size={15} />Settings</Link><button onClick={() => logout()}><LogOut size={15} />Log out</button></div></details>
       </header>
-      <main id="student-dashboard-content" className="ed-content"><StudentSectionNavigation /><div className="ed-page-content"><Outlet /></div></main>
+      <main id="student-dashboard-content" className="ed-content"><StudentSectionNavigation /><div className="ed-page-content"><StudentRouteAccess>{['/student/learning','/student/career-explorer'].includes(location.pathname) && <AiUsageDisplay />}<Outlet /></StudentRouteAccess></div></main>
     </div>
   </div>;
 }

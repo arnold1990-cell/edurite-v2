@@ -80,6 +80,9 @@ class StudentServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.mockito.Mockito.lenient().when(studentPlanAccessService.getCurrentPlan(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
+            studentPlanAccessService.hasPremiumAccess(invocation.getArgument(0)) ? com.edurite.subscription.entity.PlanType.PREMIUM : com.edurite.subscription.entity.PlanType.BASIC);
+
         studentService = new StudentService(
                 profileRepository,
                 studentProfileCompletionService,

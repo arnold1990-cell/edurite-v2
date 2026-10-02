@@ -291,7 +291,7 @@ public class StudentService {
         profile = syncProfileCompletion(profile);
         int profileCompleteness = studentProfileCompletionService.calculateCompleteness(profile);
         StudentPlanAccessService.StudentPlanAccess planAccess = studentPlanAccessService.resolveByUserId(user.getId());
-        PlanType planType = planAccess.premium() ? PlanType.PREMIUM : PlanType.BASIC;
+        PlanType planType = studentPlanAccessService.getCurrentPlan(user.getId());
         String subscriptionTier = planType.name();
         String subscriptionPlanCode = normalizeSubscriptionPlanCode(planAccess.planCode());
         boolean premiumUnlocked = planAccess.premium();

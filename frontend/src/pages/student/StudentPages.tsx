@@ -1,3 +1,5 @@
+import { useSubscriptionAccess, AiUsageDisplay } from '@/features/subscriptions/access';
+import '@/features/subscriptions/subscription.css';
 import { AiGuidance } from '@/components/student/guidance/AiGuidance';
 import { StudentProfileView } from '@/components/student/profile/StudentProfileView';
 import { StudentDashboard as ReferenceStudentDashboard } from '@/components/student/dashboard/StudentDashboard';
@@ -891,7 +893,8 @@ export const StudentProfilePage = () => {
       ? 'Complete qualification level and career goals/interests to generate AI guidance.'
       : null;
 
-  const isPremiumStudent = (user?.planType ?? 'BASIC').toUpperCase() === 'PREMIUM';
+  const access = useSubscriptionAccess();
+  const isPremiumStudent = Boolean(access.data?.entitlements.includes('ACADEMIC_ANALYSIS'));
 
   useEffect(() => {
     if (!selectedGrade) return;
@@ -1220,7 +1223,8 @@ export const StudentCareerRecommendationsPage = ({ onDemand = true }: { onDemand
   const [guidanceMode, setGuidanceMode] = useState<'FAST' | 'DEEP'>('FAST');
   const [guidanceRequest, setGuidanceRequest] = useState(onDemand ? 0 : 1);
   const subscription = useAppQuery({ queryKey: ['sub'], queryFn: subscriptionService.current });
-  const isPremium = Boolean(subscription.data?.premiumAccess) || (subscription.data?.planCode === 'PLAN_PREMIUM' && subscription.data?.status === 'ACTIVE');
+  const access = useSubscriptionAccess();
+  const isPremium = Boolean(access.data?.entitlements.includes('ADVANCED_MATCHING'));
 
   useEffect(() => {
     if (guidanceMode === 'DEEP' && !isPremium) {
@@ -3202,6 +3206,8 @@ export const StudentNotificationsPage = () => {
 
 export const StudentSubscriptionPage = () => {
   const qc = useQueryClient();
+  const access = useSubscriptionAccess();
+  const [interval, setInterval] = useState<'MONTHLY' | 'YEARLY'>('MONTHLY');
   const location = useLocation();
   const redirectHandledRef = useRef<string>('');
   const [checkoutMessage, setCheckoutMessage] = useState('');
@@ -3340,7 +3346,7 @@ export const StudentSubscriptionPage = () => {
     const response = paymentStatus.data;
     if (response.paymentStatus === 'COMPLETED') {
       setMessageTone('emerald');
-      setCheckoutMessage('Payment verified. Premium access is active.');
+      setCheckoutMessage('Payment verified. Your purchased plan is active.');
       setPendingPaymentReference(null);
     } else if (response.paymentStatus === 'CANCELLED') {
       setMessageTone('amber');
@@ -3358,6 +3364,8 @@ export const StudentSubscriptionPage = () => {
     qc.invalidateQueries({ queryKey: ['dash'] });
     qc.invalidateQueries({ queryKey: ['recs'] });
   }, [paymentStatus.data, qc]);
+
+  useEffect(() => { qc.invalidateQueries({ queryKey: ['subscription-access'] }); }, [current.data, qc]);
 
   const chooseBasic = (planCode: string) => {
     checkout.mutate({ planCode, provider: 'internal' });
@@ -3380,13 +3388,13 @@ export const StudentSubscriptionPage = () => {
   const payFastErrorMessage = (payFastInitiate.error as ApiError | null)?.message ?? 'Could not initialize PayFast checkout. Verify PayFast configuration and retry.';
   const statusErrorMessage = (paymentStatus.error as ApiError | null)?.message ?? 'Could not refresh payment status. Please reload this page.';
   const actionInProgress = checkout.isPending || confirm.isPending || cancel.isPending || payFastInitiate.isPending || paymentStatus.isFetching;
-  const currentPlanCode = current.data?.planCode ?? 'PLAN_BASIC';
+  const currentPlanCode = access.data?.plan ?? 'BASIC';
   const currentStatus = current.data?.status ?? 'ACTIVE';
   const trialEndLabel = current.data?.trialEndDate
     ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(current.data.trialEndDate))
     : null;
 
-  return <Section title="Subscription & Payment" description="Manage your Basic or Premium access with secure PayFast checkout.">
+  return <Section title="Subscription & Payment" description="Explore, discover your pathway, and plan your future.">
     <div className="student-hero-card">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -3395,7 +3403,7 @@ export const StudentSubscriptionPage = () => {
             <h2 className="text-2xl font-bold text-slate-950">{currentPlanCode}</h2>
             <Badge color={currentStatus === 'ACTIVE' ? 'emerald' : currentStatus === 'PAST_DUE' ? 'amber' : 'slate'}>{currentStatus}</Badge>
           </div>
-          <p className="mt-2 text-sm text-slate-600">Premium upgrades activate after PayFast verification.</p>
+          <p className="mt-2 text-sm text-slate-600">Paid features activate only after verified payment. Plan changes take effect immediately after activation; saved data is preserved.</p>
         </div>
         <div className="rounded-2xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-800">
           {current.data?.renewalDate ? `Renewal: ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(current.data.renewalDate))}` : 'Subscription access is active'}
@@ -3421,48 +3429,29 @@ export const StudentSubscriptionPage = () => {
     {paymentStatus.isError && <p className="text-sm text-red-600">{statusErrorMessage}</p>}
     {plans.isError && <p className="text-sm text-red-600">Could not load live subscription plans. Please refresh and try again.</p>}
     {!plans.isError && viewPlans.length === 0 ? <EmptyState title="No subscription plans available" message="Live plans are unavailable right now. Please refresh in a moment." /> : null}
-    <div className="grid gap-4 lg:grid-cols-2">
-      {viewPlans.map((plan) => {
-        const isPaid = Number(plan.amount) > 0;
-        const isCurrent = plan.code === currentPlanCode;
-        return <article
-          key={plan.code}
-          className="card relative flex h-full flex-col gap-5 overflow-hidden p-6"
-        >
-          {plan.premium ? <div className="absolute inset-x-0 top-0 h-1 bg-orange-500" /> : null}
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-xl font-bold text-[#1E293B]">{plan.name}</h3>
-                {plan.premium ? <Badge color="slate">Premium</Badge> : plan.recommended ? <Badge color="blue">Recommended</Badge> : null}
-                {isCurrent ? <Badge color="emerald">Current</Badge> : null}
-              </div>
-              {plan.description ? <p className="mt-2 text-sm leading-6 text-[#64748B]">{plan.description}</p> : null}
-            </div>
-            <div className="rounded-2xl bg-[#F8FAFF] px-4 py-3 text-right">
-              <p className="text-2xl font-bold text-slate-900">{plan.premium ? 'R49.99 / month' : formatPlanPrice(Number(plan.amount), plan.currency, plan.billingPeriod ?? plan.billingInterval)}</p>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{plan.billingPeriod ?? plan.billingInterval}</p>
-            </div>
-          </div>
-          {!!plan.features?.length && (
-            <ul className="grid gap-3 text-sm text-[#334155] sm:grid-cols-2">
-              {plan.features.map((feature) => <li key={feature} className="flex items-start gap-3 rounded-xl bg-[#F8FAFF] px-3 py-2">
-                <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-emerald-500" />
-                <span>{feature}</span>
-              </li>)}
-            </ul>
-          )}
-          <div className="mt-auto">
-            {isPaid ? <div className="space-y-2">
-              <Button onClick={() => payFastInitiate.mutate({ planCode: plan.code })} disabled={actionInProgress} className="inline-flex w-full items-center justify-center gap-2 rounded-[12px] bg-primary-600 text-white hover:bg-primary-700">
-                <CircleDollarSign size={16} />
-                Pay with PayFast
-              </Button>
-              <p className="text-xs text-slate-500">Secure payment powered by PayFast.</p>
-            </div> : <Button onClick={() => chooseBasic(plan.code)} disabled={actionInProgress} className="rounded-[12px] bg-slate-900 text-white hover:bg-slate-800">Choose Basic</Button>}
-          </div>
+    <AiUsageDisplay />
+    <div className="mb-5 flex gap-3" aria-label="Billing interval">{(['MONTHLY','YEARLY'] as const).map(value => <button key={value} aria-pressed={interval===value} onClick={() => setInterval(value)} className={`rounded border px-4 py-2 ${interval===value ? 'border-blue-700 text-blue-700' : ''}`}>{value==='MONTHLY' ? 'Monthly' : 'Yearly'}</button>)}</div>
+    <div className="subscription-comparison">
+      <aside className="subscription-features"><h2>Features overview</h2>{['Your Profile','Career Guidance','Study Options','Bursaries & Funding','Learning & Progress','AI Support','Applications','Parent / Guardian Support'].map(label => <p key={label}>{label}</p>)}</aside>
+      <div className="subscription-plans">{['BASIC','PREMIUM','PRO'].map(tier => {
+        const monthly=viewPlans.find(p => p.code===`PLAN_${tier}`);
+        const yearly=viewPlans.find(p => p.code===`PLAN_${tier}_YEARLY`);
+        const plan=interval==='YEARLY' && yearly ? yearly : monthly;
+        if (!plan || !monthly) return null;
+        const isCurrent=tier===currentPlanCode;
+        const downgrade=['BASIC','PREMIUM','PRO'].indexOf(tier)<['BASIC','PREMIUM','PRO'].indexOf(currentPlanCode);
+        return <article key={tier} className={`subscription-plan subscription-plan--${tier.toLowerCase()}`}>
+          {tier==='PREMIUM' && <p className="subscription-popular">MOST POPULAR</p>}
+          <h2>{tier}</h2><p className="subscription-price">R{Number(monthly.amount).toLocaleString('en-ZA')}<small>/month</small></p>
+          {yearly && <p>R{Number(yearly.amount).toLocaleString('en-ZA')}/year</p>}
+          <h3>{tier==='BASIC' ? 'EXPLORE' : tier==='PREMIUM' ? 'DISCOVER YOUR PATHWAY' : 'PLAN YOUR FUTURE'}</h3><p>{plan.description}</p>
+          <ul>{plan.features.map(feature => <li key={feature}>? {feature}</li>)}</ul>
+          <Button disabled={isCurrent || actionInProgress || !access.data} onClick={() => tier==='BASIC' ? chooseBasic(plan.code) : payFastInitiate.mutate({planCode:plan.code})}>
+            {isCurrent ? 'CURRENT PLAN' : downgrade ? `CHANGE TO ${tier}` : `UPGRADE TO ${tier}`}
+          </Button>
+          {!isCurrent && tier!=='BASIC' && <small>Checkout: {formatPlanPrice(Number(plan.amount),plan.currency,plan.billingInterval)}</small>}
         </article>;
-      })}
+      })}</div>
     </div>
   </Section>;
 };

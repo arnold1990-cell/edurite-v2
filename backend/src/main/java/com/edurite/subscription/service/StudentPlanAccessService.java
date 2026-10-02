@@ -45,13 +45,18 @@ public class StudentPlanAccessService {
                     null
             );
         }
-        SubscriptionRecord subscription = subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId).orElse(null);
+        SubscriptionRecord subscription = currentRecord(userId);
         String planCode = normalizePlanCode(subscription == null ? null : subscription.getPlanCode());
         String status = normalizeStatus(subscription == null ? null : subscription.getStatus());
-        boolean paidPremium = PLAN_PREMIUM.equals(planCode) && STATUS_ACTIVE.equals(status);
-        boolean trialActive = isTrialActive(subscription);
+        boolean inPeriod = subscription != null && subscription.getEndDate() != null
+                && java.time.LocalDate.now(java.time.ZoneOffset.UTC).isBefore(subscription.getEndDate());
+        boolean paidPremium = (planCode.startsWith(PLAN_PREMIUM) || planCode.startsWith("PLAN_PRO"))
+                && STATUS_ACTIVE.equals(status) && inPeriod;
+        boolean trialActive = STATUS_ACTIVE.equals(status) && isTrialActive(subscription);
         boolean premium = paidPremium || trialActive;
-        String effectivePlanCode = paidPremium ? PLAN_PREMIUM : (trialActive ? "PLAN_TRIAL" : PLAN_BASIC);
+        String effectivePlanCode = paidPremium ? (planCode.startsWith("PLAN_PRO") ? "PLAN_PRO" : PLAN_PREMIUM)
+                : (trialActive ? "PLAN_TRIAL" : PLAN_BASIC);
+        if (!premium && !PLAN_BASIC.equals(planCode) && STATUS_ACTIVE.equals(status)) status = "EXPIRED";
         String upgradeMessage = premium
                 ? null
                 : BASIC_UPGRADE_MESSAGE;
@@ -63,6 +68,15 @@ public class StudentPlanAccessService {
                 premium ? null : BASIC_CAREER_GUIDANCE_LIMIT,
                 upgradeMessage
         );
+    }
+
+    public SubscriptionRecord currentRecord(UUID userId) {
+        return subscriptionRepository.findTopByUserIdAndStatusOrderByCreatedAtDesc(userId, STATUS_ACTIVE)
+                .orElseGet(() -> subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId).orElse(null));
+    }
+
+    public com.edurite.subscription.entity.PlanType getCurrentPlan(UUID userId) {
+        return com.edurite.subscription.entity.PlanType.fromPlanCode(resolveByUserId(userId).planCode());
     }
 
     public boolean hasPremiumAccess(UUID userId) {
@@ -84,7 +98,8 @@ public class StudentPlanAccessService {
         if (subscription == null || subscription.getTrialEndDate() == null) {
             return false;
         }
-        return OffsetDateTime.now().isBefore(subscription.getTrialEndDate());
+        return (subscription.getTrialStartDate() == null || !OffsetDateTime.now().isBefore(subscription.getTrialStartDate()))
+                && OffsetDateTime.now().isBefore(subscription.getTrialEndDate());
     }
 
     private String normalizePlanCode(String planCode) {

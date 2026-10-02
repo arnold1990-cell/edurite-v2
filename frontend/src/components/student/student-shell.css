@@ -19,11 +19,9 @@
 .ed-account-menu { z-index:60; }
 .ed-account-menu button { border-top:1px solid var(--student-border); }
 /* One off-canvas navigation at every viewport size; the workspace stays mounted. */
-.ed-sidebar { position:fixed; inset:0 auto 0 0; z-index:80; width:min(320px,90vw); height:100dvh; padding:56px 16px 24px; background:white; color:#152033; overflow-y:auto; overscroll-behavior:contain; transform:translateX(-100%); visibility:hidden; transition:transform 300ms cubic-bezier(.22,1,.36,1),visibility 0s 300ms; }
+.ed-sidebar { position:fixed; inset:0 auto 0 0; z-index:80; width:min(320px,90vw); height:100dvh; padding:16px 16px 24px; background:white; color:#152033; overflow-y:auto; overscroll-behavior:contain; transform:translateX(-100%); visibility:hidden; transition:transform 300ms cubic-bezier(.22,1,.36,1),visibility 0s 300ms; }
 .ed-sidebar.is-open { transform:translateX(0); visibility:visible; transition-delay:0s; }
-.ed-sidebar .ed-brand { flex-shrink:0; color:#152033; }
-.ed-sidebar .ed-brand strong { color:#152033; }
-.ed-sidebar .ed-brand small { color:var(--student-muted); }
+.ed-sidebar .ed-brand { flex-shrink:0; justify-content:flex-start; padding-right:44px; }
 .ed-sidebar nav { flex-shrink:0; overflow:visible; margin-bottom:24px; }
 .ed-sidebar nav a { color:#42536a; }
 .ed-sidebar nav a:hover { background:#fff0e4; }

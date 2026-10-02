@@ -49,6 +49,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @SuppressWarnings("unused")
 class CriticalApiRouteWebMvcTest {
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.edurite.subscription.service.SubscriptionAccessInterceptor subscriptionAccessInterceptor;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.edurite.subscription.service.SubscriptionResponseAdvice subscriptionResponseAdvice;
+    @org.junit.jupiter.api.BeforeEach
+    void allowSubscriptionBoundaryInRoleTests() throws Exception {
+        org.mockito.Mockito.when(subscriptionAccessInterceptor.preHandle(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(true);
+    }
+
 
     @Autowired
     private MockMvc mockMvc;

@@ -157,13 +157,13 @@ export function CareerRoadmapDetails({ current, activeTab, setActiveTab, display
                     <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Current APS</p><p>{displayCurrentAps ?? 'Unavailable'}</p></div>
                     <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Required APS</p><p>{displayRequiredAps ?? 'APS requirement not verified'}</p></div>
                     <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">APS gap</p><p>{displayApsGap ?? 'Unavailable'}</p></div>
-                    <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Risk level</p><p>{current.gapAnalysis.riskLevel}</p></div>
+                    <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Risk level</p><p>{current.gapAnalysis?.riskLevel ?? 'Pro insight'}</p></div>
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Improvement suggestions</h3>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {current.gapAnalysis.improvementSuggestions.map((item) => <li key={item}>• {normalizeText(item)}</li>)}
+                    {(current.gapAnalysis?.improvementSuggestions ?? []).map((item) => <li key={item}>• {normalizeText(item)}</li>)}
                   </ul>
                 </div>
               </div>
@@ -171,13 +171,13 @@ export function CareerRoadmapDetails({ current, activeTab, setActiveTab, display
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Missing subjects</h3>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {current.gapAnalysis.missingSubjects.length ? current.gapAnalysis.missingSubjects.map((item) => <Badge key={item} color="amber">{item}</Badge>) : <p className="text-sm text-slate-500">No missing required subjects detected.</p>}
+                    {(current.gapAnalysis?.missingSubjects ?? []).length ? (current.gapAnalysis?.missingSubjects ?? []).map((item) => <Badge key={item} color="amber">{item}</Badge>) : <p className="text-sm text-slate-500">No missing required subjects detected.</p>}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <h3 className="text-sm font-semibold text-slate-900">Subjects needing improvement</h3>
                   <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                    {current.gapAnalysis.subjectsNeedingImprovement.length ? current.gapAnalysis.subjectsNeedingImprovement.map((item) => <li key={item}>• {normalizeText(item)}</li>) : <li className="text-slate-500">No urgent subject improvements flagged.</li>}
+                    {(current.gapAnalysis?.subjectsNeedingImprovement ?? []).length ? (current.gapAnalysis?.subjectsNeedingImprovement ?? []).map((item) => <li key={item}>• {normalizeText(item)}</li>) : <li className="text-slate-500">No urgent subject improvements flagged.</li>}
                   </ul>
                 </div>
               </div>
@@ -200,7 +200,7 @@ export function CareerRoadmapDetails({ current, activeTab, setActiveTab, display
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold text-slate-900">Best-fit universities</h3>
                 <ul className="mt-3 space-y-2 text-sm text-slate-700">
-                  {current.gapAnalysis.bestFitUniversities.map((item) => <li key={item}>• {normalizeText(item)}</li>)}
+                  {(current.gapAnalysis?.bestFitUniversities ?? []).map((item) => <li key={item}>• {normalizeText(item)}</li>)}
                 </ul>
               </div>
             </div> : null}

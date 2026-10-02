@@ -1,14 +1,1 @@
-import type { ImgHTMLAttributes } from 'react';
-import eduriteLogo from '@/assets/edurite-dashboard-logo.jpeg';
-
-type DashboardLogoProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt'>;
-
-export const DashboardLogo = ({ className, ...props }: DashboardLogoProps) => (
-  <img
-    src={eduriteLogo}
-    alt="EduRite Dashboard"
-    className={className}
-    loading="eager"
-    {...props}
-  />
-);
+export { EduRiteLogo as DashboardLogo } from './EduRiteLogo';
