@@ -6,7 +6,7 @@ type EduRiteLogoProps = Omit<ImgHTMLAttributes<HTMLImageElement>, 'src' | 'alt'>
 export const EduRiteLogo = ({ className, ...props }: EduRiteLogoProps) => (
   <img
     src={eduriteLogo}
-    alt="EduRite"
+    alt="EduRite"w
     className={className}
     loading="eager"
     {...props}

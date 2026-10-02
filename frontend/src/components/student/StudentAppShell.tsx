@@ -1,6 +1,6 @@
 import { ExploreSearch } from '@/components/student/career/ExploreSearch';
 import '@/components/student/career/explore-workspace.css';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { Bell, BookOpen, Bot, Building2, ChevronDown, ChevronRight, Compass, GraduationCap, Home, LogOut, Mail, Menu, Settings, Target, Trophy, UserRound, Wallet, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +41,7 @@ export function StudentAppShell() {
   const [open, setOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const drawer = useRef<HTMLElement>(null);
+  const workspace = useRef<HTMLDivElement>(null);
   const account = useRef<HTMLDetailsElement>(null);
   useEffect(() => {
     setOpen(false);
@@ -48,13 +49,18 @@ export function StudentAppShell() {
   }, [location.pathname, location.search]);
   const name = [profile.data?.firstName, profile.data?.lastName].filter(Boolean).join(' ') || user?.fullName || user?.email || 'Student';
   const initials = name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('').toUpperCase();
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
+    const previousPadding = document.body.style.paddingRight;
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.paddingRight = `${parseFloat(getComputedStyle(document.body).paddingRight) + scrollbarWidth}px`;
+    const background = workspace.current;
+    background?.setAttribute('inert', '');
     document.body.style.overflow = 'hidden';
     drawer.current?.querySelector<HTMLButtonElement>('button')?.focus();
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); }
+      if (event.key === 'Escape') { event.preventDefault(); setOpen(false); }
       if (event.key === 'Tab') {
         const items = Array.from(drawer.current?.querySelectorAll<HTMLElement>('a, button') ?? []).filter((item) => item.getClientRects().length);
         const first = items[0], last = items[items.length - 1];
@@ -63,13 +69,19 @@ export function StudentAppShell() {
       }
     };
     document.addEventListener('keydown', onKey);
-    return () => { document.body.style.overflow = previousOverflow; document.removeEventListener('keydown', onKey); };
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPadding;
+      background?.removeAttribute('inert');
+      document.removeEventListener('keydown', onKey);
+      menuButton.current?.focus({ preventScroll: true });
+    };
   }, [open]);
   return <div className="ed-dashboard">
     <a className="ed-skip" href="#student-dashboard-content">Skip to content</a>
-    {open && <button className="ed-scrim" aria-label="Close navigation" onClick={() => setOpen(false)} />}
-    <aside ref={drawer} id="student-dashboard-navigation" className={`ed-sidebar ${open ? 'is-open' : ''}`} aria-label="Student navigation">
-      <button className="ed-drawer-close" onClick={() => { setOpen(false); menuButton.current?.focus(); }} aria-label="Close navigation"><X size={22} /></button>
+    <div className={`ed-scrim ${open ? 'is-open' : ''}`} aria-hidden="true" onClick={() => setOpen(false)} />
+    <aside ref={drawer} id="student-dashboard-navigation" className={`ed-sidebar ${open ? 'is-open' : ''}`} role="dialog" aria-modal={open || undefined} aria-hidden={!open} aria-label="Student navigation" {...(!open ? { inert: '' } : {})} onClick={(event) => { if ((event.target as HTMLElement).closest('a')) setOpen(false); }}>
+      <button className="ed-drawer-close" onClick={() => setOpen(false)} aria-label="Close navigation"><X size={22} /></button>
       <Link to="/student/dashboard" className="ed-brand"><img src={logo} alt="" /><span><strong>EduRite</strong><small>Education done right</small></span></Link>
       <nav>{navigation.map(({ label, to, icon: Icon }) => to.startsWith('#')
         ? <a key={to} href={to} onClick={() => setOpen(false)}><Icon size={19} /><span>{label}</span></a>
@@ -77,7 +89,7 @@ export function StudentAppShell() {
       </nav>
       <Link to="/student/learning/tutor" className="ed-tutor"><span className="ed-tutor-icon"><Bot size={23} /></span><span><strong>Ask EduRite AI</strong><small>Get personalised guidance anytime.</small></span><ChevronRight size={16} /></Link>
     </aside>
-    <div className="ed-workspace">
+    <div ref={workspace} className="ed-workspace">
       <header className="ed-header">
         <button ref={menuButton} className="ed-menu-button" aria-label="Open navigation" aria-expanded={open} aria-controls="student-dashboard-navigation" onClick={() => setOpen(true)}><Menu size={22} /></button>
         <div className="ed-search"><ExploreSearch /></div>
