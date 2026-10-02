@@ -1,0 +1,6 @@
+.edurite-logo { display:block; height:auto; max-width:100%; object-fit:contain; flex-shrink:0; }
+.edurite-logo--small { width:64px; }
+.edurite-logo--medium { width:120px; }
+.edurite-logo--large { width:180px; }
+.edurite-logo--light { background:#fff; border-radius:8px; padding:6px; }
+@media(min-width:768px) { .edurite-logo--large { width:210px; } }
