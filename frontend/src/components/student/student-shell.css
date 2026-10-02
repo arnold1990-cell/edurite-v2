@@ -1,0 +1,32 @@
+/* Shared presentation for content inside the canonical student shell. */
+.ed-dashboard { --student-border:#e2e7ec; --student-muted:#637084; }
+.ed-header { position:sticky; top:0; z-index:50; border-bottom:1px solid var(--student-border); }
+.ed-content { max-width:1600px; margin:0 auto; }
+.ed-page-content { min-width:0; }
+.ed-page-content .student-page-section { padding:16px; font-size:14px; }
+.ed-page-content .student-page-title { font-size:24px; line-height:1.3; font-weight:700; }
+.ed-page-content .student-page-subtitle { font-size:14px; color:var(--student-muted); }
+.ed-page-content :is(.card,.student-soft-card,.student-metric-card,.student-hero-card) { border:1px solid var(--student-border); border-radius:9px; background:#fff; box-shadow:none; }
+.ed-page-content .student-soft-card:hover { transform:none; box-shadow:none; }
+.ed-page-content :is(button,a).bg-primary-600 { background:var(--ed-orange); }
+.ed-page-content :is(button,a).bg-primary-600:hover { background:#df6511; }
+.ed-page-content :is(input,textarea,select) { font:inherit; border-radius:6px; }
+.ed-page-content :is(input,textarea,select):focus { outline-color:var(--ed-orange); --tw-ring-color:#ff791a40; }
+.ed-page-content progress { accent-color:var(--ed-orange); width:100%; }
+.ed-section-navigation { border-bottom:1px solid var(--student-border); padding:12px 0; }
+.ed-section-navigation a { border:0; border-radius:4px; background:transparent; }
+.ed-section-navigation a[aria-current=page] { color:#a44405; background:#fff0e4; border-bottom:2px solid var(--ed-orange); }
+.ed-account-menu { z-index:60; }
+.ed-account-menu button { border-top:1px solid var(--student-border); }
+@media(max-width:640px) { .ed-page-content .student-page-section { padding:8px; }.ed-page-content .student-page-title { font-size:21px; } }
+
+.ed-page-content .ed-learning-panel :is(.text-white,.text-white\/90,.text-white\/80,.text-white\/70,.text-blue-100,.text-slate-200,.text-slate-300) { color:var(--student-muted); }
+.ed-page-content .ed-learning-panel button.text-white { color:white; background:#d95d06; border-radius:6px; backdrop-filter:none; }
+
+.ed-section-heading > h1 { font-size:24px; font-weight:700; margin:0; }
+.ed-section-navigation { display:flex; gap:8px; overflow-x:auto; flex-wrap:nowrap; max-width:100%; margin-bottom:16px; }
+.ed-section-navigation a { flex-shrink:0; white-space:nowrap; padding:9px 12px; }
+.ed-section-navigation a:focus-visible { outline:2px solid var(--ed-orange); outline-offset:-2px; }
+.ed-feature-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:16px; }
+.ed-feature-grid a { color:inherit; text-decoration:none; }
+.ed-feature-grid a span { display:block; margin-top:12px; color:var(--student-muted); }
