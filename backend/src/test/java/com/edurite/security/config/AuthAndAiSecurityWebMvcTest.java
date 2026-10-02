@@ -29,7 +29,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
+import com.edurite.auth.service.SchoolPasswordRecoveryService;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -57,6 +57,8 @@ class AuthAndAiSecurityWebMvcTest {
 
     @MockitoBean
     private AuthService authService;
+    @MockitoBean
+    private SchoolPasswordRecoveryService schoolPasswordRecoveryService;
     @MockitoBean
     private AccountService accountService;
     @MockitoBean

@@ -123,7 +123,7 @@ class GamificationServiceTest {
         when(studentProfileRepository.findByUserIdForUpdate(user.getId())).thenReturn(Optional.of(profile));
         when(studentPointsLedgerRepository.sumPointsByStudentId(profile.getId())).thenReturn(120L);
         when(rewardClaimRepository.sumReservedPointsByStudentId(profile.getId())).thenReturn(0L);
-        when(rewardClaimRepository.existsActiveClaimForReward(profile.getId(), LocalDate.now(java.time.ZoneOffset.UTC).getYear() + "-T3", "End of Term Reward")).thenReturn(false);
+        when(rewardClaimRepository.existsActiveClaimForReward(profile.getId(), LocalDate.now(java.time.ZoneOffset.UTC).getYear() + "-T4", "End of Term Reward")).thenReturn(false);
 
         ResourceConflictException error = assertThrows(ResourceConflictException.class,
                 () -> service.claimReward(principal, new RewardClaimRequest("End of Term Reward", "Reward claim")));
@@ -153,7 +153,7 @@ class GamificationServiceTest {
         profile.setId(UUID.randomUUID());
         profile.setUserId(user.getId());
         Principal principal = () -> "student@example.com";
-        String currentTermCode = LocalDate.now(java.time.ZoneOffset.UTC).getYear() + "-T3";
+        String currentTermCode = LocalDate.now(java.time.ZoneOffset.UTC).getYear() + "-T4";
 
         when(currentUserService.requireUser(principal)).thenReturn(user);
         when(studentProfileRepository.findByUserIdForUpdate(user.getId())).thenReturn(Optional.of(profile));
@@ -192,7 +192,7 @@ class GamificationServiceTest {
         profile.setId(UUID.randomUUID());
         profile.setUserId(user.getId());
         Principal principal = () -> "student@example.com";
-        String currentTermCode = LocalDate.now(java.time.ZoneOffset.UTC).getYear() + "-T3";
+        String currentTermCode = LocalDate.now(java.time.ZoneOffset.UTC).getYear() + "-T4";
 
         when(currentUserService.requireUser(principal)).thenReturn(user);
         when(studentProfileRepository.findByUserIdForUpdate(user.getId())).thenReturn(Optional.of(profile));
@@ -247,4 +247,3 @@ class GamificationServiceTest {
         assertThat(summary.recentEvents()).singleElement().extracting(GamificationSummaryDto.RecentPointEventDto::eventType).isEqualTo("Daily login");
     }
 }
-

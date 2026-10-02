@@ -1,4 +1,4 @@
-name: Deploy EduRite
+name: Deploy EduRite V2
 
 on:
   workflow_run:
@@ -10,7 +10,8 @@ jobs:
   deploy:
     if: >-
       github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
 
     steps:
@@ -19,19 +20,7 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
 
-      - name: GitHub Actions Diagnostics
-        run: |
-          set -euo pipefail
-          echo "==> GitHub Actions diagnostics"
-          echo "pwd: $(pwd)"
-          ls -la
-          echo "whoami: $(whoami)"
-          echo "hostname: $(hostname)"
-          echo "github.workspace: ${GITHUB_WORKSPACE}"
-          echo "repository root:"
-          git rev-parse --show-toplevel
-
-      - name: Deploy to Hostinger VPS
+      - name: Deploy to AWS EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -39,136 +28,144 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           timeout: 30m
           command_timeout: 30m
+
           script: |
             set -euo pipefail
 
-            echo "==> Remote diagnostics"
-            echo "pwd: $(pwd)"
-            ls -la
-            echo "whoami: $(whoami)"
-            echo "hostname: $(hostname)"
-            docker compose ps || true
-
+            PROJECT_DIR="/opt/edurite-v2"
             REPO_URL="https://github.com/arnold1990-cell/edurite-v2.git"
-            CANDIDATES="
-            /opt/edurite-v2
-            /opt/edurite-ai-career-guidance-clean
-            $HOME/edurite-v2
-            $HOME/edurite-ai-career-guidance-clean
-            $HOME/projects/edurite-v2
-            $HOME/projects/edurite-ai-career-guidance-clean
-            "
 
-            PROJECT_DIR=""
-            for dir in $CANDIDATES; do
-              if [ -d "$dir/.git" ] || [ -f "$dir/docker-compose.yml" ]; then
-                PROJECT_DIR="$dir"
-                break
-              fi
-            done
+            echo "======================================"
+            echo " Deploying EduRite V2 to AWS EC2"
+            echo "======================================"
 
-            if [ -z "$PROJECT_DIR" ]; then
-              echo "==> Searching for repository"
-              FOUND_DIR="$(find /opt "$HOME" -maxdepth 4 -type d -name 'edurite*' 2>/dev/null | head -n 1 || true)"
-              if [ -n "$FOUND_DIR" ]; then
-                PROJECT_DIR="$FOUND_DIR"
-              fi
+            echo "Host: $(hostname)"
+            echo "User: $(whoami)"
+
+            # Make sure Docker is available
+            if ! command -v docker >/dev/null 2>&1; then
+              echo "ERROR: Docker is not installed."
+              exit 1
             fi
 
-            if [ -z "$PROJECT_DIR" ]; then
-              echo "==> Repository not found. Attempting clone."
-              for dir in /opt/edurite-v2 /opt/edurite-ai-career-guidance-clean "$HOME/projects/edurite-v2" "$HOME/edurite-v2"; do
-                parent_dir="$(dirname "$dir")"
-                if [ -d "$parent_dir" ] && [ -w "$parent_dir" ]; then
-                  PROJECT_DIR="$dir"
-                  break
-                fi
-              done
+            if ! docker compose version >/dev/null 2>&1; then
+              echo "ERROR: Docker Compose plugin is not installed."
+              exit 1
+            fi
 
-              if [ -z "$PROJECT_DIR" ]; then
-                echo "ERROR: Could not find a writable target directory for the repository."
-                echo "Checked candidates:"
-                printf '%s\n' $CANDIDATES
-                exit 1
-              fi
+            # Clone repository on first deployment
+            if [ ! -d "$PROJECT_DIR/.git" ]; then
+              echo "==> Repository not found at $PROJECT_DIR"
+
+              sudo mkdir -p "$PROJECT_DIR"
+              sudo chown -R "$(whoami):$(whoami)" "$PROJECT_DIR"
 
               git clone "$REPO_URL" "$PROJECT_DIR"
-              echo "==> Clone completed"
             fi
 
-            if [ ! -d "$PROJECT_DIR" ]; then
-              echo "ERROR: Resolved project directory does not exist: $PROJECT_DIR"
+            cd "$PROJECT_DIR"
+
+            echo "==> Updating repository"
+
+            git fetch origin
+            git checkout main
+            git reset --hard origin/main
+
+            echo "==> Deploying commit:"
+            git rev-parse --short HEAD
+
+            # Production secrets/config must already exist on EC2
+            if [ ! -f ".env" ]; then
+              echo "ERROR: Production .env is missing:"
+              echo "$PROJECT_DIR/.env"
               exit 1
             fi
 
-            if ! cd "$PROJECT_DIR"; then
-              echo "ERROR: Failed to enter project directory: $PROJECT_DIR"
-              ls -la "$(dirname "$PROJECT_DIR")" || true
+            echo "==> Validating Docker Compose"
+            docker compose config >/dev/null
+
+            echo "==> Building EduRite images"
+            docker compose build --progress=plain backend frontend
+
+            echo "==> Starting services"
+            docker compose up -d
+
+            echo "==> Waiting for containers"
+            sleep 10
+
+            docker compose ps
+
+            echo "==> Checking PostgreSQL"
+            if ! docker compose exec -T postgres pg_isready; then
+              echo "ERROR: PostgreSQL is not ready."
+              docker compose logs --tail=100 postgres || true
               exit 1
             fi
 
-            echo "==> Using project directory: $PROJECT_DIR"
-            echo "pwd: $(pwd)"
-            ls -la
-
-            if [ ! -f "docker-compose.yml" ]; then
-              echo "ERROR: docker-compose.yml not found in $PROJECT_DIR"
+            echo "==> Checking Redis"
+            if ! docker compose exec -T redis redis-cli ping | grep -q PONG; then
+              echo "ERROR: Redis is not responding."
+              docker compose logs --tail=100 redis || true
               exit 1
             fi
 
-            if [ ! -d ".git" ]; then
-              echo "ERROR: $PROJECT_DIR exists but is not a git repository."
-              exit 1
-            fi
+            echo "==> Waiting for backend"
 
-            echo "==> Pulling latest code from origin/main"
-            git pull origin main
-            echo "==> Deploying commit $(git rev-parse --short HEAD)"
+            BACKEND_OK=false
 
-            echo "==> Stopping existing containers"
-            docker compose down || true
-
-            echo "==> Building images with plain progress"
-            docker compose build --progress=plain
-
-            echo "==> Starting containers"
-            docker compose up -d --build
-
-            echo "==> Container status after startup"
-            docker compose ps || true
-
-            echo "==> Verifying frontend bundle is a fresh Vite build"
-            if docker exec edurite-frontend test -f /usr/share/nginx/html/assets/main.js; then
-              echo "ERROR: Legacy /assets/main.js is still present in the deployed frontend image."
-              exit 1
-            fi
-            if docker exec edurite-frontend sh -lc 'grep -R "import.meta.glob" /usr/share/nginx/html/assets >/dev/null'; then
-              echo "ERROR: Deployed frontend assets still contain import.meta.glob."
-              exit 1
-            fi
-            if ! curl -fsS http://localhost:5173/ | grep -Eq '/assets/index-[^"]+\\.js'; then
-              echo "ERROR: Frontend HTML is not serving a Vite hashed JavaScript asset."
-              exit 1
-            fi
-
-            echo "==> Waiting for backend health"
             for i in $(seq 1 30); do
-              if curl -fsS http://localhost:8080/actuator/health; then
-                echo
-                echo "Backend healthy."
-                exit 0
+              if docker compose exec -T backend \
+                curl -fsS http://127.0.0.1:8080/actuator/health/readiness >/dev/null; then
+
+                BACKEND_OK=true
+                echo "Backend is healthy."
+                break
               fi
-              echo "Waiting for backend..."
+
+              echo "Waiting for backend... attempt $i/30"
               sleep 10
             done
 
-            echo "==> Backend did not become healthy. Collecting diagnostics."
-            docker compose ps || true
-            docker compose logs --tail=300 backend || true
-            docker compose logs --tail=100 postgres || true
-            docker compose logs --tail=100 redis || true
-            docker images || true
-            docker system df || true
-            free -h || true
-            df -h || true
-            exit 1
+            if [ "$BACKEND_OK" != "true" ]; then
+              echo "ERROR: Backend failed health check."
+
+              docker compose ps || true
+              docker compose logs --tail=300 backend || true
+              docker compose logs --tail=100 postgres || true
+              docker compose logs --tail=100 redis || true
+
+              exit 1
+            fi
+
+            echo "==> Checking frontend container"
+
+            if ! docker compose exec -T frontend \
+              wget -qO- http://127.0.0.1/ >/dev/null; then
+
+              echo "ERROR: Frontend is not responding."
+              docker compose logs --tail=200 frontend || true
+              exit 1
+            fi
+
+            echo "==> Checking Vite production bundle"
+
+            if docker compose exec -T frontend \
+              test -f /usr/share/nginx/html/assets/main.js; then
+
+              echo "ERROR: Legacy frontend bundle detected."
+              exit 1
+            fi
+
+            if docker compose exec -T frontend \
+              sh -lc 'grep -R "import.meta.glob" /usr/share/nginx/html/assets >/dev/null 2>&1'; then
+
+              echo "ERROR: Frontend bundle contains unresolved import.meta.glob."
+              exit 1
+            fi
+
+            echo "==> Final container status"
+            docker compose ps
+
+            echo "======================================"
+            echo " EduRite V2 deployment successful"
+            echo "======================================"
