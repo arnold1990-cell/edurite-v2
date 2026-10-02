@@ -110,9 +110,10 @@ jobs:
           docker build -t edurite-frontend-ci ./frontend
 
           CONTAINER_ID=$(docker run -d \
-            --name edurite-frontend-ci \
-            -p 8088:80 \
-            edurite-frontend-ci)
+             --name edurite-frontend-ci \
+             --add-host backend:127.0.0.1 \
+             -p 8088:80 \
+             edurite-frontend-ci)
 
           echo "Started container: $CONTAINER_ID"
           echo "Waiting for Nginx on http://127.0.0.1:8088"
