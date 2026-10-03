@@ -77,6 +77,40 @@ class SubscriptionServiceTest {
     private User user;
     private Principal principal;
 
+    @Test
+    void newStudentReceivesExactlyFourteenDaysFromAccountCreation() {
+        var start = OffsetDateTime.parse("2026-10-01T10:15:30Z");
+        user.setCreatedAt(start);
+        var trial = subscriptionService.initializeStudentTrialIfAbsent(user.getId());
+        assertThat(trial.getTrialStartDate()).isEqualTo(start);
+        assertThat(trial.getTrialEndDate()).isEqualTo(start.plusDays(14));
+        assertThat(trial.getPlanCode()).isEqualTo("PLAN_BASIC");
+        assertThat(trial.getPremiumUntil()).isNull();
+    }
+
+    @Test
+    void repeatedInitializationAndProfileOrLoginChangesNeverRestartTrial() {
+        user.setCreatedAt(OffsetDateTime.now().minusDays(40));
+        var trial = subscriptionService.initializeStudentTrialIfAbsent(user.getId());
+        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(trial));
+        var end = trial.getTrialEndDate();
+        user.setFirstName("Updated"); user.setLastLoginAt(OffsetDateTime.now()); user.setPlanType(PlanType.PRO);
+        assertThat(subscriptionService.initializeStudentTrialIfAbsent(user.getId())).isSameAs(trial);
+        assertThat(trial.getTrialEndDate()).isEqualTo(end).isBefore(OffsetDateTime.now());
+        verify(subscriptionRepository, org.mockito.Mockito.times(1)).save(any());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void basicCheckoutCannotRestartOrExtendFreeAccess() {
+        PricingPlan basic = premiumPlan(); basic.setCode("PLAN_BASIC"); basic.setAmount(BigDecimal.ZERO);
+        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_BASIC")).thenReturn(Optional.of(basic));
+        assertThatThrownBy(() -> subscriptionService.checkout(principal, "PLAN_BASIC", "internal"))
+                .isInstanceOf(ResourceConflictException.class).hasMessageContaining("one-time 14-day trial");
+        verify(subscriptionRepository, never()).save(any());
+        verify(paymentRepository, never()).save(any());
+    }
+
     @BeforeEach
     void setUp() {
         subscriptionService = new SubscriptionService(
@@ -132,9 +166,6 @@ class SubscriptionServiceTest {
 
         when(userRepository.save(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
-
-        when(studentPlanAccessService.isPermanentPremiumOverride(any()))
-                .thenReturn(false);
 
         when(studentPlanAccessService.resolveByUserId(any()))
                 .thenReturn(
@@ -395,11 +426,11 @@ class SubscriptionServiceTest {
         ).isEqualTo("SUB-123");
 
         assertThat(subscription.getStartDate())
-                .isEqualTo(LocalDate.now());
+                .isEqualTo(LocalDate.now(java.time.ZoneOffset.UTC));
 
         assertThat(subscription.getEndDate())
                 .isEqualTo(
-                        LocalDate.now().plusMonths(1)
+                        LocalDate.now(java.time.ZoneOffset.UTC).plusMonths(1)
                 );
 
         assertThat(payment.getStatus())
@@ -1458,89 +1489,20 @@ class SubscriptionServiceTest {
     }
 
     @Test
-    void currentNormalizesOwnerOverrideSubscriptionToPermanentPremium() {
-        user.setEmail(
-                "arnoldmadaz@gmail.com"
-        );
-
-        SubscriptionRecord existing =
-                existingSubscription(
-                        user.getId()
-                );
-
-        existing.setPlanCode(
-                "PLAN_BASIC"
-        );
-        existing.setStatus(
-                "CANCELLED"
-        );
-        existing.setEndDate(
-                LocalDate.now().minusDays(1)
-        );
-        existing.setRenewalDate(
-                LocalDate.now().minusDays(1)
-        );
-        existing.setTrialEndDate(
-                OffsetDateTime.now().minusDays(10)
-        );
-        existing.setPremiumUntil(
-                OffsetDateTime.now().minusDays(10)
-        );
-
-        when(
-                subscriptionRepository
-                        .findTopByUserIdOrderByCreatedAtDesc(
-                                user.getId()
-                        )
-        ).thenReturn(Optional.of(existing));
-
-        when(
-                studentPlanAccessService
-                        .isPermanentPremiumOverride(
-                                user.getId()
-                        )
-        ).thenReturn(true);
-
-        when(
-                studentPlanAccessService
-                        .resolveByUserId(
-                                user.getId()
-                        )
-        ).thenReturn(
-                new StudentPlanAccessService.StudentPlanAccess(
-                        "PLAN_PREMIUM",
-                        "ACTIVE",
-                        true,
-                        null,
-                        null
-                )
-        );
-
-        SubscriptionRecord result =
-                subscriptionService.current(
-                        principal
-                );
-
-        assertThat(result.getPlanCode())
-                .isEqualTo("PLAN_PREMIUM");
-
-        assertThat(result.getStatus())
-                .isEqualTo("ACTIVE");
-
-        assertThat(result.getEndDate())
-                .isNull();
-
-        assertThat(result.getRenewalDate())
-                .isNull();
-
-        assertThat(result.getTrialEndDate())
-                .isNull();
-
-        assertThat(result.getPremiumUntil())
-                .isNull();
-
-        assertThat(result.getPremiumAccess())
-                .isTrue();
+    void currentDoesNotRewriteSubscriptionOrTrialBasedOnEmail() {
+        user.setEmail("arnoldmadaz@gmail.com");
+        SubscriptionRecord existing = existingSubscription(user.getId());
+        existing.setPlanCode("PLAN_BASIC"); existing.setStatus("CANCELLED");
+        existing.setTrialStartDate(OffsetDateTime.now().minusDays(30));
+        existing.setTrialEndDate(existing.getTrialStartDate().plusDays(14));
+        var end = existing.getTrialEndDate();
+        when(studentPlanAccessService.currentRecord(user.getId())).thenReturn(existing);
+        var result = subscriptionService.current(principal);
+        assertThat(result.getPlanCode()).isEqualTo("PLAN_BASIC");
+        assertThat(result.getStatus()).isEqualTo("CANCELLED");
+        assertThat(result.getTrialEndDate()).isEqualTo(end);
+        assertThat(result.getPremiumAccess()).isFalse();
+        verify(subscriptionRepository, never()).save(any());
     }
 
     @Test

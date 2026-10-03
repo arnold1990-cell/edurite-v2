@@ -17,6 +17,9 @@ public class SubscriptionAccessInterceptor implements HandlerInterceptor {
     }
     @Override public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         var rule = StudentAccessPolicy.rule(request.getMethod(), request.getRequestURI());
+        if (StudentAccessPolicy.trialProtected(request.getRequestURI()) && request.getUserPrincipal() != null) {
+            entitlements.requireFeature(users.requireUser(request.getUserPrincipal()), Feature.CAREER_BASIC);
+        }
         if (rule == null) return true;
         // Full assessments cannot be bypassed through the legacy anonymous public alias.
         User user = users.requireUser(request.getUserPrincipal());

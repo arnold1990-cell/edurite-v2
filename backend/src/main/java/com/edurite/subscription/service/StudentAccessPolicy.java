@@ -60,6 +60,16 @@ public final class StudentAccessPolicy {
         new RouteRule("/student/institutions", "saved", Feature.APPLICATION_SUPPORT)
     );
     public static String path(String uri) { return uri.replaceFirst("^/api(?:/v1)?", "").replaceAll("/+$", ""); }
+    // Existing account/profile/settings and billing endpoints are deliberately outside this gate.
+    public static boolean trialProtected(String uri) {
+        String p = path(uri);
+        if (p.equals("/student/profile") || p.startsWith("/student/profile/saved")
+                || p.equals("/student/settings") || p.equals("/student/preferences")) return false;
+        return List.of("/student", "/careers", "/courses", "/institutions", "/bursaries",
+                "/learning-centre", "/recommendations", "/ai", "/applications", "/jobs")
+                .stream().anyMatch(prefix -> p.equals(prefix) || p.startsWith(prefix + "/"));
+    }
+
     public static ApiRule rule(String method, String uri) {
         String path = path(uri);
         return API.stream().filter(r -> (r.method.equals("*") || r.method.equals(method)) && MATCHER.match(r.path, path)).findFirst().orElse(null);

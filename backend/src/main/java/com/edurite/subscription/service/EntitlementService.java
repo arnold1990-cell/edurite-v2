@@ -17,16 +17,21 @@ public class EntitlementService {
                 Set.of("ADMIN", "SCHOOL_ADMIN", "TEACHER", "DISTRICT", "DISTRICT_ADMIN", "DISTRICT_DIRECTOR", "CIRCUIT_MANAGER", "SUBJECT_ADVISOR"));
     }
     public PlanType plan(UUID userId) { return access.getCurrentPlan(userId); }
-    public boolean hasFeature(UUID userId, Feature feature) { return feature.allowed(plan(userId)); }
+    public boolean hasFeature(UUID userId, Feature feature) { return feature == Feature.PROFILE || (access.hasSubscriptionAccess(userId) && feature.allowed(plan(userId))); }
     public void requireFeature(User user, Feature feature) {
+        if (feature != Feature.PROFILE && isStudent(user) && !access.hasSubscriptionAccess(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your 14-day free trial has ended. Choose a plan to continue using EduRite.");
+        }
         if (isStudent(user) && !hasFeature(user.getId(), feature)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Upgrade to " + feature.minimumPlan + " to unlock " + feature.label.toLowerCase() + ".");
         }
     }
     public List<String> entitlements(UUID userId) {
-        PlanType plan = plan(userId);
-        return Arrays.stream(Feature.values()).filter(f -> f.allowed(plan)).map(Enum::name).toList();
+        var resolved = access.resolveByUserId(userId);
+        boolean allowed = resolved.premium() || "TRIAL_ACTIVE".equals(resolved.status());
+        PlanType plan = PlanType.fromPlanCode(resolved.planCode());
+        return Arrays.stream(Feature.values()).filter(f -> f == Feature.PROFILE || (allowed && f.allowed(plan))).map(Enum::name).toList();
     }
     public static int allowance(PlanType plan) {
         return switch (plan) { case BASIC -> 5; case PREMIUM -> 30; case PRO -> 100; };

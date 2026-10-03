@@ -38,6 +38,8 @@ class EntitlementSecurityTest {
         when(current.requireUser(any())).thenReturn(user);
         subscription=new SubscriptionRecord(); subscription.setPlanCode("PLAN_BASIC"); subscription.setStatus("ACTIVE");
         subscription.setEndDate(LocalDate.now(ZoneOffset.UTC).plusMonths(1));
+        subscription.setTrialStartDate(OffsetDateTime.now().minusDays(1));
+        subscription.setTrialEndDate(subscription.getTrialStartDate().plusDays(14));
         when(subscriptions.findTopByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(subscription));
         mvc=MockMvcBuilders.standaloneSetup(new Endpoints()).setControllerAdvice(new ApiExceptionHandler())
             .addInterceptors(new SubscriptionAccessInterceptor(current,entitlements,usage)).build();
@@ -72,6 +74,16 @@ class EntitlementSecurityTest {
     @ParameterizedTest @ValueSource(strings={"/api/student/career-roadmaps/generate","/api/v1/student/career-roadmaps/generate","/api/student/cv","/api/ai/analyse-university-sources","/api/student/psychometric/latest"})
     void directBasicApiDeniedEvenWithForgedPlan(String path) throws Exception { mvc.perform(post(path).principal(()->"student@example.com").param("plan","PRO").header("X-Plan","PRO")).andExpect(status().isForbidden());verifyNoInteractions(usage); }
     @Test void premiumCannotCallProApi() throws Exception {subscription.setPlanCode("PLAN_PREMIUM");mvc.perform(post("/api/ai/analyse-university-sources")).andExpect(status().isForbidden());mvc.perform(get("/api/student/cv")).andExpect(status().isForbidden());}
+    @ParameterizedTest @ValueSource(strings={"/api/student/aps/calculate", "/api/v1/student/career-roadmaps/generate", "/api/careers", "/api/student/tutor/ask"})
+    void expiredTrialCannotCallBasicApisWithForgedDates(String path) throws Exception {
+        subscription.setTrialStartDate(OffsetDateTime.now().minusDays(15));
+        subscription.setTrialEndDate(subscription.getTrialStartDate().plusDays(14));
+        mvc.perform(post(path).principal(() -> "student@example.com").param("trialEndDate", "2099-01-01").header("X-Plan", "PRO"))
+            .andExpect(status().isForbidden());
+        verifyNoInteractions(usage);
+        verify(subscriptions, never()).delete(any());
+        verify(users, never()).delete(any());
+    }
     @Test void basicApsAndCareerRemainAvailable() throws Exception {mvc.perform(post("/api/student/aps/calculate")).andExpect(status().isOk());mvc.perform(get("/api/careers")).andExpect(status().isOk());}
     @Test void successfulAiRequestIsReservedAndCounted() throws Exception {UUID reservation=UUID.randomUUID();when(usage.reserve(user.getId())).thenReturn(reservation);mvc.perform(post("/api/student/tutor/ask")).andExpect(status().isOk());verify(usage).finish(reservation,true);}
     @Test void quotaDenialDoesNotExecuteAi() throws Exception {when(usage.reserve(user.getId())).thenThrow(new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,"Quota exceeded"));mvc.perform(post("/api/student/tutor/ask")).andExpect(status().isTooManyRequests());verify(usage,never()).finish(any(),anyBoolean());}

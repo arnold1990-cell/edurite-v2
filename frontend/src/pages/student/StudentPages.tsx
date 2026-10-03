@@ -3395,9 +3395,6 @@ export const StudentSubscriptionPage = () => {
 
   useEffect(() => { qc.invalidateQueries({ queryKey: ['subscription-access'] }); }, [current.data, qc]);
 
-  const chooseBasic = (planCode: string) => {
-    checkout.mutate({ planCode, provider: 'internal' });
-  };
 
   if (current.isLoading) return <LoadingState />;
   if (current.isError) return <ErrorState message="Could not load your subscription." />;
@@ -3434,13 +3431,13 @@ export const StudentSubscriptionPage = () => {
           <p className="mt-2 text-sm text-slate-600">Paid features activate only after verified payment. Plan changes take effect immediately after activation; saved data is preserved.</p>
         </div>
         <div className="rounded-2xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-800">
-          {current.data?.renewalDate ? `Renewal: ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(current.data.renewalDate))}` : 'Subscription access is active'}
+          {access.data?.trialActive ? `${access.data.trialDaysRemaining} days remaining` : access.data?.accessAllowed && current.data?.renewalDate ? `Renewal: ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(current.data.renewalDate))}` : access.data?.accessAllowed ? 'Subscription access is active' : 'Choose a paid plan'}
         </div>
       </div>
     </div>
     {current.data?.trialActive ? (
       <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-        You are on a free Premium trial. Trial ends on {trialEndLabel ?? 'your trial end date'}.
+        Free Trial. Trial ends on {trialEndLabel ?? 'your trial end date'}.
       </p>
     ) : null}
     {!current.data?.trialActive && current.data?.accessMessage ? (
@@ -3470,12 +3467,12 @@ export const StudentSubscriptionPage = () => {
         const downgrade=['BASIC','PREMIUM','PRO'].indexOf(tier)<['BASIC','PREMIUM','PRO'].indexOf(currentPlanCode);
         return <article key={tier} className={`subscription-plan subscription-plan--${tier.toLowerCase()}`}>
           {tier==='PREMIUM' && <p className="subscription-popular">MOST POPULAR</p>}
-          <h2>{tier}</h2><p className="subscription-price">R{Number(monthly.amount).toLocaleString('en-ZA')}<small>/month</small></p>
+          <h2>{tier === 'BASIC' ? 'Free Trial' : tier}</h2><p className="subscription-price">R{Number(monthly.amount).toLocaleString('en-ZA')}<small>{tier === 'BASIC' ? ' / 14 days only' : '/month'}</small></p>
           {yearly && <p>R{Number(yearly.amount).toLocaleString('en-ZA')}/year</p>}
           <h3>{tier==='BASIC' ? 'EXPLORE' : tier==='PREMIUM' ? 'DISCOVER YOUR PATHWAY' : 'PLAN YOUR FUTURE'}</h3><p>{plan.description}</p>
           <ul>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
-          <Button disabled={isCurrent || actionInProgress || !access.data} onClick={() => tier==='BASIC' ? chooseBasic(plan.code) : payFastInitiate.mutate({planCode:plan.code})}>
-            {isCurrent ? 'CURRENT PLAN' : downgrade ? `CHANGE TO ${tier}` : `UPGRADE TO ${tier}`}
+          <Button disabled={tier === 'BASIC' || isCurrent || actionInProgress || !access.data} onClick={() => payFastInitiate.mutate({planCode:plan.code})}>
+            {tier === 'BASIC' ? (access.data?.trialActive ? 'TRIAL ACTIVE' : 'ONE-TIME TRIAL') : isCurrent ? 'CURRENT PLAN' : downgrade ? `CHANGE TO ${tier}` : `UPGRADE TO ${tier}`}
           </Button>
           {!isCurrent && tier!=='BASIC' && <small>Checkout: {formatPlanPrice(Number(plan.amount),plan.currency,plan.billingInterval)}</small>}
           {downgrade && <small>This change takes effect when activated. Your saved data is preserved.</small>}

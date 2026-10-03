@@ -24,7 +24,14 @@ public class EntitlementController {
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("plan", entitlements.plan(id));
         result.put("status", plan.status());
-        result.put("trialActive", "PLAN_TRIAL".equals(plan.planCode()));
+        boolean trialActive = "TRIAL_ACTIVE".equals(plan.status());
+        var trial = access.trialRecord(id);
+        var trialEnd = trial == null ? null : access.trialExpiry(trial);
+        result.put("trialActive", trialActive);
+        result.put("accessAllowed", plan.premium() || trialActive);
+        result.put("trialStartDate", trial == null ? null : trial.getTrialStartDate());
+        result.put("trialDaysRemaining", trialActive && trialEnd != null
+                ? Math.max(0, (long) Math.ceil(java.time.Duration.between(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC), trialEnd).toMillis() / 86400000.0)) : 0);
         result.put("entitlements", entitlements.entitlements(id));
         result.put("features", Arrays.stream(Feature.values()).map(f -> Map.of("id",f.name(),"label",f.label,"minimumPlan",f.minimumPlan)).toList());
         result.put("routeRules", StudentAccessPolicy.ROUTES);
@@ -33,7 +40,7 @@ public class EntitlementController {
         result.put("expiresAt", subscription == null ? null : subscription.getEndDate());
         result.put("renewalDate", subscription == null ? null : subscription.getRenewalDate());
         result.put("cancelAtPeriodEnd", subscription != null && subscription.isCancelAtPeriodEnd());
-        result.put("trialEndDate", subscription == null ? null : subscription.getTrialEndDate());
+        result.put("trialEndDate", trialEnd);
         return result;
     }
 }

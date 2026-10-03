@@ -33,7 +33,7 @@ class StudentPlanAccessServiceTest {
     }
 
     @Test
-    void trialUserHasPremiumAccessDuringTrialWindow() {
+    void trialUserHasOnlyBasicAccessDuringTrialWindow() {
         UUID userId = UUID.randomUUID();
         SubscriptionRecord subscription = new SubscriptionRecord();
         subscription.setPlanCode("PLAN_BASIC");
@@ -45,8 +45,9 @@ class StudentPlanAccessServiceTest {
         when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId)).thenReturn(Optional.of(subscription));
 
         var access = service.resolveByUserId(userId);
-        assertThat(access.premium()).isTrue();
-        assertThat(access.planCode()).isEqualTo("PLAN_TRIAL");
+        assertThat(access.premium()).isFalse();
+        assertThat(access.planCode()).isEqualTo("PLAN_BASIC");
+        assertThat(access.status()).isEqualTo("TRIAL_ACTIVE");
     }
 
     @Test
@@ -85,7 +86,7 @@ class StudentPlanAccessServiceTest {
     }
 
     @Test
-    void ownerOverrideAlwaysResolvesAsPremiumWithoutLimits() {
+    void emailAloneCannotGrantPremium() {
         UUID userId = UUID.randomUUID();
         User user = new User();
         user.setId(userId);
@@ -100,11 +101,40 @@ class StudentPlanAccessServiceTest {
         when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId)).thenReturn(Optional.of(subscription));
 
         var access = service.resolveByUserId(userId);
-        assertThat(access.premium()).isTrue();
-        assertThat(access.planCode()).isEqualTo("PLAN_PREMIUM");
-        assertThat(access.status()).isEqualTo("ACTIVE");
-        assertThat(access.careerSuggestionLimit()).isNull();
-        assertThat(access.upgradeMessage()).isNull();
+        assertThat(access.premium()).isFalse();
+        assertThat(access.status()).isEqualTo("TRIAL_EXPIRED");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"13,true", "14,false", "15,false"})
+    void trialBoundaryIsExclusive(int day, boolean active) {
+        UUID id = UUID.randomUUID();
+        OffsetDateTime start = OffsetDateTime.parse("2026-01-01T12:34:56Z");
+        SubscriptionRecord trial = new SubscriptionRecord();
+        trial.setPlanCode("PLAN_BASIC"); trial.setStatus("ACTIVE");
+        trial.setTrialStartDate(start); trial.setTrialEndDate(start.plusDays(14));
+        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(id)).thenReturn(Optional.of(trial));
+        assertThat(service.resolveAt(id, start.plusDays(day)).status()).isEqualTo(active ? "TRIAL_ACTIVE" : "TRIAL_EXPIRED");
+        assertThat(service.resolveAt(id, start.plusDays(14).minusNanos(1)).status()).isEqualTo("TRIAL_ACTIVE");
+        trial.setTrialEndDate(start.plusYears(1));
+        assertThat(service.resolveAt(id, start.plusDays(14)).status()).isEqualTo("TRIAL_EXPIRED");
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"PLAN_PREMIUM", "PLAN_PRO"})
+    void validPaidRecordWinsOverExpiredTrialAndPendingPurchase(String code) {
+        UUID id = UUID.randomUUID();
+        SubscriptionRecord paid = new SubscriptionRecord(); paid.setPlanCode(code); paid.setStatus("ACTIVE");
+        paid.setEndDate(java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusDays(10));
+        SubscriptionRecord trial = new SubscriptionRecord(); trial.setPlanCode("PLAN_BASIC"); trial.setStatus("ACTIVE");
+        trial.setTrialStartDate(OffsetDateTime.now().minusDays(30)); trial.setTrialEndDate(trial.getTrialStartDate().plusDays(14));
+        SubscriptionRecord pending = new SubscriptionRecord(); pending.setPlanCode("PLAN_PRO"); pending.setStatus("PENDING");
+        when(subscriptionRepository.findByUserIdOrderByCreatedAtDesc(id)).thenReturn(java.util.List.of(pending, trial, paid));
+        assertThat(service.resolveByUserId(id).planCode()).isEqualTo(code);
+        assertThat(service.hasSubscriptionAccess(id)).isTrue();
+        for (String status : java.util.List.of("CANCELLED", "EXPIRED", "PENDING", "PAYMENT_FAILED")) {
+            paid.setStatus(status);
+            assertThat(service.hasSubscriptionAccess(id)).isFalse();
+        }
     }
 }
-

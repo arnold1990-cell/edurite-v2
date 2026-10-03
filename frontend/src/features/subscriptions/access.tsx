@@ -5,7 +5,7 @@ import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 
 export interface SubscriptionAccess {
-  plan: 'BASIC' | 'PREMIUM' | 'PRO'; status: string; trialActive: boolean;
+  plan: 'BASIC' | 'PREMIUM' | 'PRO'; status: string; trialActive: boolean; accessAllowed: boolean; trialDaysRemaining: number;
   entitlements: string[];
   features: { id: string; label: string; minimumPlan: string }[];
   routeRules: { path: string; section: string | null; feature: string }[];
@@ -35,6 +35,21 @@ export function RequireEntitlement({ feature, children }: { feature: string; chi
   if (access.isError) return <p role="alert">Access could not be checked. <button onClick={() => access.refetch()}>Retry</button></p>;
   return access.data.entitlements.includes(feature) ? <>{children}</> : <FeatureLock feature={feature} />;
 }
+export function TrialNotice({ access }: { access: SubscriptionAccess }) {
+  if (!access.trialActive) return null;
+  return <aside role="status" className={`mb-4 rounded-xl border p-4 ${access.trialDaysRemaining <= 3 ? 'border-amber-500 bg-amber-50' : 'border-blue-200 bg-blue-50'}`}>
+    <strong>Free Trial</strong><p>{access.trialDaysRemaining} days remaining</p>
+    {access.trialEndDate && <p>Trial ends on {new Date(access.trialEndDate).toLocaleDateString()}</p>}
+    <Link className="font-semibold text-blue-700 underline" to="/student/subscription">Upgrade</Link>
+  </aside>;
+}
+export function TrialExpired() {
+  return <section className="rounded-xl border bg-white p-6" aria-label="Free trial ended">
+    <h2 className="text-lg font-semibold">Your 14-day free trial has ended.</h2>
+    <p className="my-3">Choose a plan to continue using EduRite.</p>
+    <Link className="inline-block rounded bg-blue-700 px-4 py-2 text-white" to="/student/subscription">View Plans</Link>
+  </section>;
+}
 export function StudentRouteAccess({ children }: { children: ReactNode }) {
   const location=useLocation();
   const access=useSubscriptionAccess();
@@ -42,8 +57,10 @@ export function StudentRouteAccess({ children }: { children: ReactNode }) {
   if (['/student/subscription','/student/settings','/student/notifications'].includes(location.pathname)) return <>{children}</>;
   if (access.isPending) return <p role="status">Checking access...</p>;
   if (access.isError) return <p role="alert">Access could not be checked. <button onClick={() => access.refetch()}>Retry</button></p>;
+  if (location.pathname === "/student/profile" && new URLSearchParams(location.search).get("section") !== "cv") return <>{children}</>;
+  if (!access.data.accessAllowed) return <TrialExpired />;
   const feature=featureForUrl(access.data, location.pathname+location.search);
-  return feature && !access.data.entitlements.includes(feature) ? <FeatureLock feature={feature} /> : <>{children}</>;
+  return <><TrialNotice access={access.data} />{feature && !access.data.entitlements.includes(feature) ? <FeatureLock feature={feature} /> : children}</>;
 }
 export function AccessBadge({ to }: { to: string }) {
   const { data }=useSubscriptionAccess();

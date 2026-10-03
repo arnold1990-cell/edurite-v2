@@ -19,7 +19,7 @@ public enum PlanType {
 
         return switch (normalized) {
             case "PRO", "PRO_YEARLY" -> PRO;
-            case "PREMIUM", "PREMIUM_YEARLY", "TRIAL" -> PREMIUM;
+            case "PREMIUM", "PREMIUM_YEARLY" -> PREMIUM;
             default -> BASIC;
         };
     }
