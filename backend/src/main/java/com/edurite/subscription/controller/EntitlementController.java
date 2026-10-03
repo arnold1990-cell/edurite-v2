@@ -29,8 +29,10 @@ public class EntitlementController {
         result.put("features", Arrays.stream(Feature.values()).map(f -> Map.of("id",f.name(),"label",f.label,"minimumPlan",f.minimumPlan)).toList());
         result.put("routeRules", StudentAccessPolicy.ROUTES);
         result.put("aiUsage", usage.current(id));
-        result.put("billingInterval", subscription == null ? null : subscription.getPlanCode().endsWith("_YEARLY") ? "YEARLY" : "MONTHLY");
+        result.put("billingInterval", subscription == null ? null : subscription.getPlanCode() != null && subscription.getPlanCode().endsWith("_YEARLY") ? "YEARLY" : "MONTHLY");
         result.put("expiresAt", subscription == null ? null : subscription.getEndDate());
+        result.put("renewalDate", subscription == null ? null : subscription.getRenewalDate());
+        result.put("cancelAtPeriodEnd", subscription != null && subscription.isCancelAtPeriodEnd());
         result.put("trialEndDate", subscription == null ? null : subscription.getTrialEndDate());
         return result;
     }

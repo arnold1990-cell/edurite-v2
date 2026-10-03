@@ -59,6 +59,14 @@ class EntitlementSecurityTest {
         assertThat(entitlements.plan(user.getId())).isEqualTo(PlanType.BASIC);
     }
     @Test void expiredActivePlanFallsBack() { subscription.setPlanCode("PLAN_PRO");subscription.setEndDate(LocalDate.now(ZoneOffset.UTC));assertThat(entitlements.plan(user.getId())).isEqualTo(PlanType.BASIC); }
+    @Test void futurePaidPeriodDoesNotGrantAccess() { subscription.setPlanCode("PLAN_PRO");subscription.setStartDate(LocalDate.now(ZoneOffset.UTC).plusDays(1));assertThat(entitlements.plan(user.getId())).isEqualTo(PlanType.BASIC); }
+    @ParameterizedTest @ValueSource(strings={"PLAN_PRO_FAKE","PLAN_PREMIUM_UNKNOWN","PROFESSIONAL"})
+    void unknownPlanNamesFailClosed(String code) { subscription.setPlanCode(code);assertThat(entitlements.plan(user.getId())).isEqualTo(PlanType.BASIC); }
+    @Test void expiredPaidPeriodCannotReuseUnrelatedTrialDates() { subscription.setPlanCode("PLAN_PRO");subscription.setEndDate(LocalDate.now(ZoneOffset.UTC));subscription.setTrialEndDate(OffsetDateTime.now().plusDays(10));assertThat(entitlements.plan(user.getId())).isEqualTo(PlanType.BASIC); }
+    @Test void adminWithStudentRoleIsNotSubjectToStudentBilling() throws Exception {
+        Role admin=new Role();admin.setName("ADMIN");Role student=new Role();student.setName("STUDENT");user.setRoles(Set.of(admin,student));
+        mvc.perform(post("/api/student/tutor/ask")).andExpect(status().isOk());verifyNoInteractions(usage);
+    }
     @Test void missingSubscriptionIsBasic() { when(subscriptions.findTopByUserIdOrderByCreatedAtDesc(any())).thenReturn(Optional.empty());assertThat(entitlements.plan(user.getId())).isEqualTo(PlanType.BASIC); }
     @Test void cancelAtPeriodEndRetainsAccessUntilExpiry() { subscription.setPlanCode("PLAN_PREMIUM");subscription.setCancelAtPeriodEnd(true);assertThat(entitlements.plan(user.getId())).isEqualTo(PlanType.PREMIUM);subscription.setEndDate(LocalDate.now(ZoneOffset.UTC));assertThat(entitlements.plan(user.getId())).isEqualTo(PlanType.BASIC); }
     @ParameterizedTest @ValueSource(strings={"/api/student/career-roadmaps/generate","/api/v1/student/career-roadmaps/generate","/api/student/cv","/api/ai/analyse-university-sources","/api/student/psychometric/latest"})

@@ -17,11 +17,11 @@ public enum PlanType {
             normalized = normalized.substring("PLAN_".length());
         }
 
-        if (normalized.startsWith("PRO")) return PRO;
-        if ("TRIAL".equals(normalized) || normalized.startsWith("PREMIUM")) {
-            return PREMIUM;
-        }
-        return BASIC;
+        return switch (normalized) {
+            case "PRO", "PRO_YEARLY" -> PRO;
+            case "PREMIUM", "PREMIUM_YEARLY", "TRIAL" -> PREMIUM;
+            default -> BASIC;
+        };
     }
 }
 

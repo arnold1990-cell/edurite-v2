@@ -35,6 +35,7 @@ import com.edurite.subscription.service.SubscriptionService;
 import com.edurite.user.entity.User;
 import com.edurite.user.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.math.BigDecimal;
 import java.security.Principal;
 import java.time.LocalDate;
@@ -44,22 +45,33 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class SubscriptionServiceTest {
 
-    private final SubscriptionRepository subscriptionRepository = mock(SubscriptionRepository.class);
-    private final PaymentRepository paymentRepository = mock(PaymentRepository.class);
-    private final PaymentEventRepository paymentEventRepository = mock(PaymentEventRepository.class);
-    private final CurrentUserService currentUserService = mock(CurrentUserService.class);
-    private final NotificationService notificationService = mock(NotificationService.class);
-    private final UserRepository userRepository = mock(UserRepository.class);
-    private final PricingPlanRepository pricingPlanRepository = mock(PricingPlanRepository.class);
-    private final PaymentProviderFactory paymentProviderFactory = mock(PaymentProviderFactory.class);
-    private final PaymentProvider paymentProvider = mock(PaymentProvider.class);
-    private final StudentPlanAccessService studentPlanAccessService = mock(StudentPlanAccessService.class);
+    private final SubscriptionRepository subscriptionRepository =
+            mock(SubscriptionRepository.class);
+    private final PaymentRepository paymentRepository =
+            mock(PaymentRepository.class);
+    private final PaymentEventRepository paymentEventRepository =
+            mock(PaymentEventRepository.class);
+    private final CurrentUserService currentUserService =
+            mock(CurrentUserService.class);
+    private final NotificationService notificationService =
+            mock(NotificationService.class);
+    private final UserRepository userRepository =
+            mock(UserRepository.class);
+    private final PricingPlanRepository pricingPlanRepository =
+            mock(PricingPlanRepository.class);
+    private final PaymentProviderFactory paymentProviderFactory =
+            mock(PaymentProviderFactory.class);
+    private final PaymentProvider paymentProvider =
+            mock(PaymentProvider.class);
+    private final StudentPlanAccessService studentPlanAccessService =
+            mock(StudentPlanAccessService.class);
 
     private SubscriptionService subscriptionService;
     private User user;
@@ -76,7 +88,13 @@ class SubscriptionServiceTest {
                 userRepository,
                 pricingPlanRepository,
                 paymentProviderFactory,
-                new PaymentGatewayProperties("payfast", "http://localhost:8080/api/payments/callback", "", "", ""),
+                new PaymentGatewayProperties(
+                        "payfast",
+                        "http://localhost:8080/api/payments/callback",
+                        "",
+                        "",
+                        ""
+                ),
                 new PayFastConfig(
                         "10000100",
                         "46f0cd694581a",
@@ -95,543 +113,1550 @@ class SubscriptionServiceTest {
                 "http://localhost:8080"
         );
 
-        when(studentPlanAccessService.getCurrentPlan(any())).thenReturn(PlanType.BASIC);
+        when(studentPlanAccessService.getCurrentPlan(any()))
+                .thenReturn(PlanType.BASIC);
+
         user = new User();
         user.setId(UUID.randomUUID());
-        principal = () -> user.getEmail() == null ? "student@example.com" : user.getEmail();
-        when(currentUserService.requireUser(any())).thenReturn(user);
-        when(userRepository.findById(any())).thenReturn(Optional.of(user));
-        when(userRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(studentPlanAccessService.isPermanentPremiumOverride(any())).thenReturn(false);
-        when(studentPlanAccessService.resolveByUserId(any())).thenReturn(
-                new StudentPlanAccessService.StudentPlanAccess("PLAN_BASIC", "ACTIVE", false, 3, "Upgrade to Premium")
-        );
 
-        when(subscriptionRepository.save(any())).thenAnswer(invocation -> {
-            SubscriptionRecord subscription = invocation.getArgument(0);
-            if (subscription.getId() == null) {
-                subscription.setId(UUID.randomUUID());
-            }
-            if ("ACTIVE".equals(subscription.getStatus())) {
-                when(studentPlanAccessService.getCurrentPlan(subscription.getUserId())).thenReturn(PlanType.fromPlanCode(subscription.getPlanCode()));
-            }
-            return subscription;
-        });
+        principal =
+                () -> user.getEmail() == null
+                        ? "student@example.com"
+                        : user.getEmail();
 
-        when(paymentRepository.save(any())).thenAnswer(invocation -> {
-            PaymentRecord payment = invocation.getArgument(0);
-            if (payment.getId() == null) {
-                payment.setId(UUID.randomUUID());
-            }
-            return payment;
-        });
+        when(currentUserService.requireUser(any()))
+                .thenReturn(user);
 
-        when(pricingPlanRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findById(any()))
+                .thenReturn(Optional.of(user));
+
+        when(userRepository.save(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        when(studentPlanAccessService.isPermanentPremiumOverride(any()))
+                .thenReturn(false);
+
+        when(studentPlanAccessService.resolveByUserId(any()))
+                .thenReturn(
+                        new StudentPlanAccessService.StudentPlanAccess(
+                                "PLAN_BASIC",
+                                "ACTIVE",
+                                false,
+                                3,
+                                "Upgrade to Premium"
+                        )
+                );
+
+        when(subscriptionRepository.save(any()))
+                .thenAnswer(invocation -> {
+                    SubscriptionRecord subscription =
+                            invocation.getArgument(0);
+
+                    if (subscription.getId() == null) {
+                        subscription.setId(UUID.randomUUID());
+                    }
+
+                    if ("ACTIVE".equals(subscription.getStatus())) {
+                        when(
+                                studentPlanAccessService.getCurrentPlan(
+                                        subscription.getUserId()
+                                )
+                        ).thenReturn(
+                                PlanType.fromPlanCode(
+                                        subscription.getPlanCode()
+                                )
+                        );
+                    }
+
+                    return subscription;
+                });
+
+        when(paymentRepository.save(any()))
+                .thenAnswer(invocation -> {
+                    PaymentRecord payment =
+                            invocation.getArgument(0);
+
+                    if (payment.getId() == null) {
+                        payment.setId(UUID.randomUUID());
+                    }
+
+                    return payment;
+                });
+
+        when(pricingPlanRepository.save(any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     @Test
     void checkoutThrowsWhenPlanIsUnavailable() {
-        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_ENTERPRISE")).thenReturn(Optional.empty());
+        when(
+                pricingPlanRepository.findByCodeAndActiveTrue(
+                        "PLAN_ENTERPRISE"
+                )
+        ).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> subscriptionService.checkout(principal, new SubscriptionCheckoutRequest("PLAN_ENTERPRISE", "payfast")))
+        assertThatThrownBy(
+                () -> subscriptionService.checkout(
+                        principal,
+                        new SubscriptionCheckoutRequest(
+                                "PLAN_ENTERPRISE",
+                                "payfast"
+                        )
+                )
+        )
                 .isInstanceOf(ResourceConflictException.class)
-                .hasMessageContaining("Subscription plan is not available");
+                .hasMessageContaining(
+                        "Subscription plan is not available"
+                );
     }
 
     @Test
     void checkoutCreatesProviderCheckoutForPaidPlan() {
         PricingPlan plan = premiumPlan();
-        SubscriptionRecord existing = existingSubscription(user.getId());
-        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(existing));
-        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_PREMIUM")).thenReturn(Optional.of(plan));
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(paymentProvider.createCheckout(any())).thenReturn(PaymentCheckoutResult.pending(
-                "payfast",
-                "ORDER-123",
-                "SESSION-123",
-                "https://sandbox.payfast.co.za/eng/process",
-                java.util.Map.of("mode", "subscription")
-        ));
 
-        var response = subscriptionService.checkout(principal, new SubscriptionCheckoutRequest("PLAN_PREMIUM", "payfast"));
+        SubscriptionRecord existing =
+                existingSubscription(user.getId());
 
-        assertThat(response.provider()).isEqualTo("payfast");
-        assertThat(response.paymentStatus()).isEqualTo("PENDING");
-        assertThat(response.subscriptionStatus()).isEqualTo("PENDING");
-        assertThat(response.checkoutUrl()).isEqualTo("https://sandbox.payfast.co.za/eng/process");
+        when(
+                subscriptionRepository
+                        .findTopByUserIdOrderByCreatedAtDesc(
+                                user.getId()
+                        )
+        ).thenReturn(Optional.of(existing));
 
-        verify(paymentProviderFactory).resolve("payfast");
-        verify(paymentProvider).createCheckout(any());
-        assertThat(existing.getStatus()).isEqualTo("PENDING");
-        assertThat(existing.getPlanCode()).isEqualTo("PLAN_PREMIUM");
+        when(
+                pricingPlanRepository
+                        .findByCodeAndActiveTrue("PLAN_PREMIUM")
+        ).thenReturn(Optional.of(plan));
+
+        when(paymentProviderFactory.resolve("payfast"))
+                .thenReturn(paymentProvider);
+
+        when(paymentProvider.createCheckout(any()))
+                .thenReturn(
+                        PaymentCheckoutResult.pending(
+                                "payfast",
+                                "ORDER-123",
+                                "SESSION-123",
+                                "https://sandbox.payfast.co.za/eng/process",
+                                Map.of(
+                                        "mode",
+                                        "subscription"
+                                )
+                        )
+                );
+
+        var response =
+                subscriptionService.checkout(
+                        principal,
+                        new SubscriptionCheckoutRequest(
+                                "PLAN_PREMIUM",
+                                "payfast"
+                        )
+                );
+
+        assertThat(response.provider())
+                .isEqualTo("payfast");
+
+        assertThat(response.paymentStatus())
+                .isEqualTo("PENDING");
+
+        assertThat(response.subscriptionStatus())
+                .isEqualTo("PENDING");
+
+        assertThat(response.checkoutUrl())
+                .isEqualTo(
+                        "https://sandbox.payfast.co.za/eng/process"
+                );
+
+        verify(paymentProviderFactory)
+                .resolve("payfast");
+
+        verify(paymentProvider)
+                .createCheckout(any());
+
+        ArgumentCaptor<SubscriptionRecord> subscriptionCaptor =
+                ArgumentCaptor.forClass(
+                        SubscriptionRecord.class
+                );
+
+        verify(subscriptionRepository, atLeast(1))
+                .save(subscriptionCaptor.capture());
+
+        SubscriptionRecord pendingSubscription =
+                subscriptionCaptor
+                        .getAllValues()
+                        .getLast();
+
+        assertThat(pendingSubscription.getStatus())
+                .isEqualTo("PENDING");
+
+        assertThat(pendingSubscription.getPlanCode())
+                .isEqualTo("PLAN_PREMIUM");
+
+        assertThat(pendingSubscription.getUserId())
+                .isEqualTo(user.getId());
+
+        assertThat(existing.getStatus())
+                .isEqualTo("ACTIVE");
+
+        assertThat(existing.getPlanCode())
+                .isEqualTo("PLAN_BASIC");
     }
 
     @Test
     void confirmCheckoutActivatesSubscriptionWhenProviderReportsCompleted() {
         PricingPlan plan = premiumPlan();
-        SubscriptionRecord subscription = existingSubscription(user.getId());
+
+        SubscriptionRecord subscription =
+                existingSubscription(user.getId());
+
         subscription.setPlanCode("PLAN_PREMIUM");
         subscription.setStatus("PENDING");
 
-        PaymentRecord payment = new PaymentRecord();
+        PaymentRecord payment =
+                new PaymentRecord();
+
         payment.setId(UUID.randomUUID());
-        payment.setSubscriptionId(subscription.getId());
+        payment.setSubscriptionId(
+                subscription.getId()
+        );
         payment.setReference("PAY-REF-1");
         payment.setProvider("payfast");
         payment.setStatus("PENDING");
         payment.setAmount(plan.getAmount());
         payment.setCurrency(plan.getCurrency());
 
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("PAY-REF-1")).thenReturn(Optional.of(payment));
-        when(subscriptionRepository.findById(subscription.getId())).thenReturn(Optional.of(subscription));
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_PREMIUM")).thenReturn(Optional.of(plan));
-        when(paymentProvider.confirmPayment(any())).thenReturn(PaymentConfirmationResult.completed(
-                "payfast",
-                "ORDER-123",
-                "SESSION-123",
-                "PAYMENT-123",
-                "SUB-123",
-                java.util.Map.of("status", "completed")
-        ));
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "PAY-REF-1"
+                        )
+        ).thenReturn(Optional.of(payment));
 
-        var response = subscriptionService.confirmCheckout(principal, new SubscriptionPaymentConfirmRequest(
-                "PAY-REF-1",
-                "payfast",
-                "SESSION-123",
-                "ORDER-123",
-                null,
-                null
-        ));
+        when(
+                subscriptionRepository.findById(
+                        subscription.getId()
+                )
+        ).thenReturn(Optional.of(subscription));
 
-        assertThat(response.paymentStatus()).isEqualTo("COMPLETED");
-        assertThat(response.subscriptionStatus()).isEqualTo("ACTIVE");
-        assertThat(subscription.getStatus()).isEqualTo("ACTIVE");
-        assertThat(subscription.getProvider()).isEqualTo("payfast");
-        assertThat(subscription.getProviderSubscriptionId()).isEqualTo("SUB-123");
-        assertThat(subscription.getStartDate()).isEqualTo(LocalDate.now());
-        assertThat(subscription.getEndDate()).isEqualTo(LocalDate.now().plusMonths(1));
+        when(paymentProviderFactory.resolve("payfast"))
+                .thenReturn(paymentProvider);
 
-        assertThat(payment.getStatus()).isEqualTo("COMPLETED");
-        assertThat(payment.getProviderOrderId()).isEqualTo("ORDER-123");
-        assertThat(payment.getProviderSessionId()).isEqualTo("SESSION-123");
-        assertThat(payment.getProviderPaymentId()).isEqualTo("PAYMENT-123");
-        assertThat(payment.getProviderSubscriptionId()).isEqualTo("SUB-123");
-        assertThat(payment.getConfirmedAt()).isNotNull();
+        when(
+                pricingPlanRepository
+                        .findByCodeAndActiveTrue(
+                                "PLAN_PREMIUM"
+                        )
+        ).thenReturn(Optional.of(plan));
+
+        when(paymentProvider.confirmPayment(any()))
+                .thenReturn(
+                        PaymentConfirmationResult.completed(
+                                "payfast",
+                                "ORDER-123",
+                                "SESSION-123",
+                                "PAYMENT-123",
+                                "SUB-123",
+                                Map.of(
+                                        "status",
+                                        "completed"
+                                )
+                        )
+                );
+
+        var response =
+                subscriptionService.confirmCheckout(
+                        principal,
+                        new SubscriptionPaymentConfirmRequest(
+                                "PAY-REF-1",
+                                "payfast",
+                                "SESSION-123",
+                                "ORDER-123",
+                                null,
+                                null
+                        )
+                );
+
+        assertThat(response.paymentStatus())
+                .isEqualTo("COMPLETED");
+
+        assertThat(response.subscriptionStatus())
+                .isEqualTo("ACTIVE");
+
+        assertThat(subscription.getStatus())
+                .isEqualTo("ACTIVE");
+
+        assertThat(subscription.getProvider())
+                .isEqualTo("payfast");
+
+        assertThat(
+                subscription.getProviderSubscriptionId()
+        ).isEqualTo("SUB-123");
+
+        assertThat(subscription.getStartDate())
+                .isEqualTo(LocalDate.now());
+
+        assertThat(subscription.getEndDate())
+                .isEqualTo(
+                        LocalDate.now().plusMonths(1)
+                );
+
+        assertThat(payment.getStatus())
+                .isEqualTo("COMPLETED");
+
+        assertThat(payment.getProviderOrderId())
+                .isEqualTo("ORDER-123");
+
+        assertThat(payment.getProviderSessionId())
+                .isEqualTo("SESSION-123");
+
+        assertThat(payment.getProviderPaymentId())
+                .isEqualTo("PAYMENT-123");
+
+        assertThat(
+                payment.getProviderSubscriptionId()
+        ).isEqualTo("SUB-123");
+
+        assertThat(payment.getConfirmedAt())
+                .isNotNull();
     }
 
     @Test
     void cancelCheckoutKeepsSubscriptionInactive() {
-        SubscriptionRecord subscription = existingSubscription(user.getId());
+        SubscriptionRecord subscription =
+                existingSubscription(user.getId());
+
         subscription.setStatus("PENDING");
 
-        PaymentRecord payment = new PaymentRecord();
+        PaymentRecord payment =
+                new PaymentRecord();
+
         payment.setId(UUID.randomUUID());
-        payment.setSubscriptionId(subscription.getId());
+        payment.setSubscriptionId(
+                subscription.getId()
+        );
         payment.setReference("PAY-CANCEL-1");
         payment.setProvider("payfast");
         payment.setStatus("PENDING");
         payment.setConfirmedAt(null);
 
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("PAY-CANCEL-1")).thenReturn(Optional.of(payment));
-        when(subscriptionRepository.findById(subscription.getId())).thenReturn(Optional.of(subscription));
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "PAY-CANCEL-1"
+                        )
+        ).thenReturn(Optional.of(payment));
 
-        var response = subscriptionService.cancelCheckout(principal, new SubscriptionPaymentCancelRequest(
-                "PAY-CANCEL-1",
-                "payfast",
-                "User closed checkout"
-        ));
+        when(
+                subscriptionRepository.findById(
+                        subscription.getId()
+                )
+        ).thenReturn(Optional.of(subscription));
 
-        assertThat(response.paymentStatus()).isEqualTo("CANCELLED");
-        assertThat(response.subscriptionStatus()).isEqualTo("CANCELLED");
-        assertThat(payment.getStatus()).isEqualTo("CANCELLED");
-        assertThat(payment.getFailureReason()).isEqualTo("User closed checkout");
-        assertThat(payment.getConfirmedAt()).isNotNull();
-        assertThat(subscription.getStatus()).isEqualTo("CANCELLED");
+        var response =
+                subscriptionService.cancelCheckout(
+                        principal,
+                        new SubscriptionPaymentCancelRequest(
+                                "PAY-CANCEL-1",
+                                "payfast",
+                                "User closed checkout"
+                        )
+                );
+
+        assertThat(response.paymentStatus())
+                .isEqualTo("CANCELLED");
+
+        assertThat(response.subscriptionStatus())
+                .isEqualTo("CANCELLED");
+
+        assertThat(payment.getStatus())
+                .isEqualTo("CANCELLED");
+
+        assertThat(payment.getFailureReason())
+                .isEqualTo(
+                        "User closed checkout"
+                );
+
+        assertThat(payment.getConfirmedAt())
+                .isNotNull();
+
+        assertThat(subscription.getStatus())
+                .isEqualTo("CANCELLED");
     }
 
     @Test
     void checkoutFailureMarksPaymentAndSubscriptionAsFailed() {
         PricingPlan plan = premiumPlan();
-        SubscriptionRecord existing = existingSubscription(user.getId());
-        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(existing));
-        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_PREMIUM")).thenReturn(Optional.of(plan));
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(paymentProvider.createCheckout(any())).thenThrow(new RuntimeException("PayFast is temporarily unavailable"));
 
-        assertThatThrownBy(() -> subscriptionService.checkout(principal, new SubscriptionCheckoutRequest("PLAN_PREMIUM", "payfast")))
+        SubscriptionRecord existing =
+                existingSubscription(user.getId());
+
+        when(
+                subscriptionRepository
+                        .findTopByUserIdOrderByCreatedAtDesc(
+                                user.getId()
+                        )
+        ).thenReturn(Optional.of(existing));
+
+        when(
+                pricingPlanRepository
+                        .findByCodeAndActiveTrue(
+                                "PLAN_PREMIUM"
+                        )
+        ).thenReturn(Optional.of(plan));
+
+        when(paymentProviderFactory.resolve("payfast"))
+                .thenReturn(paymentProvider);
+
+        when(paymentProvider.createCheckout(any()))
+                .thenThrow(
+                        new RuntimeException(
+                                "PayFast is temporarily unavailable"
+                        )
+                );
+
+        assertThatThrownBy(
+                () -> subscriptionService.checkout(
+                        principal,
+                        new SubscriptionCheckoutRequest(
+                                "PLAN_PREMIUM",
+                                "payfast"
+                        )
+                )
+        )
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("temporarily unavailable");
+                .hasMessageContaining(
+                        "temporarily unavailable"
+                );
 
-        ArgumentCaptor<PaymentRecord> paymentCaptor = ArgumentCaptor.forClass(PaymentRecord.class);
-        verify(paymentRepository, atLeast(1)).save(paymentCaptor.capture());
-        PaymentRecord last = paymentCaptor.getAllValues().getLast();
-        assertThat(last.getStatus()).isEqualTo("FAILED");
-        assertThat(last.getFailureReason()).contains("temporarily unavailable");
-        assertThat(existing.getStatus()).isEqualTo("PAYMENT_FAILED");
+        ArgumentCaptor<PaymentRecord> paymentCaptor =
+                ArgumentCaptor.forClass(
+                        PaymentRecord.class
+                );
+
+        verify(paymentRepository, atLeast(1))
+                .save(paymentCaptor.capture());
+
+        PaymentRecord last =
+                paymentCaptor
+                        .getAllValues()
+                        .getLast();
+
+        assertThat(last.getStatus())
+                .isEqualTo("FAILED");
+
+        assertThat(last.getFailureReason())
+                .contains(
+                        "temporarily unavailable"
+                );
+
+        ArgumentCaptor<SubscriptionRecord> subscriptionCaptor =
+                ArgumentCaptor.forClass(
+                        SubscriptionRecord.class
+                );
+
+        verify(subscriptionRepository, atLeast(1))
+                .save(subscriptionCaptor.capture());
+
+        SubscriptionRecord failedSubscription =
+                subscriptionCaptor
+                        .getAllValues()
+                        .getLast();
+
+        assertThat(failedSubscription.getStatus())
+                .isEqualTo("PAYMENT_FAILED");
+
+        assertThat(failedSubscription.getPlanCode())
+                .isEqualTo("PLAN_PREMIUM");
+
+        assertThat(failedSubscription.getUserId())
+                .isEqualTo(user.getId());
+
+        assertThat(existing.getStatus())
+                .isEqualTo("ACTIVE");
+
+        assertThat(existing.getPlanCode())
+                .isEqualTo("PLAN_BASIC");
     }
 
     @Test
     void plansNormalizesPremiumPriceTo59() {
-        PricingPlan premium = premiumPlan();
-        premium.setAmount(new BigDecimal("35.00"));
-        when(pricingPlanRepository.findByActiveTrueOrderByDisplayOrderAsc()).thenReturn(List.of(premium));
+        PricingPlan premium =
+                premiumPlan();
 
-        var plans = subscriptionService.plans();
+        premium.setAmount(
+                new BigDecimal("35.00")
+        );
 
-        assertThat(plans).hasSize(1);
-        assertThat(plans.getFirst().amount()).isEqualByComparingTo("59.00");
-        verify(pricingPlanRepository).save(premium);
+        when(
+                pricingPlanRepository
+                        .findByActiveTrueOrderByDisplayOrderAsc()
+        ).thenReturn(
+                List.of(premium)
+        );
+
+        var plans =
+                subscriptionService.plans();
+
+        assertThat(plans)
+                .hasSize(1);
+
+        assertThat(
+                plans.getFirst().amount()
+        ).isEqualByComparingTo("59.00");
+
+        verify(pricingPlanRepository)
+                .save(premium);
     }
 
     @Test
     void handleProviderWebhookCompleteItnActivatesPremium() {
-        PricingPlan plan = premiumPlan();
-        SubscriptionRecord subscription = existingSubscription(user.getId());
+        PricingPlan plan =
+                premiumPlan();
+
+        SubscriptionRecord subscription =
+                existingSubscription(user.getId());
+
         subscription.setPlanCode("PLAN_PREMIUM");
         subscription.setStatus("PENDING");
 
-        PaymentRecord payment = new PaymentRecord();
+        PaymentRecord payment =
+                new PaymentRecord();
+
         payment.setId(UUID.randomUUID());
-        payment.setSubscriptionId(subscription.getId());
+        payment.setSubscriptionId(
+                subscription.getId()
+        );
         payment.setReference("PAY-ITN-1");
         payment.setProvider("payfast");
         payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("59.00"));
+        payment.setAmount(
+                new BigDecimal("59.00")
+        );
         payment.setCurrency("ZAR");
 
-        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-        payload.put("merchant_id", "10000100");
-        payload.put("m_payment_id", "PAY-ITN-1");
-        payload.put("pf_payment_id", "PF-123");
-        payload.put("payment_status", "COMPLETE");
-        payload.put("amount_gross", "49.99");
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(paymentProvider.handleWebhook(any(), any())).thenReturn(new PaymentWebhookResult(
-                "payfast",
-                "PF-123",
-                "PAYFAST_ITN",
-                "PAY-ITN-1",
-                "COMPLETED",
-                true,
-                payload
-        ));
-        when(paymentEventRepository.findByProviderAndEventId("payfast", "PF-123")).thenReturn(Optional.empty());
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("PAY-ITN-1")).thenReturn(Optional.of(payment));
-        when(subscriptionRepository.findById(subscription.getId())).thenReturn(Optional.of(subscription));
-        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_PREMIUM")).thenReturn(Optional.of(plan));
+        LinkedHashMap<String, Object> payload =
+                new LinkedHashMap<>();
 
-        var response = subscriptionService.handleProviderWebhook("payfast", java.util.Map.of(), "raw");
+        payload.put(
+                "merchant_id",
+                "10000100"
+        );
+        payload.put(
+                "m_payment_id",
+                "PAY-ITN-1"
+        );
+        payload.put(
+                "pf_payment_id",
+                "PF-123"
+        );
+        payload.put(
+                "payment_status",
+                "COMPLETE"
+        );
+        payload.put(
+                "amount_gross",
+                "59.00"
+        );
 
-        assertThat(response).containsEntry("verified", true);
-        assertThat(payment.getStatus()).isEqualTo("COMPLETED");
-        assertThat(subscription.getStatus()).isEqualTo("ACTIVE");
-        assertThat(user.getPlanType()).isEqualTo(PlanType.PREMIUM);
+        when(
+                paymentProviderFactory.resolve(
+                        "payfast"
+                )
+        ).thenReturn(paymentProvider);
+
+        when(
+                paymentProvider.handleWebhook(
+                        any(),
+                        any()
+                )
+        ).thenReturn(
+                new PaymentWebhookResult(
+                        "payfast",
+                        "PF-123",
+                        "PAYFAST_ITN",
+                        "PAY-ITN-1",
+                        "COMPLETED",
+                        true,
+                        payload
+                )
+        );
+
+        when(
+                paymentEventRepository
+                        .findByProviderAndEventId(
+                                "payfast",
+                                "PF-123"
+                        )
+        ).thenReturn(Optional.empty());
+
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "PAY-ITN-1"
+                        )
+        ).thenReturn(Optional.of(payment));
+
+        when(
+                subscriptionRepository.findById(
+                        subscription.getId()
+                )
+        ).thenReturn(Optional.of(subscription));
+
+        when(
+                pricingPlanRepository
+                        .findByCodeAndActiveTrue(
+                                "PLAN_PREMIUM"
+                        )
+        ).thenReturn(Optional.of(plan));
+
+        var response =
+                subscriptionService
+                        .handleProviderWebhook(
+                                "payfast",
+                                Map.of(),
+                                "raw"
+                        );
+
+        assertThat(response)
+                .containsEntry(
+                        "verified",
+                        true
+                );
+
+        assertThat(payment.getStatus())
+                .isEqualTo("COMPLETED");
+
+        assertThat(subscription.getStatus())
+                .isEqualTo("ACTIVE");
+
+        assertThat(user.getPlanType())
+                .isEqualTo(
+                        PlanType.PREMIUM
+                );
     }
 
     @Test
     void handleProviderWebhookInvalidSignatureDoesNotActivatePremium() {
-        SubscriptionRecord subscription = existingSubscription(user.getId());
-        subscription.setPlanCode("PLAN_PREMIUM");
-        subscription.setStatus("PENDING");
+        SubscriptionRecord subscription =
+                existingSubscription(user.getId());
 
-        PaymentRecord payment = new PaymentRecord();
+        subscription.setPlanCode(
+                "PLAN_PREMIUM"
+        );
+        subscription.setStatus(
+                "PENDING"
+        );
+
+        PaymentRecord payment =
+                new PaymentRecord();
+
         payment.setId(UUID.randomUUID());
-        payment.setSubscriptionId(subscription.getId());
-        payment.setReference("PAY-ITN-2");
-        payment.setProvider("payfast");
-        payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("59.00"));
-        payment.setCurrency("ZAR");
+        payment.setSubscriptionId(
+                subscription.getId()
+        );
+        payment.setReference(
+                "PAY-ITN-2"
+        );
+        payment.setProvider(
+                "payfast"
+        );
+        payment.setStatus(
+                "PENDING"
+        );
+        payment.setAmount(
+                new BigDecimal("59.00")
+        );
+        payment.setCurrency(
+                "ZAR"
+        );
 
-        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-        payload.put("merchant_id", "10000100");
-        payload.put("m_payment_id", "PAY-ITN-2");
-        payload.put("pf_payment_id", "PF-234");
-        payload.put("payment_status", "COMPLETE");
-        payload.put("amount_gross", "49.99");
-        payload.put("signature_valid", false);
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(paymentProvider.handleWebhook(any(), any())).thenReturn(new PaymentWebhookResult(
-                "payfast",
-                "PF-234",
-                "PAYFAST_ITN",
-                "PAY-ITN-2",
-                "COMPLETED",
-                false,
-                payload
-        ));
-        when(paymentEventRepository.findByProviderAndEventId("payfast", "PF-234")).thenReturn(Optional.empty());
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("PAY-ITN-2")).thenReturn(Optional.of(payment));
+        LinkedHashMap<String, Object> payload =
+                new LinkedHashMap<>();
 
-        var response = subscriptionService.handleProviderWebhook("payfast", java.util.Map.of(), "raw");
+        payload.put(
+                "merchant_id",
+                "10000100"
+        );
+        payload.put(
+                "m_payment_id",
+                "PAY-ITN-2"
+        );
+        payload.put(
+                "pf_payment_id",
+                "PF-234"
+        );
+        payload.put(
+                "payment_status",
+                "COMPLETE"
+        );
 
-        assertThat(response).containsEntry("verified", false);
-        assertThat(payment.getStatus()).isEqualTo("PENDING");
-        assertThat(user.getPlanType()).isNotEqualTo(PlanType.PREMIUM);
+        // Deliberately invalid fixture.
+        payload.put(
+                "amount_gross",
+                "49.99"
+        );
+        payload.put(
+                "signature_valid",
+                false
+        );
+
+        when(
+                paymentProviderFactory.resolve(
+                        "payfast"
+                )
+        ).thenReturn(paymentProvider);
+
+        when(
+                paymentProvider.handleWebhook(
+                        any(),
+                        any()
+                )
+        ).thenReturn(
+                new PaymentWebhookResult(
+                        "payfast",
+                        "PF-234",
+                        "PAYFAST_ITN",
+                        "PAY-ITN-2",
+                        "COMPLETED",
+                        false,
+                        payload
+                )
+        );
+
+        when(
+                paymentEventRepository
+                        .findByProviderAndEventId(
+                                "payfast",
+                                "PF-234"
+                        )
+        ).thenReturn(Optional.empty());
+
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "PAY-ITN-2"
+                        )
+        ).thenReturn(Optional.of(payment));
+
+        var response =
+                subscriptionService
+                        .handleProviderWebhook(
+                                "payfast",
+                                Map.of(),
+                                "raw"
+                        );
+
+        assertThat(response)
+                .containsEntry(
+                        "verified",
+                        false
+                );
+
+        assertThat(payment.getStatus())
+                .isEqualTo("PENDING");
+
+        assertThat(user.getPlanType())
+                .isNotEqualTo(
+                        PlanType.PREMIUM
+                );
     }
 
     @Test
     void handleProviderWebhookAmountMismatchDoesNotActivatePremium() {
-        SubscriptionRecord subscription = existingSubscription(user.getId());
-        subscription.setPlanCode("PLAN_PREMIUM");
-        subscription.setStatus("PENDING");
+        SubscriptionRecord subscription =
+                existingSubscription(user.getId());
 
-        PaymentRecord payment = new PaymentRecord();
+        subscription.setPlanCode(
+                "PLAN_PREMIUM"
+        );
+        subscription.setStatus(
+                "PENDING"
+        );
+
+        PaymentRecord payment =
+                new PaymentRecord();
+
         payment.setId(UUID.randomUUID());
-        payment.setSubscriptionId(subscription.getId());
-        payment.setReference("PAY-ITN-3");
-        payment.setProvider("payfast");
-        payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("59.00"));
-        payment.setCurrency("ZAR");
+        payment.setSubscriptionId(
+                subscription.getId()
+        );
+        payment.setReference(
+                "PAY-ITN-3"
+        );
+        payment.setProvider(
+                "payfast"
+        );
+        payment.setStatus(
+                "PENDING"
+        );
+        payment.setAmount(
+                new BigDecimal("59.00")
+        );
+        payment.setCurrency(
+                "ZAR"
+        );
 
-        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-        payload.put("merchant_id", "10000100");
-        payload.put("m_payment_id", "PAY-ITN-3");
-        payload.put("pf_payment_id", "PF-345");
-        payload.put("payment_status", "COMPLETE");
-        payload.put("amount_gross", "10.00");
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(paymentProvider.handleWebhook(any(), any())).thenReturn(new PaymentWebhookResult(
-                "payfast",
-                "PF-345",
-                "PAYFAST_ITN",
-                "PAY-ITN-3",
-                "COMPLETED",
-                true,
-                payload
-        ));
-        when(paymentEventRepository.findByProviderAndEventId("payfast", "PF-345")).thenReturn(Optional.empty());
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("PAY-ITN-3")).thenReturn(Optional.of(payment));
+        LinkedHashMap<String, Object> payload =
+                new LinkedHashMap<>();
 
-        var response = subscriptionService.handleProviderWebhook("payfast", java.util.Map.of(), "raw");
+        payload.put(
+                "merchant_id",
+                "10000100"
+        );
+        payload.put(
+                "m_payment_id",
+                "PAY-ITN-3"
+        );
+        payload.put(
+                "pf_payment_id",
+                "PF-345"
+        );
+        payload.put(
+                "payment_status",
+                "COMPLETE"
+        );
 
-        assertThat(response).containsEntry("verified", false);
-        assertThat(payment.getStatus()).isEqualTo("PENDING");
-        assertThat(user.getPlanType()).isNotEqualTo(PlanType.PREMIUM);
+        // Deliberate mismatch.
+        payload.put(
+                "amount_gross",
+                "10.00"
+        );
+
+        when(
+                paymentProviderFactory.resolve(
+                        "payfast"
+                )
+        ).thenReturn(paymentProvider);
+
+        when(
+                paymentProvider.handleWebhook(
+                        any(),
+                        any()
+                )
+        ).thenReturn(
+                new PaymentWebhookResult(
+                        "payfast",
+                        "PF-345",
+                        "PAYFAST_ITN",
+                        "PAY-ITN-3",
+                        "COMPLETED",
+                        true,
+                        payload
+                )
+        );
+
+        when(
+                paymentEventRepository
+                        .findByProviderAndEventId(
+                                "payfast",
+                                "PF-345"
+                        )
+        ).thenReturn(Optional.empty());
+
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "PAY-ITN-3"
+                        )
+        ).thenReturn(Optional.of(payment));
+
+        var response =
+                subscriptionService
+                        .handleProviderWebhook(
+                                "payfast",
+                                Map.of(),
+                                "raw"
+                        );
+
+        assertThat(response)
+                .containsEntry(
+                        "verified",
+                        false
+                );
+
+        assertThat(payment.getStatus())
+                .isEqualTo("PENDING");
+
+        assertThat(user.getPlanType())
+                .isNotEqualTo(
+                        PlanType.PREMIUM
+                );
     }
 
     @Test
     void handleProviderWebhookDuplicateItnIsIgnoredSafely() {
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(paymentProvider.handleWebhook(any(), any())).thenReturn(new PaymentWebhookResult(
-                "payfast",
-                "PF-456",
-                "PAYFAST_ITN",
-                "PAY-ITN-4",
-                "COMPLETED",
-                true,
-                Map.of()
-        ));
-        when(paymentEventRepository.findByProviderAndEventId("payfast", "PF-456"))
-                .thenReturn(Optional.of(new com.edurite.subscription.entity.PaymentEventRecord()));
+        when(
+                paymentProviderFactory.resolve(
+                        "payfast"
+                )
+        ).thenReturn(paymentProvider);
 
-        var response = subscriptionService.handleProviderWebhook("payfast", java.util.Map.of(), "raw");
+        when(
+                paymentProvider.handleWebhook(
+                        any(),
+                        any()
+                )
+        ).thenReturn(
+                new PaymentWebhookResult(
+                        "payfast",
+                        "PF-456",
+                        "PAYFAST_ITN",
+                        "PAY-ITN-4",
+                        "COMPLETED",
+                        true,
+                        Map.of()
+                )
+        );
 
-        assertThat(response).containsEntry("duplicate", true);
+        when(
+                paymentEventRepository
+                        .findByProviderAndEventId(
+                                "payfast",
+                                "PF-456"
+                        )
+        ).thenReturn(
+                Optional.of(
+                        new com.edurite.subscription.entity.PaymentEventRecord()
+                )
+        );
+
+        var response =
+                subscriptionService
+                        .handleProviderWebhook(
+                                "payfast",
+                                Map.of(),
+                                "raw"
+                        );
+
+        assertThat(response)
+                .containsEntry(
+                        "duplicate",
+                        true
+                );
     }
 
     @Test
     void handleProviderWebhookNonCompleteStatusDoesNotActivatePremium() {
-        SubscriptionRecord subscription = existingSubscription(user.getId());
-        subscription.setPlanCode("PLAN_PREMIUM");
-        subscription.setStatus("PENDING");
+        SubscriptionRecord subscription =
+                existingSubscription(user.getId());
 
-        PaymentRecord payment = new PaymentRecord();
+        subscription.setPlanCode(
+                "PLAN_PREMIUM"
+        );
+        subscription.setStatus(
+                "PENDING"
+        );
+
+        PaymentRecord payment =
+                new PaymentRecord();
+
         payment.setId(UUID.randomUUID());
-        payment.setSubscriptionId(subscription.getId());
-        payment.setReference("PAY-ITN-5");
-        payment.setProvider("payfast");
-        payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("59.00"));
-        payment.setCurrency("ZAR");
+        payment.setSubscriptionId(
+                subscription.getId()
+        );
+        payment.setReference(
+                "PAY-ITN-5"
+        );
+        payment.setProvider(
+                "payfast"
+        );
+        payment.setStatus(
+                "PENDING"
+        );
+        payment.setAmount(
+                new BigDecimal("59.00")
+        );
+        payment.setCurrency(
+                "ZAR"
+        );
 
-        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-        payload.put("merchant_id", "10000100");
-        payload.put("m_payment_id", "PAY-ITN-5");
-        payload.put("pf_payment_id", "PF-567");
-        payload.put("payment_status", "PENDING");
-        payload.put("amount_gross", "49.99");
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(paymentProvider.handleWebhook(any(), any())).thenReturn(new PaymentWebhookResult(
-                "payfast",
-                "PF-567",
-                "PAYFAST_ITN",
-                "PAY-ITN-5",
-                "PENDING",
-                true,
-                payload
-        ));
-        when(paymentEventRepository.findByProviderAndEventId("payfast", "PF-567")).thenReturn(Optional.empty());
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("PAY-ITN-5")).thenReturn(Optional.of(payment));
-        when(subscriptionRepository.findById(subscription.getId())).thenReturn(Optional.of(subscription));
+        LinkedHashMap<String, Object> payload =
+                new LinkedHashMap<>();
 
-        var response = subscriptionService.handleProviderWebhook("payfast", java.util.Map.of(), "raw");
+        payload.put(
+                "merchant_id",
+                "10000100"
+        );
+        payload.put(
+                "m_payment_id",
+                "PAY-ITN-5"
+        );
+        payload.put(
+                "pf_payment_id",
+                "PF-567"
+        );
+        payload.put(
+                "payment_status",
+                "PENDING"
+        );
+        payload.put(
+                "amount_gross",
+                "59.00"
+        );
 
-        assertThat(response).containsEntry("verified", true);
-        assertThat(payment.getStatus()).isEqualTo("PENDING");
-        assertThat(subscription.getStatus()).isEqualTo("ACTIVE");
+        when(
+                paymentProviderFactory.resolve(
+                        "payfast"
+                )
+        ).thenReturn(paymentProvider);
+
+        when(
+                paymentProvider.handleWebhook(
+                        any(),
+                        any()
+                )
+        ).thenReturn(
+                new PaymentWebhookResult(
+                        "payfast",
+                        "PF-567",
+                        "PAYFAST_ITN",
+                        "PAY-ITN-5",
+                        "PENDING",
+                        true,
+                        payload
+                )
+        );
+
+        when(
+                paymentEventRepository
+                        .findByProviderAndEventId(
+                                "payfast",
+                                "PF-567"
+                        )
+        ).thenReturn(Optional.empty());
+
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "PAY-ITN-5"
+                        )
+        ).thenReturn(Optional.of(payment));
+
+        when(
+                subscriptionRepository.findById(
+                        subscription.getId()
+                )
+        ).thenReturn(Optional.of(subscription));
+
+        var response =
+                subscriptionService
+                        .handleProviderWebhook(
+                                "payfast",
+                                Map.of(),
+                                "raw"
+                        );
+
+        assertThat(response)
+                .containsEntry(
+                        "verified",
+                        true
+                );
+
+        assertThat(payment.getStatus())
+                .isEqualTo("PENDING");
+
+        assertThat(subscription.getStatus())
+                .isEqualTo("PENDING");
     }
 
     @Test
     void handleProviderWebhookUnknownReferenceIsRejectedSafely() {
-        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-        payload.put("merchant_id", "10000100");
-        payload.put("m_payment_id", "UNKNOWN");
-        payload.put("pf_payment_id", "PF-678");
-        payload.put("payment_status", "COMPLETE");
-        payload.put("amount_gross", "49.99");
+        LinkedHashMap<String, Object> payload =
+                new LinkedHashMap<>();
 
-        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
-        when(paymentProvider.handleWebhook(any(), any())).thenReturn(new PaymentWebhookResult(
-                "payfast",
-                "PF-678",
-                "PAYFAST_ITN",
-                "UNKNOWN",
-                "COMPLETED",
-                true,
-                payload
-        ));
-        when(paymentEventRepository.findByProviderAndEventId("payfast", "PF-678")).thenReturn(Optional.empty());
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("UNKNOWN")).thenReturn(Optional.empty());
+        payload.put(
+                "merchant_id",
+                "10000100"
+        );
+        payload.put(
+                "m_payment_id",
+                "UNKNOWN"
+        );
+        payload.put(
+                "pf_payment_id",
+                "PF-678"
+        );
+        payload.put(
+                "payment_status",
+                "COMPLETE"
+        );
+        payload.put(
+                "amount_gross",
+                "49.99"
+        );
 
-        var response = subscriptionService.handleProviderWebhook("payfast", java.util.Map.of(), "raw");
+        when(
+                paymentProviderFactory.resolve(
+                        "payfast"
+                )
+        ).thenReturn(paymentProvider);
 
-        assertThat(response).containsEntry("processed", true);
-        assertThat(response).containsEntry("verified", true);
+        when(
+                paymentProvider.handleWebhook(
+                        any(),
+                        any()
+                )
+        ).thenReturn(
+                new PaymentWebhookResult(
+                        "payfast",
+                        "PF-678",
+                        "PAYFAST_ITN",
+                        "UNKNOWN",
+                        "COMPLETED",
+                        true,
+                        payload
+                )
+        );
+
+        when(
+                paymentEventRepository
+                        .findByProviderAndEventId(
+                                "payfast",
+                                "PF-678"
+                        )
+        ).thenReturn(Optional.empty());
+
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "UNKNOWN"
+                        )
+        ).thenReturn(Optional.empty());
+
+        var response =
+                subscriptionService
+                        .handleProviderWebhook(
+                                "payfast",
+                                Map.of(),
+                                "raw"
+                        );
+
+        assertThat(response)
+                .containsEntry(
+                        "processed",
+                        true
+                );
+
+        assertThat(response)
+                .containsEntry(
+                        "verified",
+                        false
+                );
     }
 
     @Test
     void verifyPaymentActivatesFromLatestVerifiedPayFastWebhookEvent() {
-        PricingPlan plan = premiumPlan();
-        SubscriptionRecord subscription = existingSubscription(user.getId());
-        subscription.setPlanCode("PLAN_PREMIUM");
-        subscription.setStatus("PENDING");
+        PricingPlan plan =
+                premiumPlan();
 
-        PaymentRecord payment = new PaymentRecord();
+        SubscriptionRecord subscription =
+                existingSubscription(user.getId());
+
+        subscription.setPlanCode(
+                "PLAN_PREMIUM"
+        );
+        subscription.setStatus(
+                "PENDING"
+        );
+
+        PaymentRecord payment =
+                new PaymentRecord();
+
         payment.setId(UUID.randomUUID());
-        payment.setSubscriptionId(subscription.getId());
-        payment.setReference("PAY-MANUAL-ITN-1");
-        payment.setProvider("payfast");
-        payment.setStatus("PENDING");
-        payment.setAmount(new BigDecimal("59.00"));
-        payment.setCurrency("ZAR");
+        payment.setSubscriptionId(
+                subscription.getId()
+        );
+        payment.setReference(
+                "PAY-MANUAL-ITN-1"
+        );
+        payment.setProvider(
+                "payfast"
+        );
+        payment.setStatus(
+                "PENDING"
+        );
+        payment.setAmount(
+                new BigDecimal("59.00")
+        );
+        payment.setCurrency(
+                "ZAR"
+        );
 
-        com.edurite.subscription.entity.PaymentEventRecord event = new com.edurite.subscription.entity.PaymentEventRecord();
-        event.setEventId("PF-MANUAL-1");
-        event.setProvider("payfast");
-        event.setStatus("COMPLETED");
+        com.edurite.subscription.entity.PaymentEventRecord event =
+                new com.edurite.subscription.entity.PaymentEventRecord();
+
+        event.setEventId(
+                "PF-MANUAL-1"
+        );
+        event.setProvider(
+                "payfast"
+        );
+        event.setStatus(
+                "COMPLETED"
+        );
         event.setVerified(true);
 
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("PAY-MANUAL-ITN-1")).thenReturn(Optional.of(payment));
-        when(subscriptionRepository.findById(subscription.getId())).thenReturn(Optional.of(subscription));
-        when(paymentEventRepository.findTopByPaymentIdAndProviderAndVerifiedTrueOrderByProcessedAtDesc(payment.getId(), "payfast"))
-                .thenReturn(Optional.of(event));
-        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_PREMIUM")).thenReturn(Optional.of(plan));
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "PAY-MANUAL-ITN-1"
+                        )
+        ).thenReturn(Optional.of(payment));
 
-        var response = subscriptionService.verifyPayment(principal, "PAY-MANUAL-ITN-1");
+        when(
+                subscriptionRepository.findById(
+                        subscription.getId()
+                )
+        ).thenReturn(Optional.of(subscription));
 
-        assertThat(response.paymentStatus()).isEqualTo("COMPLETED");
-        assertThat(response.subscriptionStatus()).isEqualTo("ACTIVE");
-        assertThat(payment.getStatus()).isEqualTo("COMPLETED");
-        assertThat(subscription.getStatus()).isEqualTo("ACTIVE");
-        verify(paymentProviderFactory, never()).resolve("payfast");
+        when(
+                paymentEventRepository
+                        .findTopByPaymentIdAndProviderAndVerifiedTrueOrderByProcessedAtDesc(
+                                payment.getId(),
+                                "payfast"
+                        )
+        ).thenReturn(Optional.of(event));
+
+        when(
+                pricingPlanRepository
+                        .findByCodeAndActiveTrue(
+                                "PLAN_PREMIUM"
+                        )
+        ).thenReturn(Optional.of(plan));
+
+        var response =
+                subscriptionService.verifyPayment(
+                        principal,
+                        "PAY-MANUAL-ITN-1"
+                );
+
+        assertThat(response.paymentStatus())
+                .isEqualTo("COMPLETED");
+
+        assertThat(response.subscriptionStatus())
+                .isEqualTo("ACTIVE");
+
+        assertThat(payment.getStatus())
+                .isEqualTo("COMPLETED");
+
+        assertThat(subscription.getStatus())
+                .isEqualTo("ACTIVE");
+
+        verify(
+                paymentProviderFactory,
+                never()
+        ).resolve("payfast");
     }
 
     @Test
     void verifyPaymentUsesProviderConfirmationWhenNoVerifiedPayFastEventExists() {
-        PricingPlan plan = premiumPlan();
-        SubscriptionRecord subscription = existingSubscription(user.getId());
-        subscription.setPlanCode("PLAN_PREMIUM");
-        subscription.setStatus("PENDING");
+        PricingPlan plan =
+                premiumPlan();
 
-        PaymentRecord payment = new PaymentRecord();
+        SubscriptionRecord subscription =
+                existingSubscription(user.getId());
+
+        subscription.setPlanCode(
+                "PLAN_PREMIUM"
+        );
+        subscription.setStatus(
+                "PENDING"
+        );
+
+        PaymentRecord payment =
+                new PaymentRecord();
+
         payment.setId(UUID.randomUUID());
-        payment.setSubscriptionId(subscription.getId());
-        payment.setReference("PAY-MANUAL-PP-1");
-        payment.setProvider("paypal");
-        payment.setProviderOrderId("ORDER-777");
-        payment.setStatus("PENDING");
-        payment.setAmount(plan.getAmount());
-        payment.setCurrency(plan.getCurrency());
+        payment.setSubscriptionId(
+                subscription.getId()
+        );
+        payment.setReference(
+                "PAY-MANUAL-PP-1"
+        );
+        payment.setProvider(
+                "paypal"
+        );
+        payment.setProviderOrderId(
+                "ORDER-777"
+        );
+        payment.setStatus(
+                "PENDING"
+        );
+        payment.setAmount(
+                plan.getAmount()
+        );
+        payment.setCurrency(
+                plan.getCurrency()
+        );
 
-        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc("PAY-MANUAL-PP-1")).thenReturn(Optional.of(payment));
-        when(subscriptionRepository.findById(subscription.getId())).thenReturn(Optional.of(subscription));
-        when(paymentProviderFactory.resolve("paypal")).thenReturn(paymentProvider);
-        when(paymentProvider.confirmPayment(any())).thenReturn(PaymentConfirmationResult.completed(
-                "paypal",
-                "ORDER-777",
-                null,
-                "CAPTURE-777",
-                null,
-                Map.of("status", "COMPLETED")
-        ));
-        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_PREMIUM")).thenReturn(Optional.of(plan));
+        when(
+                paymentRepository
+                        .findTopByReferenceOrderByCreatedAtDesc(
+                                "PAY-MANUAL-PP-1"
+                        )
+        ).thenReturn(Optional.of(payment));
 
-        var response = subscriptionService.verifyPayment(principal, "PAY-MANUAL-PP-1");
+        when(
+                subscriptionRepository.findById(
+                        subscription.getId()
+                )
+        ).thenReturn(Optional.of(subscription));
 
-        assertThat(response.paymentStatus()).isEqualTo("COMPLETED");
-        assertThat(response.subscriptionStatus()).isEqualTo("ACTIVE");
-        assertThat(payment.getStatus()).isEqualTo("COMPLETED");
-        assertThat(payment.getProviderPaymentId()).isEqualTo("CAPTURE-777");
-        assertThat(subscription.getStatus()).isEqualTo("ACTIVE");
+        when(
+                paymentProviderFactory.resolve(
+                        "paypal"
+                )
+        ).thenReturn(paymentProvider);
+
+        when(
+                paymentProvider.confirmPayment(
+                        any()
+                )
+        ).thenReturn(
+                PaymentConfirmationResult.completed(
+                        "paypal",
+                        "ORDER-777",
+                        null,
+                        "CAPTURE-777",
+                        null,
+                        Map.of(
+                                "status",
+                                "COMPLETED"
+                        )
+                )
+        );
+
+        when(
+                pricingPlanRepository
+                        .findByCodeAndActiveTrue(
+                                "PLAN_PREMIUM"
+                        )
+        ).thenReturn(Optional.of(plan));
+
+        var response =
+                subscriptionService.verifyPayment(
+                        principal,
+                        "PAY-MANUAL-PP-1"
+                );
+
+        assertThat(response.paymentStatus())
+                .isEqualTo("COMPLETED");
+
+        assertThat(response.subscriptionStatus())
+                .isEqualTo("ACTIVE");
+
+        assertThat(payment.getStatus())
+                .isEqualTo("COMPLETED");
+
+        assertThat(payment.getProviderPaymentId())
+                .isEqualTo("CAPTURE-777");
+
+        assertThat(subscription.getStatus())
+                .isEqualTo("ACTIVE");
     }
 
     @Test
     void currentNormalizesOwnerOverrideSubscriptionToPermanentPremium() {
-        user.setEmail("arnoldmadaz@gmail.com");
-        SubscriptionRecord existing = existingSubscription(user.getId());
-        existing.setPlanCode("PLAN_BASIC");
-        existing.setStatus("CANCELLED");
-        existing.setEndDate(LocalDate.now().minusDays(1));
-        existing.setRenewalDate(LocalDate.now().minusDays(1));
-        existing.setTrialEndDate(OffsetDateTime.now().minusDays(10));
-        existing.setPremiumUntil(OffsetDateTime.now().minusDays(10));
-
-        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(existing));
-        when(studentPlanAccessService.isPermanentPremiumOverride(user.getId())).thenReturn(true);
-        when(studentPlanAccessService.resolveByUserId(user.getId())).thenReturn(
-                new StudentPlanAccessService.StudentPlanAccess("PLAN_PREMIUM", "ACTIVE", true, null, null)
+        user.setEmail(
+                "arnoldmadaz@gmail.com"
         );
 
-        SubscriptionRecord result = subscriptionService.current(principal);
+        SubscriptionRecord existing =
+                existingSubscription(
+                        user.getId()
+                );
 
-        assertThat(result.getPlanCode()).isEqualTo("PLAN_PREMIUM");
-        assertThat(result.getStatus()).isEqualTo("ACTIVE");
-        assertThat(result.getEndDate()).isNull();
-        assertThat(result.getRenewalDate()).isNull();
-        assertThat(result.getTrialEndDate()).isNull();
-        assertThat(result.getPremiumUntil()).isNull();
-        assertThat(result.getPremiumAccess()).isTrue();
+        existing.setPlanCode(
+                "PLAN_BASIC"
+        );
+        existing.setStatus(
+                "CANCELLED"
+        );
+        existing.setEndDate(
+                LocalDate.now().minusDays(1)
+        );
+        existing.setRenewalDate(
+                LocalDate.now().minusDays(1)
+        );
+        existing.setTrialEndDate(
+                OffsetDateTime.now().minusDays(10)
+        );
+        existing.setPremiumUntil(
+                OffsetDateTime.now().minusDays(10)
+        );
+
+        when(
+                subscriptionRepository
+                        .findTopByUserIdOrderByCreatedAtDesc(
+                                user.getId()
+                        )
+        ).thenReturn(Optional.of(existing));
+
+        when(
+                studentPlanAccessService
+                        .isPermanentPremiumOverride(
+                                user.getId()
+                        )
+        ).thenReturn(true);
+
+        when(
+                studentPlanAccessService
+                        .resolveByUserId(
+                                user.getId()
+                        )
+        ).thenReturn(
+                new StudentPlanAccessService.StudentPlanAccess(
+                        "PLAN_PREMIUM",
+                        "ACTIVE",
+                        true,
+                        null,
+                        null
+                )
+        );
+
+        SubscriptionRecord result =
+                subscriptionService.current(
+                        principal
+                );
+
+        assertThat(result.getPlanCode())
+                .isEqualTo("PLAN_PREMIUM");
+
+        assertThat(result.getStatus())
+                .isEqualTo("ACTIVE");
+
+        assertThat(result.getEndDate())
+                .isNull();
+
+        assertThat(result.getRenewalDate())
+                .isNull();
+
+        assertThat(result.getTrialEndDate())
+                .isNull();
+
+        assertThat(result.getPremiumUntil())
+                .isNull();
+
+        assertThat(result.getPremiumAccess())
+                .isTrue();
+    }
+
+    @Test
+    void rejectsSameActiveTierBeforeCreatingPayment() {
+        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_PREMIUM")).thenReturn(Optional.of(premiumPlan()));
+        when(studentPlanAccessService.getCurrentPlan(user.getId())).thenReturn(PlanType.PREMIUM);
+        when(studentPlanAccessService.resolveByUserId(user.getId())).thenReturn(
+                new StudentPlanAccessService.StudentPlanAccess("PLAN_PREMIUM", "ACTIVE", true, null, null));
+        assertThatThrownBy(() -> subscriptionService.checkout(principal, "PLAN_PREMIUM", "payfast"))
+                .isInstanceOf(ResourceConflictException.class).hasMessageContaining("already your active plan");
+        org.mockito.Mockito.verifyNoInteractions(paymentProviderFactory, paymentRepository);
+    }
+
+    @Test
+    void pendingUpgradeDoesNotReplaceCurrentPaidSubscription() {
+        SubscriptionRecord active = existingSubscription(user.getId());
+        active.setPlanCode("PLAN_PREMIUM");
+        when(studentPlanAccessService.currentRecord(user.getId())).thenReturn(active);
+        when(studentPlanAccessService.resolveByUserId(user.getId())).thenReturn(
+                new StudentPlanAccessService.StudentPlanAccess("PLAN_PREMIUM", "ACTIVE", true, null, null));
+        assertThat(subscriptionService.current(principal)).isSameAs(active);
+        assertThat(active.getPlanCode()).isEqualTo("PLAN_PREMIUM");
+    }
+
+    @Test
+    void verifiedProYearlyPaymentActivatesProForOneYear() {
+        PricingPlan plan = premiumPlan();
+        plan.setCode("PLAN_PRO_YEARLY"); plan.setBillingInterval("YEARLY"); plan.setAmount(new BigDecimal("1199.00"));
+        SubscriptionRecord subscription = existingSubscription(user.getId());
+        subscription.setPlanCode(plan.getCode()); subscription.setStatus("PENDING");
+        PaymentRecord payment = new PaymentRecord();
+        payment.setId(UUID.randomUUID()); payment.setSubscriptionId(subscription.getId());
+        payment.setReference("PAY-PRO-YEAR"); payment.setProvider("payfast"); payment.setStatus("PENDING");
+        payment.setAmount(plan.getAmount()); payment.setCurrency("ZAR");
+        when(paymentProviderFactory.resolve("payfast")).thenReturn(paymentProvider);
+        when(paymentProvider.handleWebhook(any(), any())).thenReturn(new PaymentWebhookResult(
+                "payfast", "PF-PRO", "PAYFAST_ITN", payment.getReference(), "COMPLETED", true,
+                Map.of("merchant_id", "10000100", "m_payment_id", payment.getReference(), "pf_payment_id", "PF-PRO", "payment_status", "COMPLETE", "amount_gross", "1199.00")));
+        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc(payment.getReference())).thenReturn(Optional.of(payment));
+        when(subscriptionRepository.findById(subscription.getId())).thenReturn(Optional.of(subscription));
+        when(pricingPlanRepository.findByCodeAndActiveTrue(plan.getCode())).thenReturn(Optional.of(plan));
+        assertThat(subscriptionService.handleProviderWebhook("payfast", Map.of(), "verified-fixture")).containsEntry("verified", true);
+        assertThat(subscription.getStatus()).isEqualTo("ACTIVE");
+        assertThat(subscription.getEndDate()).isEqualTo(subscription.getStartDate().plusYears(1));
+        assertThat(studentPlanAccessService.getCurrentPlan(user.getId())).isEqualTo(PlanType.PRO);
     }
 
     private PricingPlan premiumPlan() {
-        PricingPlan plan = new PricingPlan();
-        plan.setId(UUID.randomUUID());
-        plan.setCode("PLAN_PREMIUM");
-        plan.setName("Premium");
-        plan.setDescription("Advanced guidance");
-        plan.setAmount(new BigDecimal("59.00"));
-        plan.setCurrency("ZAR");
-        plan.setBillingInterval("MONTHLY");
-        plan.setFeatures("[]");
-        plan.setActive(true);
-        plan.setPremium(true);
+        PricingPlan plan =
+                new PricingPlan();
+
+        plan.setId(
+                UUID.randomUUID()
+        );
+        plan.setCode(
+                "PLAN_PREMIUM"
+        );
+        plan.setName(
+                "Premium"
+        );
+        plan.setDescription(
+                "Advanced guidance"
+        );
+        plan.setAmount(
+                new BigDecimal("59.00")
+        );
+        plan.setCurrency(
+                "ZAR"
+        );
+        plan.setBillingInterval(
+                "MONTHLY"
+        );
+        plan.setFeatures(
+                "[]"
+        );
+        plan.setActive(
+                true
+        );
+        plan.setPremium(
+                true
+        );
+
         return plan;
     }
 
-    private SubscriptionRecord existingSubscription(UUID userId) {
-        SubscriptionRecord record = new SubscriptionRecord();
-        record.setId(UUID.randomUUID());
-        record.setUserId(userId);
-        record.setPlanCode("PLAN_BASIC");
-        record.setStatus("ACTIVE");
-        record.setStartDate(LocalDate.now().minusDays(2));
-        record.setEndDate(LocalDate.now().plusMonths(1));
-        record.setRenewalDate(LocalDate.now().plusMonths(1));
-        record.setLastPaymentAt(OffsetDateTime.now().minusDays(2));
+    private SubscriptionRecord existingSubscription(
+            UUID userId
+    ) {
+        SubscriptionRecord record =
+                new SubscriptionRecord();
+
+        record.setId(
+                UUID.randomUUID()
+        );
+        record.setUserId(
+                userId
+        );
+        record.setPlanCode(
+                "PLAN_BASIC"
+        );
+        record.setStatus(
+                "ACTIVE"
+        );
+        record.setStartDate(
+                LocalDate.now().minusDays(2)
+        );
+        record.setEndDate(
+                LocalDate.now().plusMonths(1)
+        );
+        record.setRenewalDate(
+                LocalDate.now().plusMonths(1)
+        );
+        record.setLastPaymentAt(
+                OffsetDateTime.now().minusDays(2)
+        );
+
         return record;
     }
 }
-

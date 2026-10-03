@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
 import { StudentProfileSectionsPage, StudentCareerExplorerPage, StudentLearningResourcesPage, StudentFundingPage, StudentInstitutionsPage, StudentProgressPage } from './StudentSectionPages';
 
+vi.mock('@/features/subscriptions/access', () => ({ AccessBadge: () => null }));
+
 vi.mock('./StudentPages', () => Object.fromEntries([
   'StudentProfilePage', 'StudentMySchoolPage', 'StudentCareerRecommendationsPage', 'StudentPsychometricPage',
   'StudentLearningCentrePage', 'StudentSavedPage', 'StudentApplicationsPage', 'StudentBursaryRecommendationsPage',

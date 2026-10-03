@@ -24,20 +24,29 @@ public class SubscriptionResponseAdvice implements ResponseBodyAdvice<Object> {
     public Object beforeBodyWrite(Object body, MethodParameter p, MediaType m, Class<? extends HttpMessageConverter<?>> c, ServerHttpRequest req, ServerHttpResponse res) {
         if (!(req instanceof ServletServerHttpRequest servlet) || body == null || body instanceof String || body instanceof byte[]) return body;
         var request=servlet.getServletRequest();
-        if (request.getUserPrincipal()==null) return body;
         String path=StudentAccessPolicy.path(request.getRequestURI());
         boolean projection=path.startsWith("/student/career-roadmaps") || path.equals("/student/progress-score") || limitedCatalogue(path);
         if (!projection && request.getAttribute("aiReservation")==null) return body;
+        if (res instanceof ServletServerHttpResponse response && response.getServletResponse().getStatus() >= 300) return body;
+        // Public catalogue aliases must not unlock the full result set by dropping the JWT.
+        if (request.getUserPrincipal()==null) {
+            if (!limitedCatalogue(path)) return body;
+            JsonNode preview=mapper.valueToTree(body);
+            capArrays(preview,5);
+            return preview;
+        }
         var user=users.requireUser(request.getUserPrincipal());
         if (!entitlements.isStudent(user)) return body;
+        JsonNode node=mapper.valueToTree(body);
         if (request.getAttribute("aiReservation") instanceof UUID reservation && res instanceof ServletServerHttpResponse response && response.getServletResponse().getStatus()<300) {
-            usage.finish(reservation,true);
+            boolean successful = !node.path("available").isBoolean() || node.path("available").asBoolean();
+            successful = successful && !"ERROR".equals(node.path("status").asText()) && !"UNAVAILABLE".equals(node.path("mode").asText());
+            usage.finish(reservation,successful);
             var current=usage.current(user.getId());
             res.getHeaders().set("X-AI-Allowance",String.valueOf(current.allowance()));
             res.getHeaders().set("X-AI-Used",String.valueOf(current.used()));
             res.getHeaders().set("X-AI-Remaining",String.valueOf(current.remaining()));
         }
-        JsonNode node=mapper.valueToTree(body);
         if (path.startsWith("/student/career-roadmaps") && !entitlements.hasFeature(user.getId(),Feature.CAREER_ROADMAP_ADVANCED)) redactRoadmap(node);
         if (path.equals("/student/progress-score")) {
             if (!entitlements.hasFeature(user.getId(),Feature.PROGRESS_ADVANCED)) redactInsights(node);
@@ -47,7 +56,7 @@ public class SubscriptionResponseAdvice implements ResponseBodyAdvice<Object> {
         return projection ? node : body;
     }
     private static boolean limitedCatalogue(String p) {
-        return p.equals("/careers") || p.equals("/courses") || p.equals("/institutions") || p.startsWith("/learning-centre/") || p.startsWith("/student/learning-centre/") || p.equals("/student/career-roadmaps");
+        return p.equals("/careers") || p.equals("/courses") || p.equals("/institutions") || p.startsWith("/student/universities/") || p.startsWith("/learning-centre/") || p.startsWith("/student/learning-centre/") || p.equals("/student/career-roadmaps");
     }
     private void capArrays(JsonNode node,int limit) {
         if(node instanceof ArrayNode array) { while(array.size()>limit) array.remove(array.size()-1); }

@@ -21,6 +21,18 @@ class StudentPlanAccessServiceTest {
     private final StudentPlanAccessService service = new StudentPlanAccessService(subscriptionRepository, userRepository);
 
     @Test
+    void existingOwnerBenefitDoesNotOverrideVerifiedProSubscription() {
+        UUID id = UUID.randomUUID();
+        User owner = new User(); owner.setEmail("arnoldmadaz@gmail.com");
+        SubscriptionRecord subscription = new SubscriptionRecord();
+        subscription.setPlanCode("PLAN_PRO_YEARLY"); subscription.setStatus("ACTIVE");
+        subscription.setEndDate(java.time.LocalDate.now(java.time.ZoneOffset.UTC).plusYears(1));
+        when(userRepository.findById(id)).thenReturn(Optional.of(owner));
+        when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(id)).thenReturn(Optional.of(subscription));
+        assertThat(service.getCurrentPlan(id)).isEqualTo(com.edurite.subscription.entity.PlanType.PRO);
+    }
+
+    @Test
     void trialUserHasPremiumAccessDuringTrialWindow() {
         UUID userId = UUID.randomUUID();
         SubscriptionRecord subscription = new SubscriptionRecord();

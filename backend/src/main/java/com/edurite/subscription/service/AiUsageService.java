@@ -19,9 +19,14 @@ public class AiUsageService {
     public Usage current(UUID userId) { return usage(userId, period(Instant.now())); }
     private Usage usage(UUID userId, LocalDate month) {
         int allowance = EntitlementService.allowance(entitlements.plan(userId));
-        Integer used = jdbc.queryForObject("select count(*) from student_ai_usage where user_id=? and period_start=? and status='SUCCEEDED'", Integer.class, userId, month);
-        Integer pending = jdbc.queryForObject("select count(*) from student_ai_usage where user_id=? and period_start=? and status='RESERVED'", Integer.class, userId, month);
-        return new Usage(allowance, used, pending, Math.max(0, allowance-used-pending), month, month.plusMonths(1));
+        // One statement provides a consistent snapshot while other requests finish.
+        // Separate counts could miss a reservation transitioning to SUCCEEDED between queries.
+        return jdbc.queryForObject("select count(*) filter (where status='SUCCEEDED') as used, "
+                + "count(*) filter (where status='RESERVED') as pending from student_ai_usage where user_id=? and period_start=?",
+                (rs, row) -> {
+                    int used = rs.getInt("used"), pending = rs.getInt("pending");
+                    return new Usage(allowance, used, pending, Math.max(0, allowance-used-pending), month, month.plusMonths(1));
+                }, userId, month);
     }
     @Transactional
     public UUID reserve(UUID userId) {

@@ -29,7 +29,10 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -50,6 +53,8 @@ class DevProfileDatasourceIntegrationTest {
         registry.add("spring.cache.type", () -> "none");
         registry.add("spring.data.redis.repositories.enabled", () -> false);
         registry.add("spring.task.scheduling.enabled", () -> false);
+        registry.add("PERF_TEST_SEED_ENABLED", () -> false);
+        registry.add("spring.jpa.show-sql", () -> false);
         registry.add("security.jwt.secret", () -> "dev-profile-test-jwt-secret-32-bytes-minimum");
         registry.add("edurite.auth.seed.admin.email", () -> "admin@dev-profile.test");
         registry.add("edurite.auth.seed.admin.password", () -> "AdminPass@123");
@@ -146,6 +151,45 @@ class DevProfileDatasourceIntegrationTest {
     void publicInstitutionSearchEndpointRemainsAvailable() throws Exception {
         mockMvc.perform(get("/api/v1/institutions"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void persistedSubscriptionsControlRealStudentApisAndQuota() throws Exception {
+        UUID id = UUID.randomUUID();
+        String email = "subscription-integration-" + id + "@example.com";
+        insertUser(id, email, "Subscription", "Test", OffsetDateTime.now());
+        insertStudent(UUID.randomUUID(), id, "Subscription", "Test", "Grade 12");
+        UUID studentRole = jdbcTemplate.queryForObject("select id from roles where name in ('STUDENT','ROLE_STUDENT') limit 1", UUID.class);
+        assignRole(id, studentRole);
+        var authenticated = user(email).roles("STUDENT");
+        // A forged cached user plan cannot grant paid access.
+        jdbcTemplate.update("update users set plan_type='PRO' where id=?", id);
+        mockMvc.perform(get("/api/subscriptions/entitlements").with(authenticated))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.plan").value("BASIC"))
+                .andExpect(jsonPath("$.aiUsage.allowance").value(5));
+        mockMvc.perform(get("/api/student/career-roadmaps/saved").with(authenticated).param("plan", "PRO"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/student/aps/calculate").with(authenticated)
+                .contentType("application/json").content("{\"subjects\":[]}"))
+                .andExpect(status().isOk());
+        UUID subscription = UUID.randomUUID();
+        jdbcTemplate.update("insert into subscriptions(id,user_id,plan_code,status,start_date,end_date,created_at,updated_at) values (?,?,'PLAN_PREMIUM','ACTIVE',current_date,current_date+30,now(),now())", subscription, id);
+        mockMvc.perform(get("/api/v1/subscriptions/entitlements").with(authenticated))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.plan").value("PREMIUM"))
+                .andExpect(jsonPath("$.aiUsage.allowance").value(30));
+        mockMvc.perform(get("/api/student/career-roadmaps/saved").with(authenticated)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/student/university-applications").with(authenticated)).andExpect(status().isForbidden());
+        jdbcTemplate.update("update subscriptions set plan_code='PLAN_PRO' where id=?", subscription);
+        mockMvc.perform(get("/api/student/university-applications").with(authenticated)).andExpect(status().isOk());
+        mockMvc.perform(get("/api/subscriptions/entitlements").with(authenticated))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.aiUsage.allowance").value(100));
+        jdbcTemplate.update("update subscriptions set end_date=current_date where id=?", subscription);
+        mockMvc.perform(get("/api/student/university-applications").with(authenticated)).andExpect(status().isForbidden());
+        for (int i=0; i<5; i++) jdbcTemplate.update("insert into student_ai_usage(id,user_id,period_start,status) values (?,?,date_trunc('month',current_timestamp at time zone 'UTC')::date,'SUCCEEDED')", UUID.randomUUID(), id);
+        mockMvc.perform(post("/api/student/tutor/ask").with(authenticated)
+                .contentType("application/json").content("{\"subject\":\"MATHEMATICS\",\"question\":\"Explain fractions\"}"))
+                .andExpect(status().isTooManyRequests());
+        assertThat(jdbcTemplate.queryForObject("select count(*) from student_ai_usage where user_id=?", Integer.class, id)).isEqualTo(5);
     }
 
     @Test

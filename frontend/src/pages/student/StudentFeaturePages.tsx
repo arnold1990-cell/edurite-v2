@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { AiUsageDisplay } from '@/features/subscriptions/access';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -227,6 +228,7 @@ export const StudentAiTutorPage = () => {
   const [messages, setMessages] = useState<TutorMessage[]>([]);
   const ask = useMutation({
     mutationFn: () => featureModulesService.askTutor({ sessionId, subject, question }),
+    onSettled: () => { qc.invalidateQueries({ queryKey: ['subscription-access'] }); },
     onSuccess: (data) => {
       setSessionId(data.sessionId);
       setMessages(data.messages);
@@ -247,6 +249,8 @@ export const StudentAiTutorPage = () => {
   if (sessions.isError) return <ErrorState message="Could not load AI tutor sessions." />;
 
   return <Section title="AI Tutor">
+    <AiUsageDisplay />
+    {ask.isError && <p role="alert" className="text-red-700">{(ask.error as { message?: string }).message || 'Could not complete your request. Please try again.'}</p>}
     <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="space-y-2 rounded border bg-slate-50 p-3">
         <h2 className="font-semibold">Previous sessions</h2>

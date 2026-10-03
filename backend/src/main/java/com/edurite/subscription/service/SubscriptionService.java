@@ -787,14 +787,14 @@ public class SubscriptionService {
     private SubscriptionRecord decorateSubscriptionAccess(SubscriptionRecord subscription) {
         subscription = ensurePermanentPremiumOverride(subscription);
         StudentPlanAccessService.StudentPlanAccess access = studentPlanAccessService.resolveByUserId(subscription.getUserId());
-        boolean trialActive = subscription.getTrialEndDate() != null && OffsetDateTime.now().isBefore(subscription.getTrialEndDate());
+        boolean trialActive = "PLAN_TRIAL".equals(access.planCode());
 
         subscription.setPremiumAccess(access.premium());
         subscription.setTrialActive(trialActive);
         if (trialActive && subscription.getTrialEndDate() != null) {
             subscription.setAccessMessage("You are on a free Premium trial. Trial ends on " + subscription.getTrialEndDate().toLocalDate() + ".");
         } else if (!access.premium()) {
-            subscription.setAccessMessage("Your free Premium trial has ended. You are now on Basic. Subscribe to unlock Premium features.");
+            subscription.setAccessMessage("You are on Basic. View plans to unlock Premium or Pro features.");
         } else {
             subscription.setAccessMessage(null);
         }
@@ -823,7 +823,8 @@ public class SubscriptionService {
             String billingInterval,
             String providerSubscriptionId
     ) {
-        if (studentPlanAccessService.isPermanentPremiumOverride(subscription.getUserId())) {
+        if (studentPlanAccessService.isPermanentPremiumOverride(subscription.getUserId())
+                && PlanType.fromPlanCode(subscription.getPlanCode()) != PlanType.PRO) {
             applyPermanentPremiumOverride(subscription);
             subscription.setPaymentReference(payment.getReference());
             subscription.setProvider(firstNonBlank(payment.getProvider(), PROVIDER_INTERNAL));
@@ -840,7 +841,7 @@ public class SubscriptionService {
                 subscriptionRepository.save(previous);
             }
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(java.time.ZoneOffset.UTC);
         LocalDate endDate = calculateEndDate(today, billingInterval);
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setPaymentReference(payment.getReference());
@@ -1249,9 +1250,7 @@ public class SubscriptionService {
 
     private void syncUserPlanType(SubscriptionRecord subscription) {
         userRepository.findById(subscription.getUserId()).ifPresent(user -> {
-            PlanType resolvedPlanType = studentPlanAccessService.isPermanentPremiumOverride(user.getId())
-                    ? PlanType.PREMIUM
-                    : resolvePlanType(subscription);
+            PlanType resolvedPlanType = resolvePlanType(subscription);
             if (user.getPlanType() != resolvedPlanType) {
                 user.setPlanType(resolvedPlanType);
                 userRepository.save(user);
@@ -1263,14 +1262,12 @@ public class SubscriptionService {
         if (subscription == null) {
             return PlanType.BASIC;
         }
-        if (studentPlanAccessService.isPermanentPremiumOverride(subscription.getUserId())) {
-            return PlanType.PREMIUM;
-        }
         return studentPlanAccessService.getCurrentPlan(subscription.getUserId());
     }
 
     private SubscriptionRecord ensurePermanentPremiumOverride(SubscriptionRecord subscription) {
-        if (subscription == null || !studentPlanAccessService.isPermanentPremiumOverride(subscription.getUserId())) {
+        if (subscription == null || !studentPlanAccessService.isPermanentPremiumOverride(subscription.getUserId())
+                || PlanType.fromPlanCode(subscription.getPlanCode()) == PlanType.PRO) {
             return subscription;
         }
         applyPermanentPremiumOverride(subscription);

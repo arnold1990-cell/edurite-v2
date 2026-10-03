@@ -1,4 +1,4 @@
-import { useSubscriptionAccess, AiUsageDisplay } from '@/features/subscriptions/access';
+import { useSubscriptionAccess, AiUsageDisplay, FeatureLock } from '@/features/subscriptions/access';
 import '@/features/subscriptions/subscription.css';
 import { AiGuidance } from '@/components/student/guidance/AiGuidance';
 import { StudentProfileView } from '@/components/student/profile/StudentProfileView';
@@ -1218,6 +1218,34 @@ export const StudentQualificationsPage = StudentProfilePage;
 export const StudentExperiencePage = StudentProfilePage;
 
 export const StudentCareerRecommendationsPage = ({ onDemand = true }: { onDemand?: boolean }) => {
+  const access = useSubscriptionAccess();
+  if (access.isPending) return <LoadingState />;
+  if (access.isError) return <ErrorState message="Could not check subscription access. Please refresh." />;
+  if (!access.data.entitlements.includes('PERSONALISED_CAREER_RECOMMENDATIONS')) return <FeatureLock feature="PERSONALISED_CAREER_RECOMMENDATIONS" />;
+  return access.data.entitlements.includes('ADVANCED_MATCHING')
+    ? <AdvancedCareerRecommendations onDemand={onDemand} />
+    : <PersonalisedCareerRecommendations />;
+};
+
+function PersonalisedCareerRecommendations() {
+  const qc = useQueryClient();
+  const advice = useMutation({
+    mutationFn: aiGuidanceService.getPersonalisedCareerAdvice,
+    onSettled: () => { qc.invalidateQueries({ queryKey: ['subscription-access'] }); },
+  });
+  return <Section title="Career Guidance" description="Personalised career recommendations based on your learner profile.">
+    <AiUsageDisplay />
+    <Button disabled={advice.isPending} onClick={() => advice.mutate()}>{advice.isPending ? 'Finding your pathways...' : 'Generate career recommendations'}</Button>
+    {advice.isError && <p role="alert">{(advice.error as ApiError)?.message || 'Could not generate guidance. Please try again.'}</p>}
+    <div className="grid gap-4 md:grid-cols-2">{advice.data?.recommendedCareers.map(career => <article key={career.name} className="card p-5">
+      <h2 className="text-lg font-semibold">{career.name}</h2><p>{career.reason}</p>
+      <ul className="mt-3 list-disc pl-5">{career.improvements.map(item => <li key={item}>{item}</li>)}</ul>
+    </article>)}</div>
+    <FeatureLock feature="ADVANCED_MATCHING" />
+  </Section>;
+}
+
+const AdvancedCareerRecommendations = ({ onDemand = true }: { onDemand?: boolean }) => {
   const isDemoMode = aiGuidanceService.demoModeEnabled;
   const profile = useAppQuery({ queryKey: ['me'], queryFn: studentService.getMe });
   const [guidanceMode, setGuidanceMode] = useState<'FAST' | 'DEEP'>('FAST');
@@ -1411,7 +1439,7 @@ export const StudentCareerRecommendationsPage = ({ onDemand = true }: { onDemand
     </div>}
     {onDemand && !isDemoMode ? <Button type="button" onClick={() => setGuidanceRequest((count) => count + 1)} disabled={isSearching || Boolean(profileReadinessMessage)}>{guidanceRequest ? 'Regenerate guidance' : 'Generate my guidance'}</Button> : null}
     </>}
-    {!aiPremiumUnlocked ? <p className="text-xs text-amber-700">Deep AI mode and expanded insights are available on Premium subscriptions.</p> : null}
+    {!aiPremiumUnlocked ? <p className="text-xs text-amber-700">Deep AI mode and expanded insights are available on Pro subscriptions.</p> : null}
     {isSearching ? <div className="rounded-[22px] border border-blue-200 bg-blue-50/70 p-4"><LoadingState message="Searching for guidance results..." detail={guidanceMode === 'FAST' ? 'Fast mode is prioritising quick source retrieval.' : 'Deep mode is checking more sources for broader coverage.'} /></div> : null}
     {!isDemoMode && guidanceRequest > 0 && <>
       {aiUnavailable && <div className="rounded-[22px] border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 shadow-sm">
@@ -1511,7 +1539,7 @@ export const StudentCareerRecommendationsPage = ({ onDemand = true }: { onDemand
   return <AiGuidance qualifications={aiPremiumUnlocked && !aiUnavailable ? programmes.map(programme => evaluateProgrammeQualification(programme, currentProfile?.subjectAchievements ?? [], careers.map(career => career.name))) : []} profile={currentProfile} advice={aiUnavailable ? undefined : aiAdvice.data} careers={aiUnavailable ? [] : visibleCareers} premium={aiPremiumUnlocked} loading={isSearching} error={profileReadinessMessage || (guidanceRequest > 0 && aiUnavailable ? AI_ERROR_MESSAGE : null)} details={guidanceDetails} controls={<>
     <span>Guidance:</span><button type="button" aria-pressed={guidanceMode === 'FAST'} onClick={() => setGuidanceMode('FAST')}>Fast</button><button type="button" aria-pressed={guidanceMode === 'DEEP'} disabled={!isPremium} onClick={() => setGuidanceMode('DEEP')}>Deep</button>
     <button type="button" className="ec-generate" disabled={isSearching || Boolean(profileReadinessMessage)} onClick={() => setGuidanceRequest(count => count + 1)}>{guidanceRequest ? 'Regenerate guidance' : 'Generate my guidance'}</button>
-    {!isPremium && <Link to="/student/subscription">Premium unlocks Deep guidance</Link>}
+    {!isPremium && <Link to="/student/subscription">Pro unlocks Deep guidance</Link>}
   </>} />;
 };
 export const StudentBursaryRecommendationsPage = () => <StudentCareerRecommendationsPage onDemand={false} />;
@@ -3389,7 +3417,7 @@ export const StudentSubscriptionPage = () => {
   const statusErrorMessage = (paymentStatus.error as ApiError | null)?.message ?? 'Could not refresh payment status. Please reload this page.';
   const actionInProgress = checkout.isPending || confirm.isPending || cancel.isPending || payFastInitiate.isPending || paymentStatus.isFetching;
   const currentPlanCode = access.data?.plan ?? 'BASIC';
-  const currentStatus = current.data?.status ?? 'ACTIVE';
+  const currentStatus = access.data?.status ?? current.data?.status ?? 'ACTIVE';
   const trialEndLabel = current.data?.trialEndDate
     ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(current.data.trialEndDate))
     : null;
@@ -3438,18 +3466,19 @@ export const StudentSubscriptionPage = () => {
         const yearly=viewPlans.find(p => p.code===`PLAN_${tier}_YEARLY`);
         const plan=interval==='YEARLY' && yearly ? yearly : monthly;
         if (!plan || !monthly) return null;
-        const isCurrent=tier===currentPlanCode;
+        const isCurrent=tier===currentPlanCode && !access.data?.trialActive;
         const downgrade=['BASIC','PREMIUM','PRO'].indexOf(tier)<['BASIC','PREMIUM','PRO'].indexOf(currentPlanCode);
         return <article key={tier} className={`subscription-plan subscription-plan--${tier.toLowerCase()}`}>
           {tier==='PREMIUM' && <p className="subscription-popular">MOST POPULAR</p>}
           <h2>{tier}</h2><p className="subscription-price">R{Number(monthly.amount).toLocaleString('en-ZA')}<small>/month</small></p>
           {yearly && <p>R{Number(yearly.amount).toLocaleString('en-ZA')}/year</p>}
           <h3>{tier==='BASIC' ? 'EXPLORE' : tier==='PREMIUM' ? 'DISCOVER YOUR PATHWAY' : 'PLAN YOUR FUTURE'}</h3><p>{plan.description}</p>
-          <ul>{plan.features.map(feature => <li key={feature}>? {feature}</li>)}</ul>
+          <ul>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
           <Button disabled={isCurrent || actionInProgress || !access.data} onClick={() => tier==='BASIC' ? chooseBasic(plan.code) : payFastInitiate.mutate({planCode:plan.code})}>
             {isCurrent ? 'CURRENT PLAN' : downgrade ? `CHANGE TO ${tier}` : `UPGRADE TO ${tier}`}
           </Button>
           {!isCurrent && tier!=='BASIC' && <small>Checkout: {formatPlanPrice(Number(plan.amount),plan.currency,plan.billingInterval)}</small>}
+          {downgrade && <small>This change takes effect when activated. Your saved data is preserved.</small>}
         </article>;
       })}</div>
     </div>

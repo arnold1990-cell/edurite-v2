@@ -1,4 +1,5 @@
 import { SubjectEditor } from '@/components/student/career/SubjectEditor';
+import { useSubscriptionAccess, RequireEntitlement, AiUsageDisplay } from '@/features/subscriptions/access';
 import { CareerRoadmapDetails } from '@/components/student/career/CareerRoadmapDetails';
 import { ExploreWorkspace } from '@/components/student/career/ExploreWorkspace';
 import { useEffect, useMemo, useState } from 'react';
@@ -55,9 +56,10 @@ const slugifyFilename = (value: string) => value
 export const StudentCareerRoadmapsExplorerPage = () => {
   const [params] = useSearchParams();
   const queryClient = useQueryClient();
+  const access = useSubscriptionAccess();
   const profile = useAppQuery({ queryKey: ['me'], queryFn: studentService.getMe });
   const apsProfile = useAppQuery({ queryKey: ['student-aps-profile'], queryFn: featureModulesService.apsProfile });
-  const savedRoadmaps = useAppQuery({ queryKey: ['student-career-roadmaps-saved'], queryFn: featureModulesService.savedCareerRoadmaps });
+  const savedRoadmaps = useAppQuery({ queryKey: ['student-career-roadmaps-saved', access.data?.plan], enabled: Boolean(access.data?.entitlements.includes('CAREER_ROADMAP_PERSONALISED')), queryFn: featureModulesService.savedCareerRoadmaps });
   const [actionFeedback, setActionFeedback] = useState<FeedbackState | null>(null);
 
   const [careerName, setCareerName] = useState(params.get('career') || '');
@@ -75,6 +77,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
   const section = params.get('section');
   useEffect(() => { setActiveTab(section === 'learning-path' || section === 'study-plan' ? 'AI Study Plan' : section === 'readiness' ? 'APS Readiness' : 'Roadmap'); }, [section]);
   const [generated, setGenerated] = useState<CareerRoadmapGenerateResponse | null>(null);
+  useEffect(() => { setGenerated(null); }, [access.data?.plan]);
   const [generatedFingerprint, setGeneratedFingerprint] = useState('');
   const [savedSnapshot, setSavedSnapshot] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
@@ -118,6 +121,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
 
   const generate = useMutation({
     mutationFn: (request: { payload: Parameters<typeof featureModulesService.generateCareerRoadmap>[0]; fingerprint: string }) => featureModulesService.generateCareerRoadmap(request.payload),
+    onSettled: () => { queryClient.invalidateQueries({ queryKey: ['subscription-access'] }); },
     onSuccess: (data, request) => {
       setSavedSnapshot(false);
       setCareerName(data.careerName);
@@ -235,7 +239,7 @@ export const StudentCareerRoadmapsExplorerPage = () => {
     savedSnapshot={savedSnapshot} roadmap={current} aps={activeApsValue} requiredAps={displayRequiredAps} gap={displayApsGap}
     saved={savedRoadmaps.data ?? []} savedLoading={savedRoadmaps.isLoading} retrySaved={() => savedRoadmaps.refetch()} savedError={savedRoadmaps.isError} onSaved={selectSaved}
     history={history} clearHistory={() => setHistory([])} outdated={analysisOutdated}
-    actions={<><Button onClick={() => generate.mutate({ payload: { careerName, grade: grade || undefined, province: province || undefined, subjects: activeInputs }, fingerprint: activeFingerprint })} disabled={generate.isPending || !careerName.trim() || !activeInputs.length || activeAps.isFetching || activeAps.isError || activeAps.data?.status === 'UNAVAILABLE' || activeInputs.some(subject => subject.markPercentage != null && (subject.markPercentage < 0 || subject.markPercentage > 100))}>{generate.isPending ? 'Generating...' : 'Generate Roadmap'}</Button><Button disabled={!generated || analysisOutdated || saveRoadmap.isPending} onClick={() => saveRoadmap.mutate()}>Save Roadmap</Button><Button disabled={!matchedCareer || addToCareerPlan.isPending} onClick={() => addToCareerPlan.mutate()}>Save Career</Button>{current && <Button disabled={analysisOutdated} onClick={exportRoadmap}>Export PDF</Button>}</>}
+    actions={<RequireEntitlement feature="CAREER_ROADMAP_PERSONALISED"><AiUsageDisplay /><Button onClick={() => generate.mutate({ payload: { careerName, grade: grade || undefined, province: province || undefined, subjects: activeInputs }, fingerprint: activeFingerprint })} disabled={generate.isPending || !careerName.trim() || !activeInputs.length || activeAps.isFetching || activeAps.isError || activeAps.data?.status === 'UNAVAILABLE' || activeInputs.some(subject => subject.markPercentage != null && (subject.markPercentage < 0 || subject.markPercentage > 100))}>{generate.isPending ? 'Generating...' : 'Generate Roadmap'}</Button><Button disabled={!generated || analysisOutdated || saveRoadmap.isPending} onClick={() => saveRoadmap.mutate()}>Save Roadmap</Button><Button disabled={!matchedCareer || addToCareerPlan.isPending} onClick={() => addToCareerPlan.mutate()}>Save Career</Button>{current && <Button disabled={analysisOutdated} onClick={exportRoadmap}>Export PDF</Button>}</RequireEntitlement>}
     feedback={actionFeedback?.message || (activeAps.isError ? 'Academic results could not load. Open your academic profile to retry or enter subjects manually.' : undefined)}
     editor={<SubjectEditor subjects={subjects} source={activeSource} grade={grade} province={province} grades={grades} provinces={provinces} subjectOptions={subjectOptions}
       onGrade={setGrade} onProvince={setProvince} onLink={switchToProfile} onManual={switchToManual}
@@ -244,6 +248,6 @@ export const StudentCareerRoadmapsExplorerPage = () => {
       onAdd={() => { setManualSubjects([...subjects,createSubjectRow()]); setActiveSource('MANUAL'); }}
       aps={activeApsValue} loading={activeAps.isFetching} error={activeAps.isError} onRetry={() => activeAps.refetch()} feedback={actionFeedback?.message}/>}
     printContent={current && <div className="ex-print-roadmap"><h1>{current.careerName}</h1>{savedSnapshot && <p>Saved roadmap snapshot</p>}{tabs.map(tab => <section key={tab}><h2>{tab}</h2><CareerRoadmapDetails current={current} activeTab={tab} setActiveTab={() => undefined} displayCurrentAps={current.apsReadiness.learnerAps} displayRequiredAps={current.apsReadiness.requiredAps} displayApsGap={current.apsReadiness.apsGap}/></section>)}</div>}
-    details={<CareerRoadmapDetails current={current} activeTab={activeTab} setActiveTab={setActiveTab} displayCurrentAps={displayCurrentAps} displayRequiredAps={displayRequiredAps} displayApsGap={displayApsGap} />}
+    details={<RequireEntitlement feature={activeTab === 'AI Study Plan' ? 'CAREER_ROADMAP_ADVANCED' : 'CAREER_ROADMAP_PERSONALISED'}><CareerRoadmapDetails current={current} activeTab={activeTab} setActiveTab={setActiveTab} displayCurrentAps={displayCurrentAps} displayRequiredAps={displayRequiredAps} displayApsGap={displayApsGap} /></RequireEntitlement>}
   />;
 };

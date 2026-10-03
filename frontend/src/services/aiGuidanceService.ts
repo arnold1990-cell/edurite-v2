@@ -92,6 +92,8 @@ const normalizeUniversityResponse = (payload: UniversitySourcesAnalysisResponse)
 
 export const aiGuidanceService = {
   demoModeEnabled,
+  getPersonalisedCareerAdvice: () =>
+    apiClient.get<CareerAdviceResponse>('/ai/career-advice/me').then((r) => r.data),
   getCareerAdvice: (payload: CareerAdviceRequest) =>
     apiClient.post<CareerAdviceResponse>('/ai/career-advice', payload).then((r) => r.data),
   analyseUniversitySources: (payload: UniversitySourcesAnalysisRequest) =>

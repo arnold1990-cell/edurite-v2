@@ -31,7 +31,7 @@ export function FeatureLock({ feature }: { feature: string }) {
 }
 export function RequireEntitlement({ feature, children }: { feature: string; children: ReactNode }) {
   const access=useSubscriptionAccess();
-  if (access.isPending) return <p role="status">Checking access?</p>;
+  if (access.isPending) return <p role="status">Checking access...</p>;
   if (access.isError) return <p role="alert">Access could not be checked. <button onClick={() => access.refetch()}>Retry</button></p>;
   return access.data.entitlements.includes(feature) ? <>{children}</> : <FeatureLock feature={feature} />;
 }
@@ -40,7 +40,7 @@ export function StudentRouteAccess({ children }: { children: ReactNode }) {
   const access=useSubscriptionAccess();
   // Account management must remain reachable if the entitlement request fails.
   if (['/student/subscription','/student/settings','/student/notifications'].includes(location.pathname)) return <>{children}</>;
-  if (access.isPending) return <p role="status">Checking access?</p>;
+  if (access.isPending) return <p role="status">Checking access...</p>;
   if (access.isError) return <p role="alert">Access could not be checked. <button onClick={() => access.refetch()}>Retry</button></p>;
   const feature=featureForUrl(access.data, location.pathname+location.search);
   return feature && !access.data.entitlements.includes(feature) ? <FeatureLock feature={feature} /> : <>{children}</>;
@@ -49,10 +49,10 @@ export function AccessBadge({ to }: { to: string }) {
   const { data }=useSubscriptionAccess();
   const feature=featureForUrl(data,to);
   const info=data?.features.find(item => item.id===feature);
-  return feature && !data?.entitlements.includes(feature) ? <small className="ml-2 text-blue-700">?? {info?.minimumPlan}</small> : null;
+  return feature && !data?.entitlements.includes(feature) ? <small className="ml-2 text-blue-700">Locked: {info?.minimumPlan}</small> : null;
 }
 export function AiUsageDisplay() {
   const { data }=useSubscriptionAccess();
   if (!data) return null;
-  return <p className="my-3 text-sm text-slate-600">AI interactions: {data.aiUsage.used} / {data.aiUsage.allowance} used ? {data.aiUsage.remaining} remaining{data.aiUsage.pending ? ` ? ${data.aiUsage.pending} processing` : ''}. Resets {data.aiUsage.periodEnd} (UTC). <Link className="text-blue-700" to="/student/subscription">View plans</Link></p>;
+  return <p className="my-3 text-sm text-slate-600">AI interactions: {data.aiUsage.used} / {data.aiUsage.allowance} used, {data.aiUsage.remaining} remaining{data.aiUsage.pending ? `, ${data.aiUsage.pending} processing` : ''}. Resets {data.aiUsage.periodEnd} (UTC). <Link className="text-blue-700" to="/student/subscription">View plans</Link></p>;
 }

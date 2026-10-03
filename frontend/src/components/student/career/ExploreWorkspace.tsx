@@ -1,4 +1,5 @@
 import { SavedCareers } from './SavedCareers';
+import { useSubscriptionAccess } from '@/features/subscriptions/access';
 import { ExplorePanel, ExploreDialog } from './ExploreUi';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -23,6 +24,7 @@ type Props = {
 };
 const categories = ['Careers', 'Courses', 'Subjects', 'Institutions', 'Bursaries', 'Career Pathways'];
 export function ExploreWorkspace(p: Props) {
+  const access = useSubscriptionAccess();
   const [params, setParams] = useSearchParams();
   const category = params.get('category') || 'Careers';
   const query = params.get('q') || '';
@@ -34,8 +36,8 @@ export function ExploreWorkspace(p: Props) {
   const [all, setAll] = useState(false);
   const [page,setPage] = useState(0);
   useEffect(() => setPage(0),[query]);
-  const recommendations = useAppQuery({ queryKey: ['recommendations'], queryFn: recommendationService.mine });
-  const psychometric = useAppQuery({ queryKey: ['psychometric-latest'], queryFn: psychometricService.latestStudent });
+  const recommendations = useAppQuery({ queryKey: ['recommendations', access.data?.plan], enabled: Boolean(access.data?.entitlements.includes('PERSONALISED_CAREER_RECOMMENDATIONS')), queryFn: recommendationService.mine });
+  const psychometric = useAppQuery({ queryKey: ['psychometric-latest', access.data?.plan], enabled: Boolean(access.data?.entitlements.includes('CAREER_ASSESSMENT')), queryFn: psychometricService.latestStudent });
   const catalog = useAppQuery({ queryKey: ['explore-careers', query, page], queryFn: () => careerService.list({ q: query, size: 24, page }) });
   const catalogue = Array.isArray(catalog.data) ? catalog.data : catalog.data?.content ?? [];
   const careers = !query && !all && recommendations.data?.suggestedCareers?.length ? recommendations.data.suggestedCareers.map(item => ({ id: item.id, title: item.title, description: item.rationale, industry: 'Recommended for you' })) : catalogue;

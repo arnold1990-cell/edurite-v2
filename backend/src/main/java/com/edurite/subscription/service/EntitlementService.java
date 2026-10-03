@@ -12,7 +12,9 @@ public class EntitlementService {
     private final StudentPlanAccessService access;
     public EntitlementService(StudentPlanAccessService access) { this.access = access; }
     public boolean isStudent(User user) {
-        return user.getRoles().stream().anyMatch(role -> "STUDENT".equals(role.getName()));
+        var roles = user.getRoles().stream().map(role -> role.getName().replaceFirst("^ROLE_", "")).toList();
+        return roles.contains("STUDENT") && Collections.disjoint(roles,
+                Set.of("ADMIN", "SCHOOL_ADMIN", "TEACHER", "DISTRICT", "DISTRICT_ADMIN", "DISTRICT_DIRECTOR", "CIRCUIT_MANAGER", "SUBJECT_ADVISOR"));
     }
     public PlanType plan(UUID userId) { return access.getCurrentPlan(userId); }
     public boolean hasFeature(UUID userId, Feature feature) { return feature.allowed(plan(userId)); }

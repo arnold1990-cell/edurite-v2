@@ -36,7 +36,14 @@ public class StudentPlanAccessService {
     }
 
     public StudentPlanAccess resolveByUserId(UUID userId) {
-        if (isPermanentPremiumOverride(userId)) {
+        SubscriptionRecord subscription = currentRecord(userId);
+        boolean activePro = subscription != null
+                && com.edurite.subscription.entity.PlanType.fromPlanCode(subscription.getPlanCode()) == com.edurite.subscription.entity.PlanType.PRO
+                && STATUS_ACTIVE.equals(normalizeStatus(subscription.getStatus()))
+                && subscription.getEndDate() != null
+                && java.time.LocalDate.now(java.time.ZoneOffset.UTC).isBefore(subscription.getEndDate())
+                && (subscription.getStartDate() == null || !java.time.LocalDate.now(java.time.ZoneOffset.UTC).isBefore(subscription.getStartDate()));
+        if (!activePro && isPermanentPremiumOverride(userId)) {
             return new StudentPlanAccess(
                     PLAN_PREMIUM,
                     STATUS_ACTIVE,
@@ -45,16 +52,19 @@ public class StudentPlanAccessService {
                     null
             );
         }
-        SubscriptionRecord subscription = currentRecord(userId);
         String planCode = normalizePlanCode(subscription == null ? null : subscription.getPlanCode());
         String status = normalizeStatus(subscription == null ? null : subscription.getStatus());
         boolean inPeriod = subscription != null && subscription.getEndDate() != null
+                && (subscription.getStartDate() == null || !java.time.LocalDate.now(java.time.ZoneOffset.UTC).isBefore(subscription.getStartDate()))
                 && java.time.LocalDate.now(java.time.ZoneOffset.UTC).isBefore(subscription.getEndDate());
-        boolean paidPremium = (planCode.startsWith(PLAN_PREMIUM) || planCode.startsWith("PLAN_PRO"))
+        var storedPlan = com.edurite.subscription.entity.PlanType.fromPlanCode(planCode);
+        boolean paidPremium = !"PLAN_TRIAL".equals(planCode)
+                && storedPlan != com.edurite.subscription.entity.PlanType.BASIC
                 && STATUS_ACTIVE.equals(status) && inPeriod;
-        boolean trialActive = STATUS_ACTIVE.equals(status) && isTrialActive(subscription);
+        boolean trialActive = (PLAN_BASIC.equals(planCode) || "PLAN_TRIAL".equals(planCode))
+                && STATUS_ACTIVE.equals(status) && isTrialActive(subscription);
         boolean premium = paidPremium || trialActive;
-        String effectivePlanCode = paidPremium ? (planCode.startsWith("PLAN_PRO") ? "PLAN_PRO" : PLAN_PREMIUM)
+        String effectivePlanCode = paidPremium ? (storedPlan == com.edurite.subscription.entity.PlanType.PRO ? "PLAN_PRO" : PLAN_PREMIUM)
                 : (trialActive ? "PLAN_TRIAL" : PLAN_BASIC);
         if (!premium && !PLAN_BASIC.equals(planCode) && STATUS_ACTIVE.equals(status)) status = "EXPIRED";
         String upgradeMessage = premium
@@ -113,6 +123,7 @@ public class StudentPlanAccessService {
         if ("PREMIUM".equals(normalized)) {
             return PLAN_PREMIUM;
         }
+        if ("PRO".equals(normalized)) return "PLAN_PRO";
         return normalized;
     }
 
