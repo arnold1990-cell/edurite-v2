@@ -18,8 +18,7 @@ public class StudentProfileCompletionService {
         if (notBlank(profile.getQualificationLevel())) score += 10;
         if (notBlank(profile.getSkills())) score += 15;
         if (notBlank(profile.getInterests())) score += 10;
-        if (notBlank(profile.getCvFileUrl())) score += 15;
-        if (notBlank(profile.getTranscriptFileUrl())) score += 10;
+        if (notBlank(profile.getTranscriptFileUrl())) score += 25;
         return score;
     }
 

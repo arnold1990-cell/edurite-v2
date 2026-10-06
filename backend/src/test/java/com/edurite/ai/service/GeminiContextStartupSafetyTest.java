@@ -24,6 +24,7 @@ class GeminiContextStartupSafetyTest {
                     ValidationAutoConfiguration.class
             ))
             .withUserConfiguration(TestConfig.class)
+            .withBean(com.edurite.student.service.ProfileGuidanceContext.class, () -> org.mockito.Mockito.mock(com.edurite.student.service.ProfileGuidanceContext.class))
             .withBean(ObjectMapper.class)
             .withBean(AiProviderOrchestratorService.class,
                     () -> new AiProviderOrchestratorService(Map.of(), new MockEnvironment()))

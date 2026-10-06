@@ -121,6 +121,8 @@ public class AuthService {
     private final StudentPlanAccessService studentPlanAccessService;
     private final NotificationService notificationService;
     private final TransactionTemplate transactionTemplate;
+    @org.springframework.beans.factory.annotation.Autowired
+    private EmailVerificationService emailVerificationService;
 
     public AuthService(
             UserRepository userRepository,
@@ -213,6 +215,7 @@ public class AuthService {
             userRepository.save(user);
         }
 
+        requireEmailVerification(user);
         consentService.recordPopiaConsent(user, null);
         return buildRegistrationResponse(user);
     }
@@ -253,6 +256,7 @@ public class AuthService {
             userRepository.save(user);
         }
 
+        requireEmailVerification(user);
         consentService.recordPopiaConsent(user, request.consentVersion());
         return buildRegistrationResponse(user);
     }
@@ -483,7 +487,10 @@ public class AuthService {
 
         User user = findUserByEmail(normalizedEmail)
                 .map(existing -> activateExistingGoogleUser(existing, identity, requestedRole))
-                .orElseGet(() -> provisionGoogleUser(identity, requestedRole));
+                .orElseGet(() -> {
+                    if (!Boolean.TRUE.equals(request.popiaConsentAccepted())) throw new ResourceConflictException("Accept privacy consent before creating an account with Google.");
+                    return provisionGoogleUser(identity, requestedRole);
+                });
 
         validateUserEligibleForSession(user, false);
 
@@ -540,6 +547,8 @@ public class AuthService {
         if (user.isEmailVerified()) {
             return new VerificationStatusResponse("Account already verified. You can sign in.");
         }
+
+        if (user.isEmailVerificationRequired()) throw new InvalidOtpException("Use the verification link sent to your email.");
 
         boolean approved = otpService.verifyVerificationOtp(normalizedPhone, request.code().trim());
 
@@ -665,7 +674,19 @@ public class AuthService {
         return resolvedUser;
     }
 
+    private void requireEmailVerification(User user) {
+        user.setEmailVerified(false);
+        user.setEmailVerificationRequired(true);
+        userRepository.save(user);
+    }
+
     private RegistrationResponse buildRegistrationResponse(User user) {
+        if (user.isEmailVerificationRequired()) {
+            boolean sent = emailVerificationService != null && emailVerificationService.send(user);
+            return buildPendingVerificationRegistrationResponse(user, sent
+                ? "Account created. Check your email to verify your account before signing in."
+                : "Account created, but we could not send your verification email. Please resend or contact support.");
+        }
         if (!isOtpRequired()) {
             return buildAuthenticatedRegistrationResponse(user, "Account created successfully.");
         }
@@ -791,6 +812,12 @@ public class AuthService {
         }
 
         boolean changed = false;
+        if (existing.isEmailVerificationRequired()) {
+            existing.setEmailVerificationRequired(false);
+            existing.setEmailVerificationHash(null);
+            existing.setEmailVerificationExpiresAt(null);
+            changed = true;
+        }
 
         if (!existing.isEmailVerified()) {
             existing.setEmailVerified(true);
@@ -1095,6 +1122,9 @@ public class AuthService {
             throw loginFailure(LoginAuditReason.ROLE_MISSING, identifier);
         }
 
+        if (user.isEmailVerificationRequired()) {
+            throw new InvalidCredentialsException("Verify your email before signing in. Use the resend verification email option.");
+        }
         if (isOtpRequired() && !user.isEmailVerified()) {
             throw loginFailure(LoginAuditReason.EMAIL_NOT_VERIFIED, identifier);
         }
@@ -1119,6 +1149,7 @@ public class AuthService {
     }
 
     private void validateUserEligibleForSession(User user, boolean requireVerified) {
+        if (user.isEmailVerificationRequired()) throw new InvalidCredentialsException("Verify your email before signing in.");
         if (user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null) {
             throw new InvalidCredentialsException("Account is inactive or suspended.");
         }

@@ -5,8 +5,11 @@ import jakarta.validation.constraints.NotBlank;
 public record GoogleLoginRequest(
         @NotBlank(message = "idToken is required")
         String idToken,
-        String role
+        String role,
+        Boolean popiaConsentAccepted
 ) {
+    public GoogleLoginRequest(String idToken, String role) { this(idToken, role, false); }
+
     public String resolvedRole() {
         if (role == null || role.isBlank()) {
             return "STUDENT";

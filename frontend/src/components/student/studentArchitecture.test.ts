@@ -52,10 +52,10 @@ describe('student route architecture', () => {
     ['/student/notifications', '', undefined],
     ['/student/explore', '?category=Courses', '/student/study-options'],
     ['/student/explore', '?category=Bursaries', '/student/funding'],
-    ['/student/universities/uct/programmes', '', '/student/institutions'],
+    ['/student/universities/uct/programmes', '', '/student/study-options'],
     ['/student/psychometric/', '', '/student/career-explorer'],
     ['/student/ai-tutor', '', '/student/learning'],
-    ['/student/rewards', '', '/student/progress'],
+    ['/student/rewards', '', '/student/dashboard'],
   ])('selects the correct section for %s%s', (path, search, expected) => {
     expect(studentSection(path, search)).toBe(expected);
   });

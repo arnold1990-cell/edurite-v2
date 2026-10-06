@@ -37,6 +37,9 @@ public class StudentProfile extends BaseEntity {
     private String bio;
     private String qualificationLevel;
     private String selectedGrade;
+    private String schoolName;
+    @jakarta.persistence.Version
+    private long rowVersion;
 
 // @Column configures how this field is stored in the database.
     @Column(columnDefinition = "TEXT")
@@ -60,6 +63,9 @@ public class StudentProfile extends BaseEntity {
 
     private String cvFileUrl;
     private String transcriptFileUrl;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    private String transcriptHistoryJson = "[]";
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(nullable = false, columnDefinition = "jsonb")

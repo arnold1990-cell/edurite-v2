@@ -11,6 +11,8 @@ import { ErrorState, LoadingState } from '@/components/feedback/States';
 import { authStore } from '@/features/auth/authStore';
 import { getCompanyPathForApprovalStatus, getDashboardPathForRole, getDashboardPathForUser, isAuthorizedPathForRole, resolvePrimaryRole } from '@/features/auth/roleUtils';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppQuery } from '@/hooks/useAppQuery';
+import { subscriptionService } from '@/services/subscriptionService';
 import { authService } from '@/services/authService';
 import { locationService } from '@/services/locationService';
 import type { CompanyRegisterPayload, LocationOption, Role, SchoolRegisterPayload, User } from '@/types';
@@ -704,6 +706,7 @@ const LoginAccessSelector = ({
 
 const SignInForm = ({ role }: { role: AuthRole }) => {
   const { login, loginWithGoogle } = useAuth();
+  const [googleConsent, setGoogleConsent] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
@@ -787,7 +790,7 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
     setIsSubmitting(true);
 
     try {
-      const loggedInUser = await login({ email: form.email, password: form.password }, { rememberMe: form.rememberMe });
+      const loggedInUser = await login({ email: form.email, password: form.password }, { rememberMe: form.rememberMe, popiaConsentAccepted: googleConsent });
       const expectedRole = expectedRoleForSelection(selectedRole);
       const actualRole = resolvePrimaryRole(loggedInUser);
       if (expectedRole && actualRole && expectedRole !== actualRole) {
@@ -854,7 +857,7 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
             setServerError(null);
             setIsGoogleSubmitting(true);
             try {
-              const loggedInUser = await loginWithGoogle(credential, googleLoginRole, { rememberMe: form.rememberMe });
+              const loggedInUser = await loginWithGoogle(credential, googleLoginRole, { rememberMe: form.rememberMe, popiaConsentAccepted: googleConsent });
               await routeAuthenticatedUser(loggedInUser);
             } catch (error) {
               const message = error instanceof Error ? error.message : '';
@@ -888,7 +891,7 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
     return () => {
       active = false;
     };
-  }, [form.rememberMe, googleLoginRole, googleSignInAvailable, googleClientLooksValid, loginWithGoogle, routeAuthenticatedUser]);
+  }, [form.rememberMe, googleConsent, googleLoginRole, googleSignInAvailable, googleClientLooksValid, loginWithGoogle, routeAuthenticatedUser]);
 
   const locationState = location.state as { roleMismatch?: string; registrationMessage?: string; sessionExpiredMessage?: string } | undefined;
   const mismatchMessage = locationState?.roleMismatch;
@@ -1064,6 +1067,8 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
       <Button disabled={isSubmitting} type="submit" className="h-11 w-full rounded-2xl px-5 text-[15px] shadow-lg shadow-primary-600/20">
         {isSubmitting ? 'Signing in...' : submitLabel}
       </Button>
+      {role === 'STUDENT' && <Link className="block text-sm" to="/verify-email/notice?email=">Resend verification email</Link>}
+      {googleSectionEnabled && <label className="block text-sm"><input type="checkbox" checked={googleConsent} onChange={e => setGoogleConsent(e.target.checked)} /> For a new Google account, I consent to EduRite processing my personal information under the <Link to="/privacy-policy">Privacy Policy</Link>. New students start a 14-Day Free Trial. <Link to="/pricing">Compare plans</Link></label>}
       <GoogleAuthSection
         enabled={googleSectionEnabled}
         available={googleSignInAvailable}
@@ -1093,6 +1098,7 @@ void SignInForm;
 
 const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
   const { login, loginWithGoogle } = useAuth();
+  const [googleConsent, setGoogleConsent] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
@@ -1181,7 +1187,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
       const loginPayload = selectedRole === 'SCHOOL_ADMIN'
         ? { schoolName: form.schoolName.trim() || undefined, emisNumber: form.emisNumber, password: form.password }
         : { email: form.email, password: form.password };
-      const loggedInUser = await login(loginPayload, { rememberMe: form.rememberMe });
+      const loggedInUser = await login(loginPayload, { rememberMe: form.rememberMe, popiaConsentAccepted: googleConsent });
       const expectedRole = expectedRoleForSelection(selectedRole);
       const actualRole = resolvePrimaryRole(loggedInUser);
       if (expectedRole && actualRole && expectedRole !== actualRole) {
@@ -1250,7 +1256,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
             setServerError(null);
             setIsGoogleSubmitting(true);
             try {
-              const loggedInUser = await loginWithGoogle(credential, googleLoginRole, { rememberMe: form.rememberMe });
+              const loggedInUser = await loginWithGoogle(credential, googleLoginRole, { rememberMe: form.rememberMe, popiaConsentAccepted: googleConsent });
               await routeAuthenticatedUser(loggedInUser);
             } catch (error) {
               const message = error instanceof Error ? error.message : '';
@@ -1284,7 +1290,7 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
     return () => {
       active = false;
     };
-  }, [form.rememberMe, googleLoginRole, googleSignInAvailable, loginWithGoogle, routeAuthenticatedUser]);
+  }, [form.rememberMe, googleConsent, googleLoginRole, googleSignInAvailable, loginWithGoogle, routeAuthenticatedUser]);
 
   const locationState = location.state as { roleMismatch?: string; registrationMessage?: string; sessionExpiredMessage?: string } | undefined;
   const mismatchMessage = locationState?.roleMismatch;
@@ -1474,7 +1480,9 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
           {isSubmitting ? 'Signing in...' : 'Sign In'}
         </Button>
 
-        <GoogleAuthSection
+        {role === 'STUDENT' && <Link className="block text-sm" to="/verify-email/notice?email=">Resend verification email</Link>}
+      {googleSectionEnabled && <label className="block text-sm"><input type="checkbox" checked={googleConsent} onChange={e => setGoogleConsent(e.target.checked)} /> For a new Google account, I consent to EduRite processing my personal information under the <Link to="/privacy-policy">Privacy Policy</Link>. New students start a 14-Day Free Trial. <Link to="/pricing">Compare plans</Link></label>}
+      <GoogleAuthSection
           enabled={googleSectionEnabled}
           available={googleSignInAvailable}
           isSubmitting={isGoogleSubmitting}
@@ -1589,6 +1597,7 @@ export const LoginPage = () => {
 };
 
 export const RegisterStudentPage = () => {
+  const plans = useAppQuery({ queryKey: ['plans'], queryFn: subscriptionService.plans });
   const navigate = useNavigate();
   const { registerStudent } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
@@ -1599,6 +1608,7 @@ export const RegisterStudentPage = () => {
       <RegisterPortalSelector role="STUDENT" />
       <div className="mt-5 flex justify-center">
         <div className="w-full max-w-[700px]">
+        <section className="rounded-xl border border-slate-200 p-4"><h2 className="font-semibold">14-Day Free Trial</h2><p>No payment required to start. Choose a paid plan after your trial.</p><Link to="/pricing">Compare monthly and yearly plans</Link><div className="mt-3 grid gap-3 sm:grid-cols-2">{plans.data?.filter(plan => Number(plan.amount) > 0).map(plan => <article key={plan.code}><strong>{plan.name}</strong><p>{plan.currency} {Number(plan.amount).toFixed(2)} / {plan.billingInterval?.toLowerCase()}</p><p className="text-sm">{plan.features?.slice(0, 3).join(" ? ")}</p></article>)}</div></section>
         <form
           className="mt-6 grid gap-3.5 sm:grid-cols-2"
           onSubmit={async (event) => {
@@ -1647,7 +1657,7 @@ export const RegisterStudentPage = () => {
                 consentVersion,
               });
               if (response.verificationRequired) {
-                navigate(`/auth/verify-otp/notice?phone=${encodeURIComponent(phone)}&role=STUDENT`, {
+                navigate(`/verify-email/notice?email=${encodeURIComponent(email)}`, {
                   replace: true,
                   state: { message: response.message },
                 });
@@ -1708,13 +1718,13 @@ export const RegisterStudentPage = () => {
             version={POPIA_CONSENT_VERSION}
             label={
               <>
-                I agree to the{' '}
+                I consent to EduRite collecting and processing my personal information in accordance with the{' '}
                 <Link className="font-semibold text-primary-600 hover:text-primary-500" to="/privacy-policy">Privacy Policy</Link>{' '}
-                and{' '}
+                and applicable data protection requirements. I accept the{' '}
                 <Link className="font-semibold text-primary-600 hover:text-primary-500" to="/terms-and-conditions">Terms &amp; Conditions</Link>.
               </>
             }
-            inputProps={{ name: 'popiaConsentAccepted' }}
+            inputProps={{ name: 'popiaConsentAccepted', required: true }}
           />
           <div className="sm:col-span-2 space-y-3 pt-1">
             {serverError ? <ErrorState message={serverError} /> : null}
@@ -1969,6 +1979,10 @@ export const RegisterCompanyPage = () => {
 };
 
 export const VerifyEmailNoticePage = () => {
+  const [emailParams] = useSearchParams();
+  return emailParams.has("email") ? <StudentEmailVerification /> : <LegacyVerificationNotice />;
+};
+const LegacyVerificationNotice = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const phoneNumber = searchParams.get('phone') ?? '';
@@ -1984,6 +1998,10 @@ export const VerifyEmailNoticePage = () => {
 };
 
 export const VerifyEmailPage = () => {
+  const [emailParams] = useSearchParams();
+  return emailParams.has("email") || emailParams.has("token") ? <StudentEmailVerification /> : <LegacyVerificationPage />;
+};
+const LegacyVerificationPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const role = (searchParams.get('role') === 'COMPANY' ? 'COMPANY' : 'STUDENT') as AuthRole;
@@ -2244,3 +2262,21 @@ export const ResetPasswordPage = () => {
 };
 
 
+
+function StudentEmailVerification() {
+  const [params] = useSearchParams();
+  const [email, setEmail] = useState(params.get('email') || '');
+  const [message, setMessage] = useState('Check your email and spam folder for your verification link.');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const act = async (verify: boolean) => {
+    setBusy(true); setError('');
+    try {
+      const result = verify ? await authService.verifyEmail(email, params.get('token') || '') : await authService.resendEmail(email);
+      setMessage(result.message); if (verify) setVerified(true);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to verify. Request a new link.'); }
+    finally { setBusy(false); }
+  };
+  return <AuthShell role="STUDENT" mode="register"><section className="mx-auto max-w-xl space-y-4 p-5"><h1 className="text-xl font-semibold">{verified ? 'Email verified' : 'Verify your email'}</h1><p role="status">{message}</p>{error && <p role="alert">{error}</p>}{!verified && <><label className="block">Registered email<Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>{params.get('token') && <Button disabled={busy || !email} onClick={() => act(true)}>Verify email</Button>}<Button disabled={busy || !email} onClick={() => act(false)}>Resend verification email</Button></>}<Link className="block" to="/auth/login">Back to sign in</Link></section></AuthShell>;
+}

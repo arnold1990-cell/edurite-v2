@@ -161,7 +161,7 @@ class AuthServiceVerificationFlowUnitTest {
     }
 
     @Test
-    void registrationCreatesActiveUserWithOtpDispatch() {
+    void registrationRequiresEmailVerificationWithoutIssuingSession() {
         String email = "student@example.com";
         String phone = "+26770000000";
         Role studentRole = new Role();
@@ -183,7 +183,8 @@ class AuthServiceVerificationFlowUnitTest {
         RegistrationResponse response = authService.registerStudent(studentRequest(email, phone));
 
         assertThat(response.verificationRequired()).isTrue();
-        assertThat(response.message()).contains("Account created successfully");
+        assertThat(response.message()).contains("verification email");
+        assertThat(response.accessToken()).isNull();
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
         verify(userRepository, atLeastOnce()).save(userCaptor.capture());
@@ -191,7 +192,8 @@ class AuthServiceVerificationFlowUnitTest {
         assertThat(createdUser.getStatus()).isEqualTo(UserStatus.ACTIVE);
         assertThat(createdUser.isEmailVerified()).isFalse();
         assertThat(createdUser.getPhoneNumber()).isEqualTo(phone);
-        verify(otpService, times(1)).sendVerificationOtp(phone);
+        verify(otpService, never()).sendVerificationOtp(phone);
+        assertThat(createdUser.isEmailVerificationRequired()).isTrue();
         verify(subscriptionService, times(1)).initializeStudentTrialIfAbsent(any(UUID.class));
     }
 
@@ -222,6 +224,7 @@ class AuthServiceVerificationFlowUnitTest {
         verify(userRepository, atLeastOnce()).save(userCaptor.capture());
         User createdUser = userCaptor.getValue();
         createdUser.setEmailVerified(true);
+        createdUser.setEmailVerificationRequired(false);
 
         when(userRepository.findByEmailIgnoreCase(normalizedEmail)).thenReturn(Optional.of(createdUser));
         when(userRepository.findById(createdUser.getId())).thenReturn(Optional.of(createdUser));
@@ -439,7 +442,7 @@ class AuthServiceVerificationFlowUnitTest {
         when(jwtService.generateRefreshToken(any(User.class))).thenReturn("refresh-token");
         when(jwtService.accessTokenExpirationSeconds()).thenReturn(3600L);
 
-        AuthResponse response = authService.loginWithGoogle(new GoogleLoginRequest("student-google-token", "STUDENT"));
+        AuthResponse response = authService.loginWithGoogle(new GoogleLoginRequest("student-google-token", "STUDENT", true));
 
         assertThat(response.primaryRole()).isEqualTo("ROLE_STUDENT");
         assertThat(response.user().email()).isEqualTo("google.student@example.com");
@@ -478,7 +481,7 @@ class AuthServiceVerificationFlowUnitTest {
         when(jwtService.generateRefreshToken(any(User.class))).thenReturn("refresh-token");
         when(jwtService.accessTokenExpirationSeconds()).thenReturn(3600L);
 
-        AuthResponse response = authService.loginWithGoogle(new GoogleLoginRequest("company-google-token", "COMPANY"));
+        AuthResponse response = authService.loginWithGoogle(new GoogleLoginRequest("company-google-token", "COMPANY", true));
 
         assertThat(response.primaryRole()).isEqualTo("ROLE_COMPANY");
         assertThat(response.approvalStatus()).isEqualTo("PENDING");

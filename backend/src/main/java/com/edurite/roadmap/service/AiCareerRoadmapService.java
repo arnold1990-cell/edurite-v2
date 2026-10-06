@@ -21,6 +21,8 @@ public class AiCareerRoadmapService {
 
     private final AiProviderOrchestratorService aiProviderOrchestratorService;
     private final ObjectMapper objectMapper;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.edurite.student.service.ProfileGuidanceContext guidanceContext;
 
     public AiCareerRoadmapService(
             AiProviderOrchestratorService aiProviderOrchestratorService,
@@ -99,7 +101,7 @@ public class AiCareerRoadmapService {
                     safe(request.province()),
                     learnerAps == null ? "" : learnerAps,
                     safe(subjectSummary(request)),
-                    safe(profile == null ? null : profile.getCareerGoals()),
+                    safe(profile == null ? null : guidanceContext == null ? profile.getCareerGoals() : guidanceContext.describe(profile)),
                     safe(roadmapContext),
                     safe(universityRequirementsContext)
             );

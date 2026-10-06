@@ -8,7 +8,7 @@ describe('student feature compatibility', () => {
   });
   it.each([
     ['Courses', '/student/study-options'], ['Subjects', '/student/study-options'],
-    ['Institutions', '/student/institutions'], ['Bursaries', '/student/funding'], ['Opportunities', '/student/funding'],
+    ['Institutions', '/student/study-options'], ['Bursaries', '/student/funding'], ['Opportunities', '/student/funding'],
   ])('preserves legacy explore category %s', (category, parent) => {
     const destination = studentRedirectTarget('/student/career-explorer', `?category=${category}&q=science&institution=uct`);
     expect(destination.split('?')[0]).toBe(parent);

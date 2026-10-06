@@ -28,6 +28,11 @@ adzuna:
   country: ${ADZUNA_COUNTRY:za}
 
 whatsapp:
+  email-verification:
+    base-url: ${EMAIL_VERIFICATION_BASE_URL:http://localhost:5173}
+    from: ${EMAIL_VERIFICATION_FROM:}
+  storage:
+    directory: ${DOCUMENT_STORAGE_DIRECTORY:./data/uploads}
   bot:
     enabled: ${WHATSAPP_BOT_ENABLED:false}
   verify-token: ${WHATSAPP_VERIFY_TOKEN:}

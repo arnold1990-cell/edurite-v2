@@ -8,7 +8,7 @@ export function studentRedirectTarget(to: string, search: string, hash = '') {
   if (path === '/student/career-explorer' && !targetSearch) {
     const category = query.get('category');
     if (category === 'Courses' || category === 'Subjects') destination = '/student/study-options';
-    if (category === 'Institutions') destination = '/student/institutions';
+    if (category === 'Institutions') destination = '/student/study-options';
     if (category === 'Bursaries' || category === 'Opportunities') {
       destination = '/student/funding'; query.set('section', category === 'Bursaries' ? 'bursaries' : 'opportunities');
     }

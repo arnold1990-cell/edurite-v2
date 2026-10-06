@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 public class StudentAiGuidanceService {
 
     private final StudentService studentService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.edurite.student.service.ProfileGuidanceContext guidanceContext;
     private final GeminiService geminiService;
     private final BursaryRecommendationService bursaryRecommendationService;
     private final PlatformSettingsService platformSettingsService;
@@ -41,7 +43,7 @@ public class StudentAiGuidanceService {
         StudentProfile profile = studentService.getProfileEntity(principal);
         StudentPlanAccessService.StudentPlanAccess planAccess = studentPlanAccessService.resolveByUserId(profile.getUserId());
         CareerAdviceResponse baseResponse = geminiService.getCareerAdvice(new CareerAdviceRequest(
-                safe(profile.getQualificationLevel()),
+                safe(profile.getQualificationLevel()) + "; Grade: " + safe(profile.getSelectedGrade()) + "; Subjects/results: " + (guidanceContext == null ? academicContext(profile) : guidanceContext.describe(profile)),
                 safe(profile.getInterests()),
                 safe(profile.getSkills()),
                 safe(profile.getLocation())
@@ -82,6 +84,16 @@ public class StudentAiGuidanceService {
                 "Career guidance uses your stored profile and AI when live guidance is configured."
         );
         return new AiDashboardSummaryResponse(dashboard, insights, bursaries, careers.recommendedCareers());
+    }
+
+    private String academicContext(StudentProfile profile) {
+        try {
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var rows = mapper.readTree(profile.getSubjectAchievementsJson());
+            java.util.List<String> summary = new java.util.ArrayList<>();
+            for (var row : rows) summary.add(row.path("subjectName").asText() + ": level " + row.path("achievementLevel").asText() + ", mark " + row.path("markPercentage").asText());
+            return String.join("; ", summary);
+        } catch (Exception ex) { return "not available"; }
     }
 
     private String safe(String value) {

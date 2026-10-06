@@ -111,7 +111,7 @@ public class CareerRoadmapService {
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElseGet(() -> createDefaultProfile(user.getId()));
         List<ApsSubjectInput> inputs = readSubjectAchievements(profile.getSubjectAchievementsJson()).stream()
-                .map(item -> new ApsSubjectInput(item.subjectName(), null, item.achievementLevel(), item.achievementLevel()))
+                .map(item -> new ApsSubjectInput(item.subjectName(), item.markPercentage(), item.achievementLevel(), item.achievementLevel()))
                 .toList();
         String resultSetLabel = firstNonBlank(profile.getSelectedGrade(), "Profile subjects")
                 + (notBlank(profile.getTranscriptFileUrl()) ? " transcript" : " profile");
@@ -145,7 +145,7 @@ public class CareerRoadmapService {
                 .min(Integer::compareTo)
                 .orElse(null);
         CareerRoadmapGenerateResponse aiRoadmap = aiCareerRoadmapService.generate(
-                new CareerRoadmapGenerateRequest(request.careerName(), aps.grade(), aps.province(), request.subjects()),
+                new CareerRoadmapGenerateRequest(request.careerName(), aps.grade(), aps.province(), normalizeSubjectInputs(request.subjects(), profile)),
                 profile,
                 legacyContext(legacy),
                 requirementsContext(universityRequirements),
@@ -197,10 +197,14 @@ public class CareerRoadmapService {
 
     private List<ApsSubjectInput> normalizeSubjectInputs(List<ApsSubjectInput> inputs, StudentProfile profile) {
         if (inputs != null && !inputs.isEmpty()) {
-            return inputs;
+            Map<String, ApsSubjectInput> effective = new java.util.LinkedHashMap<>();
+            inputs.forEach(item -> effective.put(item.subjectName().trim().toLowerCase(java.util.Locale.ROOT), item));
+            readSubjectAchievements(profile.getSubjectAchievementsJson()).stream().filter(StudentSubjectAchievementDto::verified)
+                .forEach(item -> effective.put(item.subjectName().trim().toLowerCase(java.util.Locale.ROOT), new ApsSubjectInput(item.subjectName(), item.markPercentage(), item.achievementLevel(), item.achievementLevel())));
+            return new ArrayList<>(effective.values());
         }
         return readSubjectAchievements(profile.getSubjectAchievementsJson()).stream()
-                .map(item -> new ApsSubjectInput(item.subjectName(), null, item.achievementLevel(), item.achievementLevel()))
+                .map(item -> new ApsSubjectInput(item.subjectName(), item.markPercentage(), item.achievementLevel(), item.achievementLevel()))
                 .toList();
     }
 

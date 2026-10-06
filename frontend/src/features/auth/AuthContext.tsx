@@ -13,8 +13,8 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isHydrated: boolean;
   isStudentProfileStatusSyncing: boolean;
-  login: (payload: { email?: string; schoolName?: string; emisNumber?: string; password: string }, options?: { rememberMe?: boolean }) => Promise<User>;
-  loginWithGoogle: (idToken: string, role: 'STUDENT' | 'COMPANY', options?: { rememberMe?: boolean }) => Promise<User>;
+  login: (payload: { email?: string; schoolName?: string; emisNumber?: string; password: string }, options?: { rememberMe?: boolean; popiaConsentAccepted?: boolean }) => Promise<User>;
+  loginWithGoogle: (idToken: string, role: 'STUDENT' | 'COMPANY', options?: { rememberMe?: boolean; popiaConsentAccepted?: boolean }) => Promise<User>;
   logout: () => Promise<void>;
   registerStudent: (payload: StudentRegisterPayload) => Promise<RegistrationResponse>;
   registerCompany: (payload: CompanyRegisterPayload) => Promise<RegistrationResponse>;
@@ -304,7 +304,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isStudentProfileStatusSyncing,
       isAuthenticated: Boolean(authStore.getAccessToken() && user),
       login: async (payload, options) => setSession(await authService.login(payload), options),
-      loginWithGoogle: async (idToken, role, options) => setSession(await authService.googleSignIn(idToken, role), options),
+      loginWithGoogle: async (idToken, role, options) => setSession(await authService.googleSignIn(idToken, role, options?.popiaConsentAccepted), options),
       registerStudent: async (payload) => finalizeRegistration(await authService.registerStudent(payload)),
       registerCompany: async (payload) => finalizeRegistration(await authService.registerCompany(payload)),
       registerSchool: async (payload) => finalizeRegistration(await authService.registerSchool(payload)),

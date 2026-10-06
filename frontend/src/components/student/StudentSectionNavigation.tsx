@@ -96,9 +96,42 @@ export const studentSections = [
     "to": "/student/study-options",
     "label": "Study Options",
     "paths": [
-      "study-options"
+      "study-options",
+      "institutions",
+      "universities",
+      "colleges-tvets",
+      "university-applications"
     ],
-    "links": []
+    "links": [
+      [
+        "Recommended for You",
+        "study-options?section=recommended"
+      ],
+      [
+        "Explore",
+        "study-options?section=explore"
+      ],
+      [
+        "Universities",
+        "study-options?section=universities"
+      ],
+      [
+        "Colleges / TVET",
+        "study-options?section=colleges-tvets"
+      ],
+      [
+        "Programmes",
+        "study-options?section=programmes"
+      ],
+      [
+        "Saved",
+        "study-options?section=saved"
+      ],
+      [
+        "Applications",
+        "study-options?section=applications"
+      ]
+    ]
   },
   {
     "to": "/student/funding",
@@ -145,39 +178,6 @@ export const studentSections = [
     ]
   },
   {
-    "to": "/student/institutions",
-    "label": "Institutions",
-    "paths": [
-      "institutions",
-      "universities",
-      "colleges-tvets",
-      "university-applications"
-    ],
-    "links": [
-      [
-        "Explore",
-        "institutions?section=explore"
-      ],
-      [
-        "Universities",
-        "institutions?section=universities"
-      ],
-      [
-        "Colleges / TVET",
-        "institutions?section=colleges-tvets"
-      ],
-      [
-        "Programmes",
-        "institutions?section=programmes"
-      ],
-      ["Saved", "institutions?section=saved"],
-      [
-        "Applications",
-        "institutions?section=applications"
-      ]
-    ]
-  },
-  {
     "to": "/student/learning",
     "label": "Learning Resources",
     "paths": [
@@ -215,44 +215,6 @@ export const studentSections = [
     ]
   },
   {
-    "to": "/student/progress",
-    "label": "My Progress",
-    "paths": [
-      "progress",
-      "rewards"
-    ],
-    "links": [
-      [
-        "Overview",
-        "progress?section=overview"
-      ],
-      [
-        "Academic Progress",
-        "progress?section=academic"
-      ],
-      [
-        "Learning Progress",
-        "progress?section=learning"
-      ],
-      [
-        "Achievements",
-        "progress?section=achievements"
-      ],
-      [
-        "Points & Rewards",
-        "progress?section=rewards"
-      ]
-    ]
-  },
-  {
-    "to": "/student/goals",
-    "label": "My Goals",
-    "paths": [
-      "goals"
-    ],
-    "links": []
-  },
-  {
     "to": "/student/messages",
     "label": "Messages",
     "paths": [
@@ -264,12 +226,13 @@ export const studentSections = [
 
 export function studentSection(pathname: string, search = '') {
   const path = pathname.replace(/^\/student\/?/, '').replace(/\/$/, '');
+  if (['progress', 'goals', 'rewards'].some(prefix => path === prefix || path.startsWith(prefix + '/'))) return '/student/dashboard';
   const params = new URLSearchParams(search);
-  if (path === 'profile' && params.get('tab') === 'goals') return '/student/goals';
+  if (path === 'profile' && params.get('tab') === 'goals') return '/student/profile';
   if (path === 'explore' || path === 'career-explorer') {
     const category = params.get('category');
     if (category === 'Courses' || category === 'Subjects') return '/student/study-options';
-    if (category === 'Institutions') return '/student/institutions';
+    if (category === 'Institutions') return '/student/study-options';
     if (category === 'Bursaries' || category === 'Opportunities') return '/student/funding';
   }
   return studentSections.find(section => section.paths.some(prefix => path === prefix || path.startsWith(`${prefix}/`)))?.to
@@ -277,13 +240,15 @@ export function studentSection(pathname: string, search = '') {
 }
 
 export const studentTools = [
+  { label: 'Points & Rewards', to: '/student/dashboard?section=rewards' },
+  { label: 'Goals', to: '/student/profile?section=goals' },
   ...studentSections.flatMap(group => [{ label: group.label, to: group.to }, ...group.links.map(([label, path]) => ({ label: `${group.label} / ${label}`, to: `/student/${path}` }))]),
   { label: 'Qualifications and Experience', to: '/student/profile?section=career' },
   { label: 'Saved Profiles and Documents', to: '/student/profile?section=documents' },
   { label: 'Bursary Finder', to: '/student/funding?section=bursaries' },
   { label: 'Scholarship Assistant', to: '/student/funding?section=scholarships' },
-  { label: 'University Explorer / Universities', to: '/student/institutions?section=universities' },
-  { label: 'University Applications', to: '/student/institutions?section=applications' },
+  { label: 'University Explorer / Universities', to: '/student/study-options?section=universities' },
+  { label: 'University Applications', to: '/student/study-options?section=applications' },
   { label: 'Career Roadmaps', to: '/student/career-explorer?section=career-path' },
   ...['Subscription', 'Notifications', 'Settings'].map(label => ({ label, to: `/student/${label.toLowerCase()}` })),
 ];

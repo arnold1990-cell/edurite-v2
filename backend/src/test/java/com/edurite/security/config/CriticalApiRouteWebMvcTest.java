@@ -149,7 +149,8 @@ class CriticalApiRouteWebMvcTest {
                 null,
                 null,
                 false,
-                0
+                0,
+                null
         );
     }
 

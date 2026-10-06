@@ -1,3 +1,4 @@
+import { useSubjectCatalogue } from '@/hooks/useSubjectCatalogue';
 import { SubjectEditor } from '@/components/student/career/SubjectEditor';
 import { useSubscriptionAccess, RequireEntitlement, AiUsageDisplay } from '@/features/subscriptions/access';
 import { CareerRoadmapDetails } from '@/components/student/career/CareerRoadmapDetails';
@@ -23,23 +24,7 @@ import type {
 
 const grades = ['Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
 const provinces = ['Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal', 'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape'];
-const subjectOptions = [
-  'Mathematics',
-  'Mathematical Literacy',
-  'English HL',
-  'English FAL',
-  'Afrikaans FAL',
-  'Accounting',
-  'Business Studies',
-  'Economics',
-  'Information Technology',
-  'Computer Applications Technology',
-  'Physical Sciences',
-  'Life Sciences',
-  'Geography',
-  'History',
-  'Life Orientation',
-];
+
 const tabs = ['Roadmap', 'University Requirements', 'APS Readiness', 'Subject Requirements', 'Alternative Pathways', 'AI Study Plan'] as const;
 
 type FeedbackState = {
@@ -54,6 +39,8 @@ const slugifyFilename = (value: string) => value
   .replace(/^-+|-+$/g, '') || 'career-roadmap';
 
 export const StudentCareerRoadmapsExplorerPage = () => {
+  const catalogue = useSubjectCatalogue();
+  const subjectOptions = [...new Set(catalogue.data?.map(s => s.name) ?? [])];
   const [params] = useSearchParams();
   const queryClient = useQueryClient();
   const access = useSubscriptionAccess();
@@ -84,9 +71,10 @@ export const StudentCareerRoadmapsExplorerPage = () => {
 
   useEffect(() => {
     if (!profile.data && !apsProfile.data) return;
-    setGrade((current) => current || profile.data?.selectedGrade || apsProfile.data?.grade || '');
+    setGrade(profile.data?.selectedGrade || apsProfile.data?.grade || '');
     setProvince((current) => current || apsProfile.data?.province || '');
     setProfileSubjects(toSubjectRowsFromAps(apsProfile.data?.subjects));
+      if (activeSource === 'PROFILE') setGenerated(null);
   }, [profile.data, apsProfile.data]);
 
   const subjects = activeSource === 'PROFILE' ? profileSubjects : manualSubjects;

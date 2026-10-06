@@ -276,6 +276,7 @@ class StudentServiceTest {
                 null,
                 null,
                 null,
+                null,
                 null
         );
 
@@ -394,6 +395,7 @@ class StudentServiceTest {
                 List.of(),
                 List.of(),
                 List.of(),
+                null,
                 null
         );
 

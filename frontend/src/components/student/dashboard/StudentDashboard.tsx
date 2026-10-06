@@ -33,7 +33,7 @@ function DataState({ loading, error, empty }: { loading?: boolean; error?: boole
 }
 const shortcuts = [
   { title: 'Career Explorer', description: 'Discover careers based on your interests and strengths.', href: '/student/recommendations/careers', icon: Compass, tone: 'orange', image: careersPhoto },
-  { title: 'Study Options', description: 'Find courses and explore your next steps.', href: '/student/learning-centre', icon: GraduationCap, tone: 'blue', image: coursesPhoto },
+  { title: 'Study Options', description: 'Find courses and explore your next steps.', href: '/student/study-options', icon: GraduationCap, tone: 'blue', image: coursesPhoto },
   { title: 'Institutions', description: 'Explore universities, TVET colleges and more.', href: '/student/universities', icon: Layers3, tone: 'purple', image: careersPhoto },
   { title: 'Bursaries & Funding', description: 'Find bursaries and other funding opportunities.', href: '/student/applications', icon: Wallet, tone: 'green', image: bursariesPhoto },
 ];
@@ -75,14 +75,14 @@ export function StudentDashboard({ renderDetails }: { renderDetails?: (data: Das
       <Panel title="My Progress" href="#dashboard-progress-details" id="dashboard-progress" className="ed-progress-panel"><div className="ed-progress-body"><div><ProgressRing value={progressValue} /><p className="ed-ring-caption">Overall Progress</p></div><ul className="ed-checklist">{checklist.map((item) => <li key={item.label}><span className={item.complete ? 'ed-check is-complete' : 'ed-check'} aria-label={item.complete === null ? 'Unavailable' : item.complete ? 'Complete' : 'Not complete'}>{item.complete ? <Check size={10} /> : null}</span>{item.label}</li>)}</ul></div>{progress.isError && <p className="ed-inline-message">Progress is currently unavailable.</p>}</Panel>
     </div>
     <div className="ed-shortcuts">{shortcuts.map(({ title, description, href, icon: Icon, tone, image }) => <Link key={title} to={href} className={`ed-shortcut ed-shortcut-${tone}`}><Icon className="ed-shortcut-icon" size={36} /><div><h2>{title}</h2><p>{description}</p></div><img src={image} alt="" /><span className="ed-arrow"><ArrowRight size={16} /></span></Link>)}</div>
-    <div className="ed-lower-grid">
+    <div id="progress" className="ed-lower-grid">
       <div className="ed-column ed-left-column">
         <Panel title="My Academic Performance" icon={BarChart3} tone="blue" href="/student/profile" className="ed-academics">
           <div className="ed-tabs" aria-label="Academic view"><button aria-pressed={academicTab === 'results'} className={academicTab === 'results' ? 'is-active' : ''} onClick={() => setAcademicTab('results')}>Latest Results</button><button aria-pressed={academicTab === 'subjects'} className={academicTab === 'subjects' ? 'is-active' : ''} onClick={() => setAcademicTab('subjects')}>Subject Performance</button><Link to="/student/career-roadmaps">APS Calculator</Link></div>
           {subjects.length ? <div className={`ed-marks ${academicTab === 'subjects' ? 'ed-marks-expanded' : ''}`}>{subjects.slice(0, academicTab === 'results' ? 6 : subjects.length).map((subject, index) => { const mark = academicMark(subject); return <div key={`${subject.subjectName}-${index}`} className={`ed-mark ${mark !== null && mark >= 75 ? 'ed-mark-green' : 'ed-mark-orange'}`}><strong>{mark !== null ? `${mark}%` : subject.achievementLevel ? `L${subject.achievementLevel}` : '—'}</strong><span>{subject.subjectName}</span>{mark !== null ? <progress max={100} value={mark} aria-label={`${subject.subjectName} mark`} /> : <small>{subject.achievementLevel ? 'NSC level' : 'No mark'}</small>}</div>; })}</div> : <DataState loading={profile.isLoading} error={profile.isError} empty="Add your academic results to your profile to see your subjects here." />}
         </Panel>
-        <Panel title="Recommended Study Options" icon={GraduationCap} href="/student/learning-centre" className="ed-study">
-          {studyOptions.length ? <div className="ed-study-cards">{studyOptions.map((item) => <Link to="/student/learning-centre" key={item.id} className="ed-study-card"><img src={coursesPhoto} alt="" /><div><h3>{item.title}</h3><p>{item.rationale}</p><span>Explore course <ArrowRight size={13} /></span></div></Link>)}</div> : <DataState loading={recs.isLoading} error={recs.isError} empty="Your recommended courses will appear here when available. Explore the Learning Centre to find study options." />}
+        <Panel title="Recommended Study Options" icon={GraduationCap} href="/student/study-options" className="ed-study">
+          {studyOptions.length ? <div className="ed-study-cards">{studyOptions.map((item) => <Link to={`/courses/${item.id.replace('course-', '')}`} key={item.id} className="ed-study-card"><img src={coursesPhoto} alt="" /><div><h3>{item.title}</h3><p>{item.rationale}</p><span>Explore course <ArrowRight size={13} /></span></div></Link>)}</div> : <DataState loading={recs.isLoading} error={recs.isError} empty="Your recommended courses will appear here when available. Complete your interests and subjects, or explore Study Options." />}
         </Panel>
       </div>
       <div className="ed-column ed-middle-column">
@@ -94,7 +94,7 @@ export function StudentDashboard({ renderDetails }: { renderDetails?: (data: Das
         </Panel>
       </div>
       <div className="ed-column ed-right-column">
-        <Panel title="My Goals" icon={Target} href="/student/profile" action="Edit" id="dashboard-goals" className="ed-goals">
+        <Panel title="My Goals" icon={Target} href="/student/profile?section=goals" action="Edit" id="dashboard-goals" className="ed-goals">
           {goal || milestones.length ? <ul className="ed-goal-list">{goal && <li><Target size={17} /><span>{goal}</span></li>}{milestones.slice(0, 4).map((item, index) => <li key={`${item}-${index}`}><Circle size={17} /><span>{item}</span></li>)}</ul> : <DataState loading={dashboard.isLoading} error={dashboard.isError} empty="Set your career goal in My Profile. Your next milestones will appear here." />}
         </Panel>
         <Panel title="Upcoming Opportunities" icon={CalendarDays} href="/student/applications" className="ed-opportunities">

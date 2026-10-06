@@ -47,6 +47,11 @@ public class User extends BaseEntity {
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
 
+    private boolean emailVerificationRequired;
+    private String emailVerificationHash;
+    private OffsetDateTime emailVerificationExpiresAt;
+    private OffsetDateTime emailVerificationSentAt;
+
     // Used for first login or password reset flows.
     @Column(name = "must_change_password", nullable = false)
     private boolean mustChangePassword;

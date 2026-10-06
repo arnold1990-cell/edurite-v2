@@ -26,6 +26,7 @@ export interface SchoolRegisterPayload { schoolName: string; emisNumber: string;
 export interface LocationOption { id: string; name: string; code: string; }
 
 export interface StudentProfile {
+  schoolName?: string;
   id: string;
   firstName?: string;
   lastName?: string;
@@ -57,6 +58,10 @@ export interface StudentProfile {
 }
 
 export interface StudentSubjectAchievement {
+  source?: "MANUAL" | "TRANSCRIPT";
+  verified?: boolean;
+  documentId?: string;
+  updatedAt?: string;
   subjectName: string;
   achievementLevel?: number | null;
   markPercentage?: number | null;

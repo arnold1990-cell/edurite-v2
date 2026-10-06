@@ -1,3 +1,5 @@
+import { useSubjectCatalogue } from '@/hooks/useSubjectCatalogue';
+import { apiClient } from '@/services/apiClient';
 import { useSubscriptionAccess, AiUsageDisplay, FeatureLock } from '@/features/subscriptions/access';
 import '@/features/subscriptions/subscription.css';
 import { AiGuidance } from '@/components/student/guidance/AiGuidance';
@@ -89,51 +91,6 @@ const readinessPalette: Record<ReadinessStatus, { badge: 'emerald' | 'amber' | '
 };
 
 const STUDENT_GRADES = ['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'] as const;
-const SENIOR_PHASE_SUBJECT_OPTIONS = [
-  'Home Language',
-  'First Additional Language',
-  'Mathematics',
-  'Natural Sciences',
-  'Social Sciences',
-  'Technology',
-  'Economic and Management Sciences',
-  'Life Orientation',
-  'Creative Arts',
-] as const;
-const FET_SUBJECT_OPTIONS = [
-  'Accounting',
-  'Agricultural Management Practices',
-  'Agricultural Sciences',
-  'Agricultural Technology',
-  'Business Studies',
-  'Civil Technology',
-  'Computer Applications Technology',
-  'Consumer Studies',
-  'Dance Studies',
-  'Design',
-  'Dramatic Arts',
-  'Economics',
-  'Electrical Technology',
-  'Engineering Graphics and Design',
-  'Geography',
-  'History',
-  'Hospitality Studies',
-  'Information Technology',
-  'Life Orientation',
-  'Life Sciences',
-  'Mathematical Literacy',
-  'Mathematics',
-  'Mechanical Technology',
-  'Music',
-  'Physical Sciences',
-  'Religion Studies',
-  'Tourism',
-  'Visual Arts',
-  'Home Language',
-  'First Additional Language',
-  'Second Additional Language',
-] as const;
-const ALL_SUBJECT_OPTIONS = [...SENIOR_PHASE_SUBJECT_OPTIONS, ...FET_SUBJECT_OPTIONS] as const;
 const isSeniorPhaseGrade = (grade: string) => grade === 'Grade 8' || grade === 'Grade 9';
 const isFetGrade = (grade: string) => grade === 'Grade 10' || grade === 'Grade 11' || grade === 'Grade 12';
 const ACHIEVEMENT_LEVELS = [
@@ -164,12 +121,13 @@ const normalizeText = (value: string) => value.toLowerCase().replace(/[^a-z0-9 ]
 const normalizeSubject = (value: string) => normalizeText(value).replace(/\b(home|first|additional|language)\b/g, '').replace(/\s+/g, ' ').trim();
 const getInitials = (firstName?: string, lastName?: string) => `${(firstName?.[0] ?? '').toUpperCase()}${(lastName?.[0] ?? '').toUpperCase()}` || 'ST';
 const toSubjectRow = (item?: StudentSubjectAchievement | null): StudentSubjectAchievement => ({
+  ...item,
   subjectName: item?.subjectName ?? '',
   achievementLevel: item?.achievementLevel ?? null,
 });
 
-const parseProgrammeChecks = (requirements: string[] = []): ProgrammeRequirementCheck[] => {
-  const subjectsByLength = [...ALL_SUBJECT_OPTIONS].sort((a, b) => b.length - a.length);
+const parseProgrammeChecks = (requirements: string[] = [], subjectNames: string[] = []): ProgrammeRequirementCheck[] => {
+  const subjectsByLength = [...subjectNames].sort((a, b) => b.length - a.length);
   const checks: ProgrammeRequirementCheck[] = [];
   const seen = new Set<string>();
 
@@ -196,13 +154,14 @@ const evaluateProgrammeQualification = (
   programme: UniversitySourcesAnalysisResponse['recommendedProgrammes'][number],
   selectedSubjects: StudentSubjectAchievement[],
   alternatives: string[],
+  subjectNames: string[] = selectedSubjects.map(s => s.subjectName),
 ): ProgrammeQualificationEvaluation => {
   const studentMap = new Map(
     selectedSubjects
       .filter((item) => item.subjectName)
       .map((item) => [normalizeSubject(item.subjectName), item.achievementLevel ?? null]),
   );
-  const parsedChecks = parseProgrammeChecks(programme.admissionRequirements ?? []);
+  const parsedChecks = parseProgrammeChecks(programme.admissionRequirements ?? [], subjectNames);
   const missingRequirements: string[] = [];
   const weakSubjects: string[] = [];
   const improvementSuggestions: string[] = [];
@@ -495,7 +454,9 @@ const PremiumStudentDashboard = ({
 };
 
 export const StudentDashboardPage = () => {
+  const [dashboardParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<PremiumDashboardTab>('OVERVIEW');
+  if (['rewards', 'achievements'].includes(dashboardParams.get('section') || '')) return <><Link to="/student/dashboard">Back to Dashboard</Link><StudentRewardsPage /></>;
   return <ReferenceStudentDashboard renderDetails={(dashboard, recommendations) => {
     const careers = recommendations?.suggestedCareers ?? [];
     const bursaries = recommendations?.suggestedBursaries ?? [];
@@ -708,6 +669,8 @@ export const StudentMySchoolPage = () => {
   );
 };
 export const StudentProfilePage = () => {
+  const catalogue = useSubjectCatalogue();
+  const transcripts = useAppQuery({ queryKey: ['student-transcripts'], queryFn: () => apiClient.get<Array<{ documentId: string; extraction: { message: string; grade?: string; year?: string; subjects: StudentSubjectAchievement[] }; verifiedAt?: string }>>('/student/transcripts').then(r => r.data) });
   const qc = useQueryClient();
   const { user, syncStudentProfileState } = useAuth();
   const profile = useAppQuery({ queryKey: ['me'], queryFn: studentService.getMe });
@@ -738,9 +701,14 @@ export const StudentProfilePage = () => {
     qc.invalidateQueries({ queryKey: ['profile-ai-readiness'] });
     qc.invalidateQueries({ queryKey: ['ai-guidance-university-sources'] });
     qc.invalidateQueries({ queryKey: ['career-roadmap-career-match'] });
+    qc.invalidateQueries({ queryKey: ['student-transcripts'] });
+    qc.invalidateQueries({ queryKey: ['profile-ai-recommendations-fallback'] });
+    qc.invalidateQueries({ queryKey: ['study-recommendations'] });
+    qc.invalidateQueries({ queryKey: ['dashboard-learning-recommended'] });
   };
 
   const toFormState = (source?: StudentProfile | null) => ({
+    schoolName: source?.schoolName ?? '',
     firstName: source?.firstName ?? '',
     lastName: source?.lastName ?? '',
     phone: source?.phone ?? '',
@@ -773,7 +741,7 @@ export const StudentProfilePage = () => {
   const normalizedSubjects = useMemo(
     () => subjectRows
       .filter((item) => item.subjectName.trim())
-      .map((item) => ({ subjectName: item.subjectName.trim(), achievementLevel: item.achievementLevel ?? null })),
+      .map((item) => ({ ...item, subjectName: item.subjectName.trim(), achievementLevel: item.achievementLevel ?? null })),
     [subjectRows],
   );
 
@@ -878,8 +846,8 @@ export const StudentProfilePage = () => {
 
   const selectedGrade = value('selectedGrade');
   const currentSubjectOptions = useMemo(
-    () => (isSeniorPhaseGrade(selectedGrade) ? SENIOR_PHASE_SUBJECT_OPTIONS : FET_SUBJECT_OPTIONS),
-    [selectedGrade],
+    () => [...new Set([...(catalogue.data ?? []).filter(s => s.phase === (isSeniorPhaseGrade(selectedGrade) ? 'Senior' : 'FET')).map(s => s.name), ...subjectRows.map(s => s.subjectName).filter(Boolean)])],
+    [selectedGrade, catalogue.data, subjectRows],
   );
   const subjectSelectionHeading = isFetGrade(selectedGrade) ? 'FET Subject Selection' : 'Subject Selection';
   const subjectPlaceholder = isFetGrade(selectedGrade) ? 'Select FET subject' : 'Select subject';
@@ -896,16 +864,6 @@ export const StudentProfilePage = () => {
   const access = useSubscriptionAccess();
   const isPremiumStudent = Boolean(access.data?.entitlements.includes('ACADEMIC_ANALYSIS'));
 
-  useEffect(() => {
-    if (!selectedGrade) return;
-    const allowedSubjects = new Set<string>(currentSubjectOptions);
-    setSubjectRows((rows) => {
-      const normalizedRows = rows.map((row) => (allowedSubjects.has(row.subjectName) || !row.subjectName
-        ? row
-        : { ...row, subjectName: '', achievementLevel: null }));
-      return normalizedRows.length ? normalizedRows : [{ subjectName: '', achievementLevel: null }];
-    });
-  }, [selectedGrade, currentSubjectOptions]);
 
   useEffect(() => {
     if (isPremiumStudent && !profileReadinessMessage && guidanceRefresh === 0 && !profile.isLoading) {
@@ -931,7 +889,7 @@ export const StudentProfilePage = () => {
   const qualificationEvaluations = useMemo<ProgrammeQualificationEvaluation[]>(() => {
     if (!aiPreview.data?.recommendedProgrammes?.length) return [];
     const alternatives = (aiPreview.data.recommendedCareers ?? []).map((career) => career.name).filter(Boolean).slice(0, 5);
-    return aiPreview.data.recommendedProgrammes.slice(0, 6).map((programme) => evaluateProgrammeQualification(programme, normalizedSubjects, alternatives));
+    return aiPreview.data.recommendedProgrammes.slice(0, 6).map((programme) => evaluateProgrammeQualification(programme, normalizedSubjects, alternatives, catalogue.data?.map(s => s.name)));
   }, [aiPreview.data, normalizedSubjects]);
   const fallbackCareerRecommendations = recommendations.data?.suggestedCareers?.slice(0, 5) ?? [];
   const aiStatus = aiPreview.data?.status;
@@ -999,6 +957,7 @@ export const StudentProfilePage = () => {
     </article>);
   const academicContent = <>
     <article className="ep-form-card"><h3>Academic Information</h3><div className="ep-editor-fields">
+      <label className="ep-field"><span>School</span><Input maxLength={200} value={value('schoolName')} onChange={event => setForm(current => ({ ...current, schoolName: event.target.value }))} /><small>Profile information only. School access still requires approval.</small></label>
       <label className="ep-field"><span>Grade</span><select value={value('selectedGrade')} onChange={(event) => setForm((current) => ({ ...current, selectedGrade: event.target.value }))}><option value="">Select grade</option>{STUDENT_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select></label>
       <label className="ep-field"><span>Qualification level</span><Input value={value('qualificationLevel')} onChange={(event) => setForm((current) => ({ ...current, qualificationLevel: event.target.value }))} /></label>
     </div></article>
@@ -1006,27 +965,29 @@ export const StudentProfilePage = () => {
       <div className="mb-3 flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-slate-900">{subjectSelectionHeading}</h3>
-          <p className="text-sm text-slate-600">Select subjects from your report card and capture achievement levels.</p>
+          <p className="text-sm text-slate-600">Select subjects and named languages from your report card. Enter exact percentages when available.</p>
         </div>
         <Button type="button" className="bg-slate-800 hover:bg-slate-700" onClick={addSubjectRow}>Add subject</Button>
       </div>
+      {catalogue.isError && <p role="alert">Subject catalogue could not load. <button onClick={() => catalogue.refetch()}>Retry</button></p>}
       <div className="space-y-3">
         {subjectRows.map((row, index) => {
           const selectedElsewhere = new Set(subjectRows.filter((_, rowIndex) => rowIndex !== index).map((item) => item.subjectName));
-          return <div key={index} className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 md:grid-cols-[1fr_220px_auto] md:items-end">
+          return <div key={index} className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50/70 p-3 md:grid-cols-2 md:items-end">
             <label className="space-y-1 text-sm font-medium text-slate-700">Subject
-              <select aria-label="Subject" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500" value={row.subjectName} onChange={(e) => setSubjectField(index, { subjectName: e.target.value })}>
+              <select aria-label="Subject" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500" disabled={row.verified} value={row.subjectName} onChange={(e) => setSubjectField(index, { subjectName: e.target.value })}>
                 <option value="">{subjectPlaceholder}</option>
                 {currentSubjectOptions.map((subject) => <option key={subject} value={subject} disabled={selectedElsewhere.has(subject)}>{subject}</option>)}
               </select>
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700">Achievement level
-              <select aria-label="Achievement level" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500" value={row.achievementLevel ?? ''} onChange={(e) => setSubjectField(index, { achievementLevel: e.target.value ? Number(e.target.value) : null })}>
+              <select aria-label="Achievement level" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 focus:ring-primary-500" disabled={row.verified || row.markPercentage != null} value={row.achievementLevel ?? ''} onChange={(e) => setSubjectField(index, { achievementLevel: e.target.value ? Number(e.target.value) : null })}>
                 <option value="">Select level</option>
                 {ACHIEVEMENT_LEVELS.map((level) => <option key={level.value} value={level.value}>{level.label}</option>)}
               </select>
             </label>
-            <Button type="button" aria-label={`Remove subject ${index + 1}`} className="bg-rose-600 hover:bg-rose-500" onClick={() => removeSubjectRow(index)} disabled={subjectRows.length === 1}>Remove<span className="sr-only"> subject {index + 1}</span></Button>
+            <label className="ep-field"><span>Mark (%)</span><Input type="number" min={0} max={100} disabled={row.verified} value={row.markPercentage ?? ''} onChange={e => setSubjectField(index, { markPercentage: e.target.value === '' ? null : Number(e.target.value) })} /><small>{row.verified ? 'Verified transcript ? protected result' : row.source === 'TRANSCRIPT' ? 'Extracted transcript ? awaiting review' : 'Manual entry'}</small></label>
+            <Button type="button" aria-label={`Remove subject ${index + 1}`} className="bg-rose-600 hover:bg-rose-500" onClick={() => removeSubjectRow(index)} disabled={subjectRows.length === 1 || row.verified}>Remove<span className="sr-only"> subject {index + 1}</span></Button>
           </div>;
         })}
       </div>
@@ -1101,7 +1062,8 @@ export const StudentProfilePage = () => {
       </article>
     )}</>;
   const documentsContent = (    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
-      <h3 className="text-lg font-semibold text-slate-900">Documents</h3>
+      <h3 className="text-lg font-semibold text-slate-900">Documents</h3><p className="text-sm">Your transcript satisfies the academic document requirement. A CV is optional.</p>
+      {transcripts.data?.slice(-1).map(item => <section key={item.documentId} className="mt-3 rounded border p-3"><p role="status">{item.extraction.message}</p><p>{item.extraction.grade} {item.extraction.year}</p>{item.verifiedAt && <p>Verified transcript</p>}<ul>{item.extraction.subjects.map(subject => <li key={subject.subjectName}>{subject.subjectName}: {subject.markPercentage}%</li>)}</ul><Link to="/student/profile?section=academic">Review academic results</Link></section>)}
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
         <label className="block cursor-pointer rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4 transition hover:border-primary-300 hover:bg-primary-50/40">
           <div className="flex items-start justify-between gap-3">
@@ -1197,7 +1159,7 @@ export const StudentProfilePage = () => {
   return <StudentProfileView
     profile={p}
     authenticatedName={user?.fullName}
-    schoolName={linkedSchool.data?.status === 'APPROVED' ? linkedSchool.data.school?.name : undefined}
+    schoolName={p.schoolName || (linkedSchool.data?.status === 'APPROVED' ? linkedSchool.data.school?.name : undefined)}
     form={form}
     onChange={(field, nextValue) => { update.reset(); setForm((current) => ({ ...current, [field]: nextValue })); }}
     onSave={() => update.mutateAsync()}
@@ -1235,7 +1197,8 @@ function PersonalisedCareerRecommendations() {
   });
   return <Section title="Career Guidance" description="Personalised career recommendations based on your learner profile.">
     <AiUsageDisplay />
-    <Button disabled={advice.isPending} onClick={() => advice.mutate()}>{advice.isPending ? 'Finding your pathways...' : 'Generate career recommendations'}</Button>
+    <Link to="/student/profile?section=interests">Review interests and skills</Link>
+    <Button disabled={advice.isPending} onClick={() => advice.mutate()}>{advice.isPending ? 'Finding your pathways...' : 'Update Career Recommendations'}</Button>
     {advice.isError && <p role="alert">{(advice.error as ApiError)?.message || 'Could not generate guidance. Please try again.'}</p>}
     <div className="grid gap-4 md:grid-cols-2">{advice.data?.recommendedCareers.map(career => <article key={career.name} className="card p-5">
       <h2 className="text-lg font-semibold">{career.name}</h2><p>{career.reason}</p>
@@ -1246,6 +1209,7 @@ function PersonalisedCareerRecommendations() {
 }
 
 const AdvancedCareerRecommendations = ({ onDemand = true }: { onDemand?: boolean }) => {
+  const subjectCatalogue = useSubjectCatalogue();
   const isDemoMode = aiGuidanceService.demoModeEnabled;
   const profile = useAppQuery({ queryKey: ['me'], queryFn: studentService.getMe });
   const [guidanceMode, setGuidanceMode] = useState<'FAST' | 'DEEP'>('FAST');
@@ -1536,7 +1500,7 @@ const AdvancedCareerRecommendations = ({ onDemand = true }: { onDemand?: boolean
     ) : null}
   </Section>;
   if (!onDemand) return guidanceDetails;
-  return <AiGuidance qualifications={aiPremiumUnlocked && !aiUnavailable ? programmes.map(programme => evaluateProgrammeQualification(programme, currentProfile?.subjectAchievements ?? [], careers.map(career => career.name))) : []} profile={currentProfile} advice={aiUnavailable ? undefined : aiAdvice.data} careers={aiUnavailable ? [] : visibleCareers} premium={aiPremiumUnlocked} loading={isSearching} error={profileReadinessMessage || (guidanceRequest > 0 && aiUnavailable ? AI_ERROR_MESSAGE : null)} details={guidanceDetails} controls={<>
+  return <AiGuidance qualifications={aiPremiumUnlocked && !aiUnavailable ? programmes.map(programme => evaluateProgrammeQualification(programme, currentProfile?.subjectAchievements ?? [], careers.map(career => career.name), subjectCatalogue.data?.map(s => s.name))) : []} profile={currentProfile} advice={aiUnavailable ? undefined : aiAdvice.data} careers={aiUnavailable ? [] : visibleCareers} premium={aiPremiumUnlocked} loading={isSearching} error={profileReadinessMessage || (guidanceRequest > 0 && aiUnavailable ? AI_ERROR_MESSAGE : null)} details={guidanceDetails} controls={<>
     <span>Guidance:</span><button type="button" aria-pressed={guidanceMode === 'FAST'} onClick={() => setGuidanceMode('FAST')}>Fast</button><button type="button" aria-pressed={guidanceMode === 'DEEP'} disabled={!isPremium} onClick={() => setGuidanceMode('DEEP')}>Deep</button>
     <button type="button" className="ec-generate" disabled={isSearching || Boolean(profileReadinessMessage)} onClick={() => setGuidanceRequest(count => count + 1)}>{guidanceRequest ? 'Regenerate guidance' : 'Generate my guidance'}</button>
     {!isPremium && <Link to="/student/subscription">Pro unlocks Deep guidance</Link>}
@@ -1848,13 +1812,14 @@ const fallbackPsychometricDimensions = [
 ];
 
 export const StudentPsychometricPage = () => {
+  const [stage, setStage] = useState<'instructions' | 'questions' | 'results'>('instructions');
   const qc = useQueryClient();
   const assessments = useAppQuery({ queryKey: ['psychometric', 'assessments'], queryFn: psychometricService.assessments });
   const latest = useAppQuery({ queryKey: ['psychometric', 'latest'], queryFn: psychometricService.latestStudent, retry: false });
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
   useEffect(() => {
     if (!selectedAssessmentId && assessments.data?.length) {
-      setSelectedAssessmentId(assessments.data[0].id);
+      setSelectedAssessmentId((assessments.data.find(item => item.code === 'EDURITE_CAREER_V2') || assessments.data[0]).id);
     }
   }, [assessments.data, selectedAssessmentId]);
   const questions = useAppQuery({
@@ -1899,18 +1864,14 @@ export const StudentPsychometricPage = () => {
           questionId: question.id,
           score: questionScores[question.id] ?? Math.round((question.minScore + question.maxScore) / 2),
         }));
-        try {
-          return await psychometricService.submitAssessmentAttempt(selectedAssessmentId, attemptAnswers);
-        } catch {
-          return submitLegacy(assessmentQuestions.map((question) => ({
-            dimension: question.dimensionKey,
-            score: questionScores[question.id] ?? Math.round((question.minScore + question.maxScore) / 2),
-          })));
-        }
+        return await psychometricService.submitAssessmentAttempt(selectedAssessmentId, attemptAnswers);
       }
       return submitLegacy(Object.entries(scores).map(([dimension, score]) => ({ dimension, score })));
     },
     onSuccess: () => {
+      setStage('results');
+      qc.invalidateQueries({ queryKey: ['study-recommendations'] });
+      qc.invalidateQueries({ queryKey: ['profile-ai-recommendations-fallback'] });
       if (selectedAssessmentId) {
         qc.invalidateQueries({ queryKey: ['psychometric', 'history', selectedAssessmentId] });
       }
@@ -1934,6 +1895,9 @@ export const StudentPsychometricPage = () => {
   const currentQuestion = assessmentQuestions.length ? assessmentQuestions[Math.min(activeQuestionIndex, assessmentQuestions.length - 1)] : null;
   const canSubmitAssessment = assessmentQuestions.length ? answeredQuestionCount === assessmentQuestions.length : true;
 
+  const result = submit.data || history.data?.[0] || latest.data;
+  if (stage === 'results' && result) return <Section title="Your assessment results"><p>This is career exploration, not a clinical diagnosis.</p><h2>Key strengths</h2><p>{result.strengthAreas?.join(', ') || 'No distinct strengths identified yet'}</p><h2>Development areas</h2><p>{result.growthAreas?.join(', ') || 'Keep exploring your skills'}</p><h2>Interests and work preferences</h2><p>{result.interpretation}</p><dl>{Object.entries(result.scores ?? {}).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{Number(value).toFixed(1)} / 5</dd></div>)}</dl><Link to="/student/career-explorer?section=guidance">Update Career Recommendations</Link><Link className="block" to="/student/study-options">Explore related study areas</Link><Button onClick={() => { submit.reset(); setQuestionScores({}); setStage('instructions'); }}>Retake assessment</Button></Section>;
+  if (stage === 'instructions') return <Section title="Discover your interests and strengths"><p>This assessment explores your interests, problem-solving, creativity, communication, leadership and practical work preferences. Your results contribute to career and study guidance.</p><p>Allow about 5?10 minutes. Answer honestly about how you usually feel or work. There are no correct personality answers and this is not a medical or psychological diagnosis.</p><p>Choose a response from strongly disagree (1) to strongly agree (5) for every statement.</p>{assessments.isLoading || questions.isLoading ? <p role="status">Loading assessment...</p> : assessments.isError || questions.isError || !assessmentQuestions.length ? <p role="alert">The assessment is unavailable. <button onClick={() => { assessments.refetch(); questions.refetch(); }}>Retry</button></p> : <Button onClick={() => setStage('questions')}>Start assessment</Button>}{result && <Button onClick={() => setStage('results')}>View previous results</Button>}</Section>;
   return <Section title="Psychometric Test">
     <p className="text-sm text-slate-600">Complete this quick assessment to improve guidance and learning recommendations.</p>
     {!!assessments.data?.length && (
@@ -1969,17 +1933,7 @@ export const StudentPsychometricPage = () => {
               <Badge color="blue">{currentQuestion.dimensionKey}</Badge>
             </div>
             <p className="text-sm text-slate-800">{currentQuestion.prompt}</p>
-            <input
-              type="range"
-              min={currentQuestion.minScore}
-              max={currentQuestion.maxScore}
-              value={questionScores[currentQuestion.id] ?? Math.round((currentQuestion.minScore + currentQuestion.maxScore) / 2)}
-              onChange={(event) => setQuestionScores((state) => ({ ...state, [currentQuestion.id]: Number(event.target.value) }))}
-              className="w-full"
-            />
-            <p className="text-xs text-slate-500">
-              Score: {questionScores[currentQuestion.id] ?? Math.round((currentQuestion.minScore + currentQuestion.maxScore) / 2)} / {currentQuestion.maxScore}
-            </p>
+            <fieldset><legend>Your response</legend><div className="flex flex-wrap gap-3">{Array.from({ length: currentQuestion.maxScore - currentQuestion.minScore + 1 }, (_, i) => i + currentQuestion.minScore).map(score => <label key={score}><input type="radio" name={currentQuestion.id} checked={questionScores[currentQuestion.id] === score} onChange={() => setQuestionScores(state => ({ ...state, [currentQuestion.id]: score }))} /> {score}{score === 1 ? ' ? Strongly disagree' : score === 5 ? ' ? Strongly agree' : ''}</label>)}</div></fieldset>
             <div className="flex flex-wrap justify-between gap-2">
               <Button
                 onClick={() => setActiveQuestionIndex((index) => Math.max(index - 1, 0))}
@@ -2164,10 +2118,10 @@ export const StudentLearningCentrePage = () => {
     duration: resource.duration ?? `${resource.estimatedMinutes ?? 60}m`,
     progress: resource.progress ?? 0,
     instructor: resource.instructor ?? resource.provider ?? 'EduRite Learning Team',
-    lessons: resource.lessons?.length ? resource.lessons : ['Overview', 'Core concepts', 'Practice set'],
+    lessons: resource.lessons ?? [],
     provider: resource.provider ?? 'EduRite',
     isFree: resource.isFree ?? true,
-    sourceUrl: resource.externalUrl ?? resource.url,
+    sourceUrl: /^https?:\/\//i.test(resource.externalUrl ?? resource.url ?? '') ? resource.externalUrl ?? resource.url : undefined,
   }));
   const recommendedIds = new Set((recommended.data ?? []).map((resource) => resource.id));
   const externalResourcesRaw = [
@@ -2188,10 +2142,10 @@ export const StudentLearningCentrePage = () => {
     duration: resource.duration ?? `${resource.estimatedMinutes ?? 30}m`,
     progress: resource.progress ?? 0,
     instructor: resource.instructor ?? resource.provider ?? 'External Provider',
-    lessons: resource.lessons?.length ? resource.lessons : ['Open resource', 'Study key topics', 'Practice'],
+    lessons: resource.lessons ?? [],
     provider: resource.provider ?? 'External Provider',
     isFree: resource.isFree ?? true,
-    sourceUrl: resource.externalUrl ?? resource.url,
+    sourceUrl: /^https?:\/\//i.test(resource.externalUrl ?? resource.url ?? '') ? resource.externalUrl ?? resource.url : undefined,
   }));
 
   const externalLoading = booksQuery.isFetching || googleBooksQuery.isFetching || videosQuery.isFetching || quizzesQuery.isFetching;
@@ -2203,24 +2157,6 @@ export const StudentLearningCentrePage = () => {
   const showGoogleBooks502 = (activeTab === 'Books' || activeTab === 'Study Materials')
     && googleBooksQuery.isError
     && googleBooksErrorStatus === 502;
-  const studyMaterialsFallback: LearningCentreResource[] = [
-    {
-      id: 'fallback-study-1',
-      title: 'No courses found yet',
-      description: 'Try another category or refresh courses.',
-      category: 'Study Materials',
-      subject: 'Exam Preparation',
-      grade: 'All Grades',
-      level: 'Beginner',
-      resourceType: 'Study Guide',
-      duration: '10m',
-      progress: 0,
-      instructor: 'EduRite Learning Team',
-      lessons: ['Refresh courses', 'Switch category', 'Try a broader search'],
-      provider: 'EduRite',
-      isFree: true,
-    },
-  ];
 
   const tabFilteredExternal = externalResources.filter((item) => {
     if (activeTab === 'Books') return item.category === 'Books' || item.resourceType === 'Book';
@@ -2235,11 +2171,9 @@ export const StudentLearningCentrePage = () => {
   const preferExternalTab = activeTab !== 'Past Papers';
   const resources = preferExternalTab && tabFilteredExternal.length > 0
     ? [...fromApi, ...tabFilteredExternal]
-    : preferExternalTab && activeTab === 'Study Materials' && fromApi.length === 0
-      ? [...studyMaterialsFallback]
-      : [...fromApi];
+    : [...fromApi];
 
-  const filteredResources = resources.filter((resource) => {
+  const filteredResources = [...new Map(resources.map(resource => [resource.id, resource])).values()].filter((resource) => {
     const query = search.trim().toLowerCase();
     const matchesSearch = !query
       || resource.title.toLowerCase().includes(query)
@@ -2255,7 +2189,7 @@ export const StudentLearningCentrePage = () => {
     const matchesType = resourceType === 'All Resource Types' || resource.resourceType === resourceType;
     const matchesFree = !freeOnly || resource.isFree;
     return matchesSearch && matchesCategory && matchesSubject && matchesGrade && matchesLevel && matchesProvider && matchesType && matchesFree;
-  });
+  }).sort((a, b) => Number(recommendedIds.has(b.id)) - Number(recommendedIds.has(a.id)));
 
   const featuredCourses = filteredResources
     .filter((resource) => resource.resourceType === 'Course')
@@ -2297,7 +2231,6 @@ export const StudentLearningCentrePage = () => {
     { label: 'Papers', value: Math.round(resources.filter((item) => item.resourceType === 'Past Paper').reduce((acc, item) => acc + item.progress, 0) / Math.max(1, resources.filter((item) => item.resourceType === 'Past Paper').length)), color: '#0ea5e9' },
     { label: 'Overall', value: Math.round(resources.reduce((acc, item) => acc + item.progress, 0) / Math.max(1, resources.length)), color: '#14b8a6' },
   ];
-  const streakDays = 9;
 
   const clearFilters = () => {
     setSearch('');
@@ -2776,7 +2709,7 @@ export const StudentLearningCentrePage = () => {
               <span className="rounded-lg bg-slate-100 px-2 py-1">{course.duration}</span>
               <span className="rounded-lg bg-slate-100 px-2 py-1">Free</span>
             </div>
-            <a className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-500" href={course.sourceUrl} target="_blank" rel="noopener noreferrer">Open Course</a>
+            <a className="mt-4 inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-500" aria-disabled={!course.sourceUrl} href={course.sourceUrl || undefined} target="_blank" rel="noopener noreferrer">Open Course</a>
           </article>)}
         </div>
       )}
@@ -2790,7 +2723,7 @@ export const StudentLearningCentrePage = () => {
             <h3 className="line-clamp-2 text-sm font-semibold">{item.title}</h3>
             <p className="mt-2 text-xs text-slate-500">Provider: {item.provider}</p>
             <div className="mt-3 h-2 rounded-full bg-slate-200"><div className="h-full rounded-full bg-primary-600" style={{ width: `${Math.max(0, Math.min(100, item.progress))}%` }} /></div>
-            <a className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-500" href={item.sourceUrl} target="_blank" rel="noopener noreferrer">Open Course</a>
+            <a className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-500" aria-disabled={!item.sourceUrl} href={item.sourceUrl || undefined} target="_blank" rel="noopener noreferrer">Open Course</a>
           </article>
         ))}
       </div>
@@ -2828,7 +2761,7 @@ export const StudentLearningCentrePage = () => {
           </div>
           <div className="mt-4 rounded-xl bg-slate-50 p-3">
             <p className="text-sm font-medium text-slate-800">Learning streak</p>
-            <p className="text-xl font-bold text-slate-900">{streakDays} days</p>
+            <p className="text-xl font-bold text-slate-900">Not recorded</p>
             <p className="text-xs text-slate-500">Keep your momentum to unlock stronger mastery insights.</p>
           </div>
         </div>
@@ -3463,12 +3396,12 @@ export const StudentSubscriptionPage = () => {
         const yearly=viewPlans.find(p => p.code===`PLAN_${tier}_YEARLY`);
         const plan=interval==='YEARLY' && yearly ? yearly : monthly;
         if (!plan || !monthly) return null;
-        const isCurrent=tier===currentPlanCode && !access.data?.trialActive;
+        const isCurrent=plan.code===current.data?.planCode && !access.data?.trialActive;
         const downgrade=['BASIC','PREMIUM','PRO'].indexOf(tier)<['BASIC','PREMIUM','PRO'].indexOf(currentPlanCode);
         return <article key={tier} className={`subscription-plan subscription-plan--${tier.toLowerCase()}`}>
           {tier==='PREMIUM' && <p className="subscription-popular">MOST POPULAR</p>}
-          <h2>{tier === 'BASIC' ? 'Free Trial' : tier}</h2><p className="subscription-price">R{Number(monthly.amount).toLocaleString('en-ZA')}<small>{tier === 'BASIC' ? ' / 14 days only' : '/month'}</small></p>
-          {yearly && <p>R{Number(yearly.amount).toLocaleString('en-ZA')}/year</p>}
+          <h2>{tier === 'BASIC' ? 'Free Trial' : tier}</h2><p className="subscription-price">{plan.currency} {Number(plan.amount).toLocaleString('en-ZA', { minimumFractionDigits: 2 })}<small>{tier === 'BASIC' ? ' / 14 days only' : interval === 'YEARLY' ? '/year' : '/month'}</small></p>
+          {interval === 'YEARLY' && yearly && <p>{plan.currency} {(Number(yearly.amount) / 12).toFixed(2)} monthly equivalent, billed yearly</p>}
           <h3>{tier==='BASIC' ? 'EXPLORE' : tier==='PREMIUM' ? 'DISCOVER YOUR PATHWAY' : 'PLAN YOUR FUTURE'}</h3><p>{plan.description}</p>
           <ul>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
           <Button disabled={tier === 'BASIC' || isCurrent || actionInProgress || !access.data} onClick={() => payFastInitiate.mutate({planCode:plan.code})}>

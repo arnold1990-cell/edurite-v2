@@ -56,14 +56,14 @@ export function StudentProfileView(props: Props) {
   const subjects = profile.subjectAchievements ?? [];
   const interests = profile.interests ?? [];
   const skills = profile.skills ?? [];
-  const aspirations = [profile.preferredCareer, profile.careerGoals, ...(profile.qualifications ?? []), ...(profile.experience ?? [])].filter((item): item is string => Boolean(item?.trim()));
+  const aspirations = [profile.preferredCareer, profile.careerGoals, ...(profile.experience ?? [])].filter((item): item is string => Boolean(item?.trim()));
   const completion = [
     ['Personal Details', Boolean(profile.firstName && profile.lastName && profile.phone)],
     ['Academic Information', Boolean(profile.selectedGrade && subjects.some((subject) => subject.subjectName && subject.achievementLevel))],
     ['Interests & Skills', Boolean(interests.length && skills.length)],
     ['Career Aspirations', Boolean(profile.preferredCareer || profile.qualifications?.length || profile.experience?.length)],
     ['Goals / Action Plan', Boolean(profile.careerGoals?.trim())],
-    ['Documents', Boolean(profile.cvFileUrl && profile.transcriptFileUrl)],
+    ['Documents', Boolean(profile.transcriptFileUrl)],
   ] as const;
   const showTab = (tab: ProfileTab) => {
     setEditingPersonal(false);
@@ -72,7 +72,7 @@ export function StudentProfileView(props: Props) {
     next.delete('tab');
     const key = tabKeys[tabs.indexOf(tab)];
     next.set('section', key === 'settings' ? 'documents' : key);
-    navigate(tab === 'Goals' ? '/student/goals' : `/student/profile?${next}`, { preventScrollReset: true });
+    navigate(`/student/profile?${next}`, { preventScrollReset: true });
   };
   const editPersonal = () => { showTab('Overview'); setEditingPersonal(true); };
   useEffect(() => {
@@ -107,10 +107,11 @@ export function StudentProfileView(props: Props) {
         </div>}
         {activeTab === 'Overview' && editingPersonal && <div className="ep-editor" ref={personalEditor}><div className="ep-editor-title"><h2>Edit personal information</h2><button type="button" onClick={() => setEditingPersonal(false)}>Back to overview</button></div>{props.personalContent}</div>}
         {activeTab === 'Academic Details' && <div className="ep-editor">{props.academicContent}{props.readinessContent}<div className="ep-guidance-link"><Compass size={20} /><span>Review programme requirements and qualification guidance in Career Aspirations.</span><button type="button" onClick={() => showTab('Career Aspirations')}>Open guidance <ChevronRight size={14} /></button></div></div>}
+        {activeTab !== 'Overview' && <Link className="ep-text-action" to="/student/profile">Back to Profile</Link>}
         {activeTab === 'Interests & Skills' && <ProfileCard title="Interests & Skills" icon={Sparkles}><div className="ep-editor-fields">{field('Interests', 'interests', true, 'Separate your interests with commas.')}{field('Skills', 'skills', true, 'Separate your skills with commas.')}</div></ProfileCard>}
         {activeTab === 'Career Aspirations' && <div className="ep-editor"><ProfileCard title="Career Aspirations" icon={Compass}><div className="ep-editor-fields">{field('Career goals', 'careerGoals', true)}{field('Qualifications', 'qualifications', true, 'Separate qualifications with commas.')}{field('Experience', 'experience', true, 'Separate experience entries with commas.')}</div></ProfileCard>{props.guidanceContent}</div>}
         {activeTab === 'Goals' && <ProfileCard title="My Goals" icon={Target}><p className="ep-section-note">Your career goal is shared with Career Roadmaps and your personalised guidance.</p>{field('Career goals', 'careerGoals', true)}<div className="ep-goal-links"><Link to="/student/career-roadmaps"><Compass size={18} />Open Career Roadmaps<ChevronRight size={15} /></Link><Link to="/student/recommendations/careers"><Sparkles size={18} />Review AI Guidance<ChevronRight size={15} /></Link></div></ProfileCard>}
-        {activeTab === 'Settings' && <div className="ep-editor">{props.documentsContent}{props.savedProfilesContent}<ProfileCard title="Account Settings" icon={ShieldCheck}><p className="ep-section-note">Your profile uses your initials. Profile photo uploads are not currently supported.</p><div className="ep-goal-links"><Link to="/student/settings">Notification &amp; account preferences<ChevronRight size={15} /></Link><Link to="/account/change-password">Change password<ChevronRight size={15} /></Link></div></ProfileCard></div>}
+        {activeTab === 'Settings' && <div className="ep-editor">{props.documentsContent}{props.savedProfilesContent}</div>}
         {(activeTab !== 'Overview' || editingPersonal) && <div className="ep-save-bar"><p role={props.saveError ? 'alert' : undefined}>{props.saveError || 'Save to update your EduRite profile and linked guidance.'}</p><button type="button" className="ep-primary" onClick={save} disabled={props.saving}>{props.saving ? 'Saving profile…' : 'Save Profile'}</button></div>}
       </div>
       <aside className="ep-right-column">

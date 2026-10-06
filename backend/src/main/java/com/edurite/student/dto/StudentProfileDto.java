@@ -25,6 +25,7 @@ public record StudentProfileDto(
         String cvFileUrl,
         String transcriptFileUrl,
         boolean profileCompleted,
-        int profileCompleteness
+        int profileCompleteness,
+        String schoolName
 ) {}
 

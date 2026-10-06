@@ -119,6 +119,8 @@ const normalizeRegistrationResponse = (payload: RegistrationResponse): Registrat
 };
 
 export const authService = {
+  verifyEmail: (email: string, token: string) => apiClient.post<VerificationStatusResponse>('/auth/email-verification/verify', { email, token }).then(r => r.data),
+  resendEmail: (email: string) => apiClient.post<VerificationStatusResponse>('/auth/email-verification/resend', { email }).then(r => r.data),
   me: () => apiClient.get<AuthResponseRaw>('/auth/me').then((response) => normalizeAuthResponse(response.data)),
   login: (payload: { email?: string; schoolName?: string; emisNumber?: string; password: string }) => {
     authStore.clear();
@@ -129,9 +131,9 @@ export const authService = {
       password: payload.password,
     }).then((response) => normalizeAuthResponse(response.data));
   },
-  googleSignIn: (idToken: string, role: 'STUDENT' | 'COMPANY' = 'STUDENT') => {
+  googleSignIn: (idToken: string, role: 'STUDENT' | 'COMPANY' = 'STUDENT', popiaConsentAccepted = false) => {
     authStore.clear();
-    return apiClient.post<AuthResponseRaw>('/auth/google', { idToken, role }).then((response) => normalizeAuthResponse(response.data));
+    return apiClient.post<AuthResponseRaw>('/auth/google', { idToken, role, popiaConsentAccepted }).then((response) => normalizeAuthResponse(response.data));
   },
   registerStudent: (payload: StudentRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/student', payload).then((r) => normalizeRegistrationResponse(r.data)),
   registerCompany: (payload: CompanyRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/company', payload).then((r) => normalizeRegistrationResponse(r.data)),

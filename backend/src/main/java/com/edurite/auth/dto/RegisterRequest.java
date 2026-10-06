@@ -9,7 +9,8 @@ public record RegisterRequest(
         @NotBlank String lastName,
         @Email String email,
         @NotBlank @Size(max = 30) String phoneNumber,
-        @NotBlank String password
+        @NotBlank @Size(min = 8, max = 100) String password,
+        @jakarta.validation.constraints.NotNull @jakarta.validation.constraints.AssertTrue Boolean popiaConsentAccepted
 ) {
 }
 

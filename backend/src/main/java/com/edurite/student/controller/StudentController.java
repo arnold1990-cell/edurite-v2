@@ -38,6 +38,15 @@ public class StudentController {
         this.studentPreferenceService = studentPreferenceService;
     }
 
+    @GetMapping("/transcripts")
+    public List<Map<String, Object>> transcripts(Principal principal) { return studentService.transcriptHistory(principal); }
+
+    @GetMapping("/documents/{type}/download")
+    public ResponseEntity<byte[]> download(Principal principal, @PathVariable String type) throws IOException {
+        return ResponseEntity.ok().header("Content-Disposition", "attachment; filename=edurite-document")
+            .header("Content-Type", "application/octet-stream").header("X-Content-Type-Options", "nosniff").body(studentService.downloadDocument(principal, type));
+    }
+
     @GetMapping("/profile")
     public StudentProfileDto profile(Principal principal) {
         return studentService.getProfile(principal);

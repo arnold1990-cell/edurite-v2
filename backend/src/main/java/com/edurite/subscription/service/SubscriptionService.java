@@ -197,7 +197,7 @@ public class SubscriptionService {
         userRepository.lockForSubscription(user.getId());
         PlanType target = PlanType.fromPlanCode(plan.getCode());
         PlanType effective = studentPlanAccessService.getCurrentPlan(user.getId());
-        if (target == effective && !"PLAN_TRIAL".equals(studentPlanAccessService.resolveByUserId(user.getId()).planCode())) {
+        if (plan.getCode().equals(studentPlanAccessService.resolveByUserId(user.getId()).planCode()) && !"PLAN_TRIAL".equals(plan.getCode())) {
             throw new ResourceConflictException("This is already your active plan.");
         }
         SubscriptionRecord pending = subscriptionRepository.findTopByUserIdAndStatusOrderByCreatedAtDesc(user.getId(), STATUS_PENDING).orElse(null);

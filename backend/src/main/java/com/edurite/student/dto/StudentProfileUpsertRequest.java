@@ -19,6 +19,7 @@ public record StudentProfileUpsertRequest(
         List<String> experience,
         List<String> skills,
         List<String> interests,
-        String careerGoals
+        String careerGoals,
+        @Size(max = 200) String schoolName
 ) {}
 

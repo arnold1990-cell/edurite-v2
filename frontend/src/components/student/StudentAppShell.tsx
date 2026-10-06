@@ -19,10 +19,8 @@ const navigation = [
   { label: 'Career Explorer', to: '/student/career-explorer', icon: Compass },
   { label: 'Study Options', to: '/student/study-options', icon: GraduationCap },
   { label: 'Bursaries & Funding', to: '/student/funding', icon: Wallet },
-  { label: 'Institutions', to: '/student/institutions', icon: Building2 },
   { label: 'Learning Resources', to: '/student/learning', icon: BookOpen },
-  { label: 'My Progress', to: '/student/progress', icon: Trophy },
-  { label: 'My Goals', to: '/student/goals', icon: Target },
+  { label: 'AI Guidance', to: '/student/career-explorer?section=guidance', icon: Bot },
   { label: 'Messages', to: '/student/messages', icon: Mail },
 ];
 

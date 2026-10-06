@@ -31,7 +31,7 @@ public class CurrentUserService {
             throw new InvalidCredentialsException();
         }
         User user = userRepository.findByEmailIgnoreCase(principal.getName()).orElseThrow(InvalidCredentialsException::new);
-        if (user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null) {
+        if (user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null || user.isEmailVerificationRequired()) {
             throw new InvalidCredentialsException();
         }
         return user;
@@ -39,7 +39,7 @@ public class CurrentUserService {
 
     public User requireUserById(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow(InvalidCredentialsException::new);
-        if (user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null) {
+        if (user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null || user.isEmailVerificationRequired()) {
             throw new InvalidCredentialsException();
         }
         return user;

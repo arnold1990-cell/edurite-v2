@@ -136,6 +136,10 @@ public class StudentService {
     private final StudentSavedProfileRepository studentSavedProfileRepository;
     private final ObjectMapper objectMapper;
     private final StudentPlanAccessService studentPlanAccessService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private StudentSubjectCatalogue subjectCatalogue;
+    @org.springframework.beans.factory.annotation.Autowired
+    private TranscriptExtractionService transcriptExtraction;
 
     public StudentService(
             StudentProfileRepository repository,
@@ -199,6 +203,7 @@ public class StudentService {
         profile.setLocation(mergeValue(profile.getLocation(), request.location()));
         profile.setBio(mergeValue(profile.getBio(), request.bio()));
         profile.setQualificationLevel(mergeValue(profile.getQualificationLevel(), request.qualificationLevel()));
+        profile.setSchoolName(mergeValue(profile.getSchoolName(), request.schoolName()));
         profile.setSelectedGrade(request.selectedGrade() == null ? profile.getSelectedGrade() : normalizedSelectedGrade);
         profile.setSubjectAchievementsJson(mergeSubjectAchievements(profile.getSubjectAchievementsJson(), request.subjectAchievements(), effectiveSelectedGrade));
         profile.setQualifications(mergeList(profile.getQualifications(), request.qualifications()));
@@ -265,16 +270,32 @@ public class StudentService {
      * this method handles the "uploadDocument" step of the feature.
      * It exists to keep this class focused and reusable.
      */
+    @org.springframework.transaction.annotation.Transactional
     public StudentProfileDto uploadDocument(Principal principal, MultipartFile file, String documentType) throws IOException {
         validateFile(file);
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = repository.findByUserId(user.getId()).orElseGet(() -> createDefault(user));
-        String path = storageService.putObject("student-documents", "%s/%s-%s".formatted(user.getId(), documentType, file.getOriginalFilename()), file.getBytes());
+        if (!List.of("cv", "transcript").contains(documentType.toLowerCase(Locale.ROOT))) throw new ResourceConflictException("Unsupported document type.");
+        String filename = file.getOriginalFilename() == null ? "document.pdf" : file.getOriginalFilename().replaceAll("[^a-zA-Z0-9._-]", "_");
+        String path = storageService.putObject("student-documents", "%s/%s-%s-%s".formatted(user.getId(), documentType, UUID.randomUUID(), filename), file.getBytes());
         if ("cv".equalsIgnoreCase(documentType)) {
             profile.setCvFileUrl(path);
         }
         if ("transcript".equalsIgnoreCase(documentType)) {
             profile.setTranscriptFileUrl(path);
+            if (transcriptExtraction != null) {
+                var extraction = transcriptExtraction.extract(file.getBytes(), path);
+                List<Map<String, Object>> history = transcriptHistory(profile);
+                Map<String, Object> entry = new LinkedHashMap<>();
+                entry.put("documentId", path); entry.put("uploadedAt", java.time.OffsetDateTime.now().toString());
+                entry.put("extraction", extraction); entry.put("previousResults", readSubjectAchievements(profile.getSubjectAchievementsJson()));
+                history.add(entry); profile.setTranscriptHistoryJson(writeJson(history));
+                Map<String, StudentSubjectAchievementDto> results = new LinkedHashMap<>();
+                readSubjectAchievements(profile.getSubjectAchievementsJson()).forEach(item -> results.put(item.subjectName(), item));
+                extraction.subjects().forEach(item -> { var previous = results.get(item.subjectName()); if (previous == null || !previous.verified()) results.put(item.subjectName(), item); });
+                profile.setSubjectAchievementsJson(writeJson(new ArrayList<>(results.values())));
+                if (profile.getSelectedGrade() == null && extraction.grade() != null) profile.setSelectedGrade(extraction.grade());
+            }
         }
         profile = repository.save(profile);
         profile = syncProfileCompletion(profile);
@@ -285,6 +306,35 @@ public class StudentService {
      * this method handles the "dashboard" step of the feature.
      * It exists to keep this class focused and reusable.
      */
+
+    private List<Map<String, Object>> transcriptHistory(StudentProfile profile) {
+        return new ArrayList<>(readJson(profile.getTranscriptHistoryJson(), new TypeReference<List<Map<String, Object>>>() {}));
+    }
+    public List<Map<String, Object>> transcriptHistory(Principal principal) { return transcriptHistory(getProfileEntity(principal)); }
+    public byte[] downloadDocument(Principal principal, String type) throws IOException {
+        StudentProfile profile = getProfileEntity(principal);
+        return storageService.getObject("transcript".equals(type) ? profile.getTranscriptFileUrl() : "cv".equals(type) ? profile.getCvFileUrl() : null);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void verifyTranscript(Principal principal, UUID studentId, String documentId) {
+        User reviewer = currentUserService.requireUser(principal);
+        if (reviewer.getRoles().stream().noneMatch(r -> "ROLE_ADMIN".equals(r.getName()))) throw new org.springframework.security.access.AccessDeniedException("Administrator review required");
+        StudentProfile profile = repository.findById(studentId).orElseThrow(() -> new ResourceConflictException("Student not found"));
+        List<Map<String, Object>> history = transcriptHistory(profile);
+        Map<String, Object> entry = history.stream().filter(e -> documentId.equals(e.get("documentId"))).findFirst().orElseThrow(() -> new ResourceConflictException("Document not found"));
+        if (!documentId.equals(profile.getTranscriptFileUrl())) throw new ResourceConflictException("Review the latest transcript.");
+        var extraction = objectMapper.convertValue(entry.get("extraction"), TranscriptExtractionService.Extraction.class);
+        if (extraction.subjects().isEmpty()) throw new ResourceConflictException("No extracted marks to verify. Review requires a readable PDF.");
+        Map<String, StudentSubjectAchievementDto> results = new LinkedHashMap<>();
+        readSubjectAchievements(profile.getSubjectAchievementsJson()).forEach(item -> results.put(item.subjectName(), item));
+        String now = java.time.OffsetDateTime.now().toString();
+        extraction.subjects().forEach(item -> results.put(item.subjectName(), new StudentSubjectAchievementDto(item.subjectName(), item.achievementLevel(), item.markPercentage(), "TRANSCRIPT", true, documentId, now)));
+        entry.put("verifiedBy", reviewer.getId().toString()); entry.put("verifiedAt", now);
+        profile.setTranscriptHistoryJson(writeJson(history)); profile.setSubjectAchievementsJson(writeJson(new ArrayList<>(results.values())));
+        repository.save(profile);
+    }
+
     public Map<String, Object> dashboard(Principal principal) {
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = repository.findByUserId(user.getId()).orElseGet(() -> createDefault(user));
@@ -576,7 +626,7 @@ public class StudentService {
                 profile.getLocation(), profile.getBio(), profile.getQualificationLevel(), profile.getSelectedGrade(),
                 readSubjectAchievements(profile.getSubjectAchievementsJson()), split(profile.getQualifications()), split(profile.getExperience()),
                 split(profile.getSkills()), split(profile.getInterests()), profile.getCareerGoals(), profile.getCvFileUrl(), profile.getTranscriptFileUrl(),
-                profile.isProfileCompleted(), completeness
+                profile.isProfileCompleted(), completeness, profile.getSchoolName()
         );
     }
 
@@ -964,7 +1014,7 @@ public class StudentService {
         profile.setBio(normalized.bio());
         profile.setQualificationLevel(normalized.qualificationLevel());
         profile.setSelectedGrade(normalized.selectedGrade());
-        profile.setSubjectAchievementsJson(writeJson(normalized.subjectAchievements()));
+        profile.setSubjectAchievementsJson(mergeSubjectAchievements(profile.getSubjectAchievementsJson(), normalized.subjectAchievements(), normalized.selectedGrade()));
         profile.setQualifications(join(normalized.qualifications()));
         profile.setExperience(join(normalized.experience()));
         profile.setSkills(join(normalized.skills()));
@@ -994,7 +1044,10 @@ public class StudentService {
                     if (!allowedSubjects.isEmpty() && !allowedSubjects.contains(normalizedSubjectName)) {
                         throw new ResourceConflictException("Subject '%s' is not valid for %s.".formatted(normalizedSubjectName, selectedGrade));
                     }
-                    return new StudentSubjectAchievementDto(normalizedSubjectName, normalizeAchievementLevel(item.achievementLevel()));
+                    Integer mark = item.markPercentage();
+                    if (mark != null && (mark < 0 || mark > 100)) throw new ResourceConflictException("Marks must be between 0 and 100.");
+                    Integer level = mark == null ? normalizeAchievementLevel(item.achievementLevel()) : mark >= 80 ? 7 : mark >= 70 ? 6 : mark >= 60 ? 5 : mark >= 50 ? 4 : mark >= 40 ? 3 : mark >= 30 ? 2 : 1;
+                    return new StudentSubjectAchievementDto(normalizedSubjectName, level, mark, item.source(), item.verified(), item.documentId(), item.updatedAt());
                 })
                 .toList();
     }
@@ -1003,14 +1056,23 @@ public class StudentService {
         if (value == null) {
             return null;
         }
-        return Math.max(1, Math.min(7, value));
+        if (value < 1 || value > 7) throw new ResourceConflictException("Achievement level must be between 1 and 7.");
+        return value;
     }
 
     private String mergeSubjectAchievements(String existingJson, List<StudentSubjectAchievementDto> incoming, String selectedGrade) {
         if (incoming == null) {
             return existingJson == null ? "[]" : existingJson;
         }
-        return writeJson(normalizeSubjectAchievements(incoming, selectedGrade));
+        List<StudentSubjectAchievementDto> existing = readSubjectAchievements(existingJson);
+        Map<String, StudentSubjectAchievementDto> merged = new LinkedHashMap<>();
+        for (StudentSubjectAchievementDto item : normalizeSubjectAchievements(incoming, selectedGrade)) {
+            StudentSubjectAchievementDto previous = existing.stream().filter(s -> s.subjectName().equals(item.subjectName())).findFirst().orElse(null);
+            boolean unchanged = previous != null && java.util.Objects.equals(previous.markPercentage(), item.markPercentage()) && java.util.Objects.equals(previous.achievementLevel(), item.achievementLevel());
+            merged.put(item.subjectName(), previous != null && (previous.verified() || unchanged) ? previous : new StudentSubjectAchievementDto(item.subjectName(), item.achievementLevel(), item.markPercentage(), "MANUAL", false, null, java.time.OffsetDateTime.now().toString()));
+        }
+        existing.stream().filter(StudentSubjectAchievementDto::verified).forEach(s -> merged.put(s.subjectName(), s));
+        return writeJson(new ArrayList<>(merged.values()));
     }
 
     private List<StudentSubjectAchievementDto> readSubjectAchievements(String value) {
@@ -1030,6 +1092,10 @@ public class StudentService {
     }
 
     private Set<String> allowedSubjectsByGrade(String selectedGrade) {
+        if (subjectCatalogue != null && selectedGrade != null) {
+            String phase = List.of("Grade 8", "Grade 9").contains(selectedGrade) ? "Senior" : "FET";
+            return subjectCatalogue.subjects().stream().filter(s -> phase.equalsIgnoreCase(s.phase())).map(StudentSubjectCatalogue.Subject::name).collect(java.util.stream.Collectors.toSet());
+        }
         if ("Grade 8".equals(selectedGrade) || "Grade 9".equals(selectedGrade)) {
             return SENIOR_PHASE_SUBJECTS;
         }
@@ -1040,6 +1106,7 @@ public class StudentService {
     }
 
     private String canonicalizeSubjectName(String subjectName) {
+        if (subjectCatalogue != null && subjectName != null) return subjectCatalogue.canonicalize(subjectName);
         String trimmed = subjectName == null ? "" : subjectName.trim();
         if (trimmed.isBlank()) {
             return trimmed;

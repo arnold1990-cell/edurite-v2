@@ -257,6 +257,14 @@ public class PsychometricService {
     }
 
     @Transactional(readOnly = true)
+    public List<String> findStrengthAreasByStudentProfileId(UUID studentProfileId) {
+        return psychometricSubmissionRepository.findTopByStudentIdOrderByCreatedAtDesc(studentProfileId)
+            .map(this::scoresFromSubmission).map(scores -> scores.entrySet().stream()
+                .filter(e -> e.getValue() >= 3.5).sorted(Map.Entry.<String, Double>comparingByValue().reversed())
+                .limit(3).map(Map.Entry::getKey).toList()).orElse(List.of());
+    }
+
+    @Transactional(readOnly = true)
     public List<String> findGrowthAreasByStudentProfileId(UUID studentProfileId) {
         return psychometricSubmissionRepository.findTopByStudentIdOrderByCreatedAtDesc(studentProfileId)
                 .map(this::scoresFromSubmission)

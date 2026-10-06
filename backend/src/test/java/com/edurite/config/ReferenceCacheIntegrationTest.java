@@ -164,6 +164,7 @@ class ReferenceCacheIntegrationTest {
     @Configuration
     @EnableCaching
     static class TestConfig {
+        @Bean com.edurite.student.service.ProfileGuidanceContext profileGuidanceContext() { return mock(com.edurite.student.service.ProfileGuidanceContext.class); }
         @Bean
         CacheManager cacheManager() {
             return new ConcurrentMapCacheManager(

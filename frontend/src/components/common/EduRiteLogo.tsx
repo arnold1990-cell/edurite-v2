@@ -1,5 +1,5 @@
 import type { ComponentPropsWithoutRef } from 'react';
-import eduriteLogo from '@/assets/branding/edurite-logo.png';
+import eduriteLogo from '@/assets/edurite-main-logo.jpeg';
 import './edurite-logo.css';
 
 type EduRiteLogoProps = Omit<

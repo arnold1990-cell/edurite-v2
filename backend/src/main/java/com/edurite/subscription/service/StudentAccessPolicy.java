@@ -56,14 +56,14 @@ public final class StudentAccessPolicy {
         new RouteRule("/student/funding", "scholarships", Feature.APPLICATION_SUPPORT),
         new RouteRule("/student/funding", "saved", Feature.SAVE_OPPORTUNITIES),
         new RouteRule("/student/funding", "matches", Feature.PRIORITY_OPPORTUNITY_MATCHING),
-        new RouteRule("/student/institutions", "applications", Feature.APPLICATION_SUPPORT),
-        new RouteRule("/student/institutions", "saved", Feature.APPLICATION_SUPPORT)
+        new RouteRule("/student/study-options", "applications", Feature.APPLICATION_SUPPORT),
+        new RouteRule("/student/study-options", "saved", Feature.APPLICATION_SUPPORT)
     );
     public static String path(String uri) { return uri.replaceFirst("^/api(?:/v1)?", "").replaceAll("/+$", ""); }
     // Existing account/profile/settings and billing endpoints are deliberately outside this gate.
     public static boolean trialProtected(String uri) {
         String p = path(uri);
-        if (p.equals("/student/profile") || p.startsWith("/student/profile/saved")
+        if (p.equals("/student/profile") || p.startsWith("/student/profile/") || p.equals("/student/subjects") || p.equals("/student/transcripts") || p.startsWith("/student/documents/")
                 || p.equals("/student/settings") || p.equals("/student/preferences")) return false;
         return List.of("/student", "/careers", "/courses", "/institutions", "/bursaries",
                 "/learning-centre", "/recommendations", "/ai", "/applications", "/jobs")
