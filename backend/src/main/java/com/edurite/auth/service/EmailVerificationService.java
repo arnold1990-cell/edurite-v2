@@ -12,46 +12,66 @@ import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.Locale;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.sesv2.SesV2Client;
+import software.amazon.awssdk.services.sesv2.model.SendEmailRequest;
+import software.amazon.awssdk.services.sesv2.model.SesV2Exception;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
 
 @Service
 public class EmailVerificationService {
+    private static final Logger log = LoggerFactory.getLogger(EmailVerificationService.class);
+    private static final SecureRandom RANDOM = new SecureRandom();
     private final UserRepository users;
-    private final ObjectProvider<JavaMailSender> mail;
+    private final SesV2Client ses;
     private final String baseUrl;
     private final String from;
 
-    public EmailVerificationService(UserRepository users, ObjectProvider<JavaMailSender> mail,
-            @Value("${app.email-verification.base-url:http://localhost:5173}") String baseUrl,
-            @Value("${app.email-verification.from:}") String from) {
-        this.users = users; this.mail = mail; this.baseUrl = baseUrl; this.from = from;
+    public EmailVerificationService(UserRepository users, SesV2Client ses,
+            @Value("${app.email-verification.base-url:https://edurite.co.za}") String baseUrl,
+            @Value("${app.email-verification.from:info@edurite.co.za}") String from) {
+        this.users = users; this.ses = ses; this.baseUrl = baseUrl; this.from = from;
     }
 
     public boolean send(User user) {
         if (!user.isEmailVerificationRequired()) return false;
         if (user.getEmailVerificationSentAt() != null && user.getEmailVerificationSentAt().isAfter(OffsetDateTime.now().minusMinutes(1))) return true;
-        JavaMailSender sender = mail.getIfAvailable();
-        if (sender == null || from.isBlank()) return false;
+        if (from.isBlank()) return false;
         byte[] bytes = new byte[32];
-        new SecureRandom().nextBytes(bytes);
+        RANDOM.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         String link = UriComponentsBuilder.fromUriString(baseUrl).path("/verify-email")
                 .queryParam("email", user.getEmail()).queryParam("token", token).build().encode().toUriString();
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(from); message.setTo(user.getEmail());
-        message.setSubject("Verify your EduRite email");
-        message.setText("Confirm your email to access EduRite and your 14-Day Free Trial.\n\n" + link
-                + "\n\nThis single-use link expires in 30 minutes. If you did not register, ignore this email.");
-        try { sender.send(message); } catch (RuntimeException ex) { return false; }
+        String body = "Confirm your email to access EduRite and your 14-Day Free Trial.\n\n" + link
+                + "\n\nThis single-use link expires in 30 minutes. If you did not register, ignore this email.";
+        SendEmailRequest request = SendEmailRequest.builder()
+                .fromEmailAddress(from)
+                .destination(d -> d.toAddresses(user.getEmail()))
+                .content(c -> c.simple(m -> m
+                        .subject(s -> s.data("Verify your EduRite email").charset("UTF-8"))
+                        .body(b -> b.text(t -> t.data(body).charset("UTF-8")))))
+                .build();
+        try {
+            ses.sendEmail(request);
+            log.info("Email verification SES accepted");
+        } catch (SesV2Exception ex) {
+            // Never log exception messages, request bodies, recipients or links.
+            log.warn("Email verification SES rejected: status={} code={} requestId={}",
+                    ex.statusCode(), ex.awsErrorDetails() == null ? "unknown" : ex.awsErrorDetails().errorCode(), ex.requestId());
+            return false;
+        } catch (SdkClientException ex) {
+            log.warn("Email verification SES client failure: check IAM role, container IMDS access and SES connectivity");
+            return false;
+        }
+        OffsetDateTime acceptedAt = OffsetDateTime.now();
         user.setEmailVerificationHash(hash(token));
-        user.setEmailVerificationExpiresAt(OffsetDateTime.now().plusMinutes(30));
-        user.setEmailVerificationSentAt(OffsetDateTime.now());
+        user.setEmailVerificationExpiresAt(acceptedAt.plusMinutes(30));
+        user.setEmailVerificationSentAt(acceptedAt);
         users.save(user);
         return true;
     }

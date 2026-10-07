@@ -40,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
-        controllers = {AuthController.class, AccountController.class, AiController.class, GoogleOAuthCompatibilityController.class},
+        controllers = {AuthController.class, AccountController.class, AiController.class, GoogleOAuthCompatibilityController.class, com.edurite.auth.controller.EmailVerificationController.class},
         properties = {
                 "spring.flyway.enabled=false",
                 "spring.jpa.hibernate.ddl-auto=none",
@@ -66,6 +66,18 @@ class AuthAndAiSecurityWebMvcTest {
 
     @MockitoBean
     private AuthService authService;
+    @MockitoBean
+    private com.edurite.auth.service.EmailVerificationService emailVerificationService;
+
+    @Test
+    void emailVerificationEndpointsAndAliasesArePublic() throws Exception {
+        for (String prefix : new String[]{"/api/v1/auth/email-verification", "/api/auth/email-verification"}) {
+            mockMvc.perform(post(prefix + "/resend").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"email\":\"student@example.com\"}")).andExpect(status().isOk());
+            mockMvc.perform(post(prefix + "/verify").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"email\":\"student@example.com\",\"token\":\"test-token\"}")).andExpect(status().isOk());
+        }
+    }
     @MockitoBean
     private SchoolPasswordRecoveryService schoolPasswordRecoveryService;
     @MockitoBean
