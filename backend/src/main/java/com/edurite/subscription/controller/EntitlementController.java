@@ -28,7 +28,7 @@ public class EntitlementController {
         var trial = access.trialRecord(id);
         var trialEnd = trial == null ? null : access.trialExpiry(trial);
         result.put("trialActive", trialActive);
-        result.put("accessAllowed", plan.premium() || trialActive);
+        result.put("accessAllowed", true);
         result.put("trialStartDate", trial == null ? null : trial.getTrialStartDate());
         result.put("trialDaysRemaining", trialActive && trialEnd != null
                 ? Math.max(0, (long) Math.ceil(java.time.Duration.between(java.time.OffsetDateTime.now(java.time.ZoneOffset.UTC), trialEnd).toMillis() / 86400000.0)) : 0);

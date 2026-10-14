@@ -53,7 +53,7 @@ describe('student route architecture', () => {
     ['/student/explore', '?category=Courses', '/student/study-options'],
     ['/student/explore', '?category=Bursaries', '/student/funding'],
     ['/student/universities/uct/programmes', '', '/student/study-options'],
-    ['/student/psychometric/', '', '/student/career-explorer'],
+    ['/student/psychometric/', '', '/student/career-match'],
     ['/student/ai-tutor', '', '/student/learning'],
     ['/student/rewards', '', '/student/dashboard'],
   ])('selects the correct section for %s%s', (path, search, expected) => {

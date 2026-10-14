@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
-import { StudentRouteAccess } from './access';
+import { PendingPaymentNotice, StudentRouteAccess } from './access';
 
-const query = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
-vi.mock('@tanstack/react-query', () => ({ useQuery: () => query.value }));
+const query = vi.hoisted(() => ({ value: {} as Record<string, unknown>, pending: { data: [] as unknown[], isPending: false, isError: false } }));
+vi.mock('@tanstack/react-query', () => ({ useQuery: (options: { queryKey: string[] }) => options.queryKey[0] === 'pending-payments' ? query.pending : query.value }));
 vi.mock('@/hooks/useAuth', () => ({ useAuth: () => ({ user: { id: 'student' } }) }));
 const features = [
   { id: 'CAREER_ROADMAP_PERSONALISED', minimumPlan: 'PREMIUM', label: 'Personalised career roadmap' },
@@ -18,6 +18,21 @@ function render(location: string, entitlements: string[], error = false, accessA
   return renderToStaticMarkup(<StaticRouter location={location}><StudentRouteAccess><p>Protected feature content</p></StudentRouteAccess></StaticRouter>);
 }
 describe('direct student URLs use server entitlements', () => {
+  it('blocks dashboard content while redirecting pending purchases and keeps payment page reachable', () => {
+    query.pending.data = [{ paymentReference: 'pending' }];
+    expect(render('/student/dashboard', [])).not.toContain('Protected feature content');
+    expect(render('/student/subscription', [])).toContain('Protected feature content');
+    query.pending.data = [];
+  });
+  it('resumes PayFast using its signed POST form', () => {
+    query.pending.data = [{ paymentReference: 'pending', provider: 'payfast', checkoutUrl: 'https://sandbox.payfast.co.za/eng/process', formFields: { m_payment_id: 'pending', signature: 'signed' } }];
+    const html = renderToStaticMarkup(<PendingPaymentNotice />);
+    expect(html).toContain('Payment pending');
+    expect(html).toContain('method="POST"');
+    expect(html).toContain('name="signature" value="signed"');
+    expect(html).toContain('Complete payment');
+    query.pending.data = [];
+  });
   it('locks a manually entered Premium URL for Basic', () => {
     const html = render('/student/career-explorer?section=career-path', []);
     expect(html).toContain('Upgrade to PREMIUM');
@@ -47,7 +62,7 @@ describe('direct student URLs use server entitlements', () => {
     render('/student/dashboard', []);
     Object.assign(query.value.data as object, { trialActive: true, trialDaysRemaining: 2, trialEndDate: '2026-10-06T12:00:00Z' });
     const html = renderToStaticMarkup(<StaticRouter location="/student/dashboard"><StudentRouteAccess>Learning</StudentRouteAccess></StaticRouter>);
-    expect(html).toContain('Free Trial');
+    expect(html).toContain('Premium trial');
     expect(html).toContain('2 days remaining');
     expect(html).toContain('Trial ends on');
     expect(html).toContain('Upgrade');

@@ -37,6 +37,9 @@ public class GeminiProperties {
     @Min(value = 0, message = "gemini.max-retries must be 0 or greater.")
     private int maxRetries = 2;
 
+    @Positive
+    private int maxOutputTokens = 8192;
+
     private boolean startupHealthCheckEnabled = false;
 }
 

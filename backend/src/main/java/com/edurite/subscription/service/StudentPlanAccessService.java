@@ -16,7 +16,7 @@ public class StudentPlanAccessService {
     public static final String STATUS_ACTIVE = "ACTIVE";
     public static final int BASIC_CAREER_GUIDANCE_LIMIT = 3;
     public static final String BASIC_UPGRADE_MESSAGE =
-            "You are on a Free Trial with Basic features. Upgrade to Premium to unlock deeper analysis and more recommendations.";
+            "You are on the free Basic plan. Upgrade to Premium to unlock deeper analysis and more recommendations.";
     private final SubscriptionRepository subscriptionRepository;
 
     public StudentPlanAccessService(
@@ -34,7 +34,7 @@ public class StudentPlanAccessService {
 
     // Explicit server time also makes the exclusive expiry boundary testable.
     public StudentPlanAccess resolveAt(UUID userId, OffsetDateTime now) {
-        SubscriptionRecord subscription = currentRecord(userId);
+        SubscriptionRecord subscription = currentRecordAt(userId, now.toLocalDate());
         String code = normalizePlanCode(subscription == null ? null : subscription.getPlanCode());
         String status = normalizeStatus(subscription == null ? null : subscription.getStatus());
         if (isActivePaid(subscription, now.toLocalDate())) {
@@ -43,16 +43,18 @@ public class StudentPlanAccessService {
         var trial = trialRecord(userId);
         boolean active = trial != null && trial.getTrialStartDate() != null
                 && !now.isBefore(trial.getTrialStartDate()) && now.isBefore(trialExpiry(trial));
-        String effectiveStatus = active ? "TRIAL_ACTIVE" : "TRIAL_EXPIRED";
-        if (!active && subscription != null && !PLAN_BASIC.equals(code) && !"PLAN_TRIAL".equals(code)) {
+        if (active) return new StudentPlanAccess(PLAN_PREMIUM, "TRIAL_ACTIVE", true, null, null);
+        String effectiveStatus = "TRIAL_EXPIRED";
+        if (subscription != null && !PLAN_BASIC.equals(code) && !"PLAN_TRIAL".equals(code)) {
             effectiveStatus = STATUS_ACTIVE.equals(status) ? "EXPIRED" : status;
         }
         return new StudentPlanAccess(PLAN_BASIC, effectiveStatus, false, BASIC_CAREER_GUIDANCE_LIMIT,
-                active ? BASIC_UPGRADE_MESSAGE : "Your 14-day free trial has ended. Choose a plan to continue using EduRite.");
+                "Your Premium trial has ended. You are on the free Basic plan.");
     }
 
     private boolean isActivePaid(SubscriptionRecord record, java.time.LocalDate today) {
         if (record == null || "PLAN_TRIAL".equals(record.getPlanCode())) return false;
+        if (isTestingGrant(record)) return true;
         var plan = com.edurite.subscription.entity.PlanType.fromPlanCode(record.getPlanCode());
         return plan != com.edurite.subscription.entity.PlanType.BASIC
                 && STATUS_ACTIVE.equals(normalizeStatus(record.getStatus()))
@@ -60,10 +62,19 @@ public class StudentPlanAccessService {
                 && (record.getStartDate() == null || !today.isBefore(record.getStartDate()));
     }
 
+    public static boolean isTestingGrant(SubscriptionRecord record) {
+        return record != null && "manual-testing".equals(record.getProvider())
+                && "PLAN_PRO".equals(record.getPlanCode()) && STATUS_ACTIVE.equals(record.getStatus());
+    }
+
     public SubscriptionRecord currentRecord(UUID userId) {
+        return currentRecordAt(userId, java.time.LocalDate.now(clock));
+    }
+
+    private SubscriptionRecord currentRecordAt(UUID userId, java.time.LocalDate today) {
         // A later pending purchase or stale ACTIVE record must not hide valid paid access.
         return subscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .filter(s -> isActivePaid(s, java.time.LocalDate.now(clock)))
+                .filter(s -> isActivePaid(s, today))
                 .max(java.util.Comparator.comparingInt(s -> com.edurite.subscription.entity.PlanType.fromPlanCode(s.getPlanCode()).ordinal()))
                 .orElseGet(() -> subscriptionRepository.findTopByUserIdAndStatusOrderByCreatedAtDesc(userId, STATUS_ACTIVE)
                         .orElseGet(() -> subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId).orElse(null)));
@@ -84,8 +95,7 @@ public class StudentPlanAccessService {
     }
 
     public boolean hasSubscriptionAccess(UUID userId) {
-        var access = resolveByUserId(userId);
-        return access.premium() || "TRIAL_ACTIVE".equals(access.status());
+        return true; // Basic remains available after trial expiry.
     }
 
     public com.edurite.subscription.entity.PlanType getCurrentPlan(UUID userId) {

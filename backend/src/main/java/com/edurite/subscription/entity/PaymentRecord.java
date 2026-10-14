@@ -47,6 +47,9 @@ public class PaymentRecord extends BaseEntity {
     private String checkoutUrl;
 
     @Column(columnDefinition = "TEXT")
+    private String checkoutPayload;
+
+    @Column(columnDefinition = "TEXT")
     private String failureReason;
 
     private OffsetDateTime paidAt;

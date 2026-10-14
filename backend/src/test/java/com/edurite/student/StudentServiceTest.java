@@ -1,5 +1,9 @@
 package com.edurite.student;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.anyString;
+
 import com.edurite.application.repository.ApplicationRepository;
 import com.edurite.bursary.repository.BursaryRepository;
 import com.edurite.gamification.dto.GamificationSummaryDto;
@@ -110,6 +114,26 @@ class StudentServiceTest {
         when(currentUserService.requireUser(principal)).thenReturn(user);
         lenient().when(studentPlanAccessService.resolveByUserId(user.getId()))
                 .thenReturn(new StudentPlanAccessService.StudentPlanAccess("PLAN_BASIC", "ACTIVE", false, 3, "Upgrade to Premium"));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"0,1", "29,1", "30,2", "39,2", "40,3", "49,3", "50,4", "59,4", "60,5", "69,5", "70,6", "79,6", "80,7", "100,7"})
+    void manualMarksDeriveAchievementLevelAndSurviveReload(int mark, int expectedLevel) {
+        StudentProfile profile = new StudentProfile(); profile.setId(UUID.randomUUID()); profile.setUserId(user.getId());
+        when(profileRepository.findByUserId(user.getId())).thenReturn(Optional.of(profile));
+        when(profileRepository.save(any(StudentProfile.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        var request = new StudentProfileUpsertRequest("Test", "Student", null, null, null, null, null,
+                "High School", "Grade 12", List.of(new StudentSubjectAchievementDto("Mathematics", 1, mark, "MANUAL", false, null, null)),
+                List.of(), List.of(), List.of(), List.of(), null, null);
+        var saved = studentService.upsertProfile(principal, request);
+        assertThat(saved.subjectAchievements()).first().satisfies(subject -> {
+            assertThat(subject.markPercentage()).isEqualTo(mark);
+            assertThat(subject.achievementLevel()).isEqualTo(expectedLevel);
+        });
+        var reloaded = studentService.getProfile(principal);
+        assertThat(reloaded.subjectAchievements()).isEqualTo(saved.subjectAchievements());
+        assertThat(reloaded.qualificationLevel()).isEqualTo("High School");
+        assertThat(reloaded.selectedGrade()).isEqualTo("Grade 12");
     }
 
     @Test
@@ -405,5 +429,77 @@ class StudentServiceTest {
                 .extracting(StudentSubjectAchievementDto::subjectName)
                 .containsExactly("Accounting");
     }
+    private StudentProfile academicProfile() {
+        StudentProfile profile = new StudentProfile();
+        profile.setId(UUID.randomUUID()); profile.setUserId(user.getId());
+        when(profileRepository.findByUserId(user.getId())).thenReturn(Optional.of(profile));
+        lenient().when(profileRepository.save(any(StudentProfile.class))).thenAnswer(i -> i.getArgument(0));
+        return profile;
+    }
+    private StudentProfileUpsertRequest academicRequest(List<StudentSubjectAchievementDto> subjects, List<StudentSubjectAchievementDto> baseline) {
+        return new StudentProfileUpsertRequest(null, null, null, null, null, null, null, null, "Grade 12",
+                subjects, null, null, null, null, null, null, baseline);
+    }
+    private StudentSubjectAchievementDto mark(String name, int mark) {
+        return new StudentSubjectAchievementDto(name, null, mark, "MANUAL", false, null, null);
+    }
+    @Test void equivalentSubjectsDeduplicateButConflictingMarksFail() {
+        academicProfile();
+        var saved = studentService.upsertProfile(principal, academicRequest(List.of(mark("Maths", 70), mark("Mathematics", 70)), List.of()));
+        assertThat(saved.subjectAchievements()).hasSize(1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> studentService.upsertProfile(principal,
+                academicRequest(List.of(mark("Maths", 70), mark("Mathematics", 80)), saved.subjectAchievements())))
+                .hasMessageContaining("Conflicting results");
+        assertThat(studentService.getProfile(principal).subjectAchievements()).isEqualTo(saved.subjectAchievements());
+    }
+    @Test void staleDraftCannotOverwriteNewerMarks() {
+        academicProfile();
+        var first = studentService.upsertProfile(principal, academicRequest(List.of(mark("Mathematics", 70)), List.of()));
+        studentService.upsertProfile(principal, academicRequest(List.of(mark("Mathematics", 80)), first.subjectAchievements()));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> studentService.upsertProfile(principal,
+                academicRequest(List.of(mark("Mathematics", 60)), first.subjectAchievements())))
+                .hasMessageContaining("another session");
+        assertThat(studentService.getProfile(principal).subjectAchievements().getFirst().markPercentage()).isEqualTo(80);
+    }
+    @Test void uploadStaysPendingThenConfirmedCombinedResultsSurviveReload() throws Exception {
+        var entity = academicProfile();
+        var saved = studentService.upsertProfile(principal, academicRequest(List.of(mark("Mathematics", 70)), List.of()));
+        var extraction = mock(com.edurite.student.service.TranscriptExtractionService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(studentService, "transcriptExtraction", extraction);
+        when(storageService.putObject(anyString(), anyString(), any(byte[].class))).thenReturn("learner/report.pdf");
+        var extracted = new StudentSubjectAchievementDto("Physical Sciences", 6, 75, "TRANSCRIPT", false, "learner/report.pdf", null,
+                "CAPS", "NSC percentage", "2026", "Final");
+        when(extraction.extract(any(byte[].class), anyString())).thenReturn(new com.edurite.student.service.TranscriptExtractionService.Extraction(
+                "EXTRACTED", "Review required", "Grade 12", "2026", List.of(extracted)));
+        var uploaded = studentService.uploadDocument(principal, new org.springframework.mock.web.MockMultipartFile("file", "report.pdf", "application/pdf", new byte[]{1}), "transcript");
+        assertThat(uploaded.subjectAchievements()).isEqualTo(saved.subjectAchievements());
+        assertThat(studentService.transcriptHistory(principal)).hasSize(1);
+        var confirmed = studentService.upsertProfile(principal, academicRequest(List.of(saved.subjectAchievements().getFirst(), extracted), saved.subjectAchievements()));
+        assertThat(studentService.getProfile(principal).subjectAchievements()).isEqualTo(confirmed.subjectAchievements()).hasSize(2);
+        assertThat(confirmed.subjectAchievements().get(1)).satisfies(row -> {
+            assertThat(row.documentId()).isEqualTo("learner/report.pdf");
+            assertThat(row.academicYear()).isEqualTo("2026");
+            assertThat(row.curriculum()).isEqualTo("CAPS");
+            assertThat(row.gradingScale()).isEqualTo("NSC percentage");
+            assertThat(row.examination()).isEqualTo("Final");
+        });
+        var context = new com.edurite.student.service.ProfileGuidanceContext(new ObjectMapper(), psychometricService, mock(com.edurite.student.repository.StudentPreferenceRepository.class)).describe(entity);
+        assertThat(context).contains("Physical Sciences", "75", "2026", "Final");
+    }
+    @Test void foreignDocumentCannotBeAttachedToAcademicResults() {
+        academicProfile();
+        var forged = new StudentSubjectAchievementDto("Mathematics", 7, 80, "TRANSCRIPT", true, "other-learner/report.pdf", null);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> studentService.upsertProfile(principal, academicRequest(List.of(forged), List.of())))
+                .hasMessageContaining("does not belong");
+        verify(profileRepository, never()).save(any());
+    }
+    @Test void suppliedVerificationIsNotTrustedAndInvalidMarksFail() {
+        academicProfile();
+        var saved = studentService.upsertProfile(principal, academicRequest(List.of(new StudentSubjectAchievementDto("Mathematics", 7, 80, "TRANSCRIPT", true, null, null)), List.of()));
+        assertThat(saved.subjectAchievements().getFirst().verified()).isFalse();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> studentService.upsertProfile(principal, academicRequest(List.of(mark("Mathematics", 101)), saved.subjectAchievements())))
+                .hasMessageContaining("between 0 and 100");
+    }
+
 }
 

@@ -115,6 +115,28 @@ public class SubscriptionService {
         this.backendBaseUrl = backendBaseUrl;
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<Map<String, Object>> pendingPayments(Principal principal) {
+        UUID userId = currentUserService.requireUser(principal).getId();
+        return subscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .flatMap(subscription -> paymentRepository.findBySubscriptionIdOrderByCreatedAtDesc(subscription.getId()).stream())
+                .filter(payment -> STATUS_PENDING.equals(payment.getStatus()))
+                .map(payment -> {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("paymentReference", payment.getReference());
+                    result.put("provider", payment.getProvider());
+                    result.put("status", payment.getStatus());
+                    result.put("checkoutUrl", payment.getCheckoutUrl());
+                    // Return only the signed checkout fields, never general provider metadata.
+                    try {
+                        var payload = objectMapper.readTree(payment.getCheckoutPayload() == null ? payment.getMetadata() : payment.getCheckoutPayload());
+                        var fields = payload.has("formFields") ? payload.path("formFields") : payload.path("response").path("formFields");
+                        if (fields.isObject()) result.put("formFields", objectMapper.convertValue(fields, Map.class));
+                    } catch (Exception ignored) { /* Older payments may lack resumable checkout data. */ }
+                    return result;
+                }).toList();
+    }
+
     @Transactional
     public SubscriptionRecord current(Principal principal) {
         User user = currentUserService.requireUser(principal);
@@ -148,7 +170,7 @@ public class SubscriptionService {
         subscription.setPremiumUntil(null);
         subscription.setTrialUsed(true);
         SubscriptionRecord saved = subscriptionRepository.save(subscription);
-        log.info("Initialized one-time 14-day Basic trial: userId={}, trialStart={}, trialEnd={}",
+        log.info("Initialized one-time 14-day Premium trial: userId={}, trialStart={}, trialEnd={}",
                 userId, saved.getTrialStartDate(), saved.getTrialEndDate());
         return saved;
     }
@@ -677,6 +699,7 @@ public class SubscriptionService {
         payment.setProviderPaymentId(firstNonBlank(result.externalPaymentId(), payment.getProviderPaymentId()));
         payment.setProviderSubscriptionId(firstNonBlank(result.externalSubscriptionId(), payment.getProviderSubscriptionId()));
         payment.setCheckoutUrl(firstNonBlank(result.checkoutUrl(), payment.getCheckoutUrl()));
+        payment.setCheckoutPayload(serializeMetadata(result.rawResponse() == null ? Map.of() : result.rawResponse()));
         payment.setFailureReason(result.failureReason());
         payment.setMetadata(serializeMetadata(Map.of(
                 "event", "CHECKOUT_CREATED",
@@ -779,9 +802,9 @@ public class SubscriptionService {
         subscription.setPremiumAccess(access.premium());
         subscription.setTrialActive(trialActive);
         if (trialActive && subscription.getTrialEndDate() != null) {
-            subscription.setAccessMessage("Free Trial. Trial ends on " + subscription.getTrialEndDate().toLocalDate() + ".");
+            subscription.setAccessMessage("Premium trial. Trial ends on " + subscription.getTrialEndDate().toLocalDate() + ".");
         } else if (!access.premium()) {
-            subscription.setAccessMessage("Your 14-day free trial has ended. Choose a plan to continue using EduRite.");
+            subscription.setAccessMessage("Your Premium trial has ended. You are on the free Basic plan.");
         } else {
             subscription.setAccessMessage(null);
         }
@@ -812,6 +835,7 @@ public class SubscriptionService {
     ) {
         userRepository.lockForSubscription(subscription.getUserId());
         for (SubscriptionRecord previous : subscriptionRepository.findByUserIdOrderByCreatedAtDesc(subscription.getUserId())) {
+            if (StudentPlanAccessService.isTestingGrant(previous)) continue;
             if (!previous.getId().equals(subscription.getId()) && STATUS_ACTIVE.equals(previous.getStatus())) {
                 previous.setStatus(STATUS_CANCELLED);
                 previous.setCancelAtPeriodEnd(false);

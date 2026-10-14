@@ -32,19 +32,23 @@ export const featureModulesService = {
 
   tutorSessions: () => apiClient.get<TutorSession[]>('/student/tutor/sessions').then((r) => r.data),
   tutorSession: (id: string) => apiClient.get<TutorSession>(`/student/tutor/sessions/${id}`).then((r) => r.data),
-  askTutor: (payload: { sessionId?: string; subject: string; question: string }) => apiClient.post<TutorAskResponse>('/student/tutor/ask', payload).then((r) => r.data),
+  askTutor: (payload: { sessionId?: string; subject: string; question: string }) => apiClient.post<TutorAskResponse>('/student/tutor/ask', payload, { timeout: 240000 }).then((r) => r.data),
 
   universityApplications: () => apiClient.get<UniversityApplication[]>('/student/university-applications').then((r) => r.data),
   createUniversityApplication: (payload: Partial<UniversityApplication>) => apiClient.post<UniversityApplication>('/student/university-applications', payload).then((r) => r.data),
   updateUniversityApplication: (id: string, payload: Partial<UniversityApplication>) => apiClient.put<UniversityApplication>(`/student/university-applications/${id}`, payload).then((r) => r.data),
   deleteUniversityApplication: (id: string) => apiClient.delete(`/student/university-applications/${id}`),
 
+  selectedCareer: () => apiClient.get<{ careerName: string; programmeId?: string }>('/student/career-roadmaps/selection').then(r => r.data),
+  selectProgramme: (programmeId: string) => apiClient.put<{ careerName: string; programmeId?: string }>('/student/career-roadmaps/selection/programme', { programmeId: programmeId || null }).then(r => r.data),
+  clearSelectedCareer: () => apiClient.delete<{ careerName: string }>('/student/career-roadmaps/selection').then(r => r.data),
+  selectCareer: (careerName: string) => apiClient.put<{ careerName: string }>('/student/career-roadmaps/selection', { careerName }).then(r => r.data),
   careerRoadmaps: () => apiClient.get<CareerRoadmap[]>('/student/career-roadmaps').then((r) => r.data),
   careerRoadmap: (slug: string) => apiClient.get<CareerRoadmap>(`/student/career-roadmaps/${slug}`).then((r) => r.data),
   generateCareerRoadmap: (payload: { careerName: string; grade?: string; province?: string; subjects: ApsSubjectInput[] }) =>
     apiClient.post<CareerRoadmapGenerateResponse>('/student/career-roadmaps/generate', payload).then((r) => r.data),
   savedCareerRoadmaps: () => apiClient.get<SavedCareerRoadmap[]>('/student/career-roadmaps/saved').then((r) => r.data),
-  saveCareerRoadmap: (payload: { careerName: string; roadmap: CareerRoadmapGenerateResponse; learnerAps: number; requiredAps?: number; apsGap?: number; readinessScore: number }) =>
+  saveCareerRoadmap: (payload: { careerName: string; roadmap: CareerRoadmapGenerateResponse; learnerAps: number | null; requiredAps?: number; apsGap?: number; readinessScore: number }) =>
     apiClient.post<SavedCareerRoadmap>('/student/career-roadmaps/save', payload).then((r) => r.data),
   careerRequirementMatches: (career: string) =>
     apiClient.get<CareerRoadmapGenerateResponse['universityRequirements']>('/student/career-roadmaps/requirements', { params: { career } }).then((r) => r.data),

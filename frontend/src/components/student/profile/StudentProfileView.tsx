@@ -1,3 +1,4 @@
+import { ProfileAssociations } from './ProfileAssociations';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { BarChart3, BookOpen, BriefcaseBusiness, CalendarDays, Check, ChevronRight, Compass, GraduationCap, MapPin, Pencil, School, ShieldCheck, Sparkles, Target, UserRound, Wallet, Zap, type LucideIcon } from 'lucide-react';
@@ -7,9 +8,9 @@ import { academicMark } from '@/components/student/dashboard/dashboardData';
 import banner from '@/assets/images/careers.jpeg';
 import './student-profile.css';
 
-const tabs = ['Overview', 'Academic Details', 'Interests & Skills', 'Career Aspirations', 'Goals', 'Settings'] as const;
+const tabs = ['Overview', 'Academic Details', 'Interests & Skills', 'Career Aspirations', 'Goals', 'Documents'] as const;
 type ProfileTab = typeof tabs[number];
-const tabKeys = ['overview', 'academic', 'interests', 'career', 'goals', 'settings'];
+const tabKeys = ['overview', 'academic', 'interests', 'career', 'goals', 'documents'];
 
 type Props = {
   profile: StudentProfile;
@@ -43,9 +44,9 @@ export function StudentProfileView(props: Props) {
   const location = useLocation();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const sectionTab = ({ overview: 'overview', goals: 'goals', academic: 'academic', interests: 'interests', career: 'career', documents: 'settings' } as Record<string, string>)[params.get('section') || ''];
-  const requestedTab = sectionTab || params.get('tab') || (location.pathname === '/student/goals' ? 'goals' : null);
-  const aliasTab = location.pathname.endsWith('/academic-profile') ? 'academic' : location.pathname.endsWith('/documents') ? 'settings' : /\/(qualifications|experience)$/.test(location.pathname) ? 'career' : 'overview';
+  const sectionTab = ({ overview: 'overview', goals: 'goals', academic: 'academic', interests: 'interests', career: 'career', documents: 'documents', settings: 'documents' } as Record<string, string>)[params.get('section') || ''];
+  const requestedTab = location.pathname.replace(/\/$/, '') === '/student/documents' ? 'documents' : sectionTab || (params.get('tab') === 'settings' ? 'documents' : params.get('tab')) || (location.pathname === '/student/goals' ? 'goals' : null);
+  const aliasTab = location.pathname.endsWith('/academic-profile') ? 'academic' : location.pathname.endsWith('/documents') ? 'documents' : /\/(qualifications|experience)$/.test(location.pathname) ? 'career' : 'overview';
   const activeIndex = Math.max(0, tabKeys.indexOf(requestedTab ?? aliasTab));
   const activeTab = tabs[activeIndex];
   const [editingPersonal, setEditingPersonal] = useState(false);
@@ -56,14 +57,14 @@ export function StudentProfileView(props: Props) {
   const subjects = profile.subjectAchievements ?? [];
   const interests = profile.interests ?? [];
   const skills = profile.skills ?? [];
-  const aspirations = [profile.preferredCareer, profile.careerGoals, ...(profile.experience ?? [])].filter((item): item is string => Boolean(item?.trim()));
+  const aspirations = [profile.preferredCareer, profile.careerGoals, ...(profile.qualifications ?? []), ...(profile.experience ?? [])].filter((item): item is string => Boolean(item?.trim()));
   const completion = [
     ['Personal Details', Boolean(profile.firstName && profile.lastName && profile.phone)],
     ['Academic Information', Boolean(profile.selectedGrade && subjects.some((subject) => subject.subjectName && subject.achievementLevel))],
     ['Interests & Skills', Boolean(interests.length && skills.length)],
     ['Career Aspirations', Boolean(profile.preferredCareer || profile.qualifications?.length || profile.experience?.length)],
     ['Goals / Action Plan', Boolean(profile.careerGoals?.trim())],
-    ['Documents', Boolean(profile.transcriptFileUrl)],
+    ['Documents', Boolean(profile.cvFileUrl && profile.transcriptFileUrl)],
   ] as const;
   const showTab = (tab: ProfileTab) => {
     setEditingPersonal(false);
@@ -71,8 +72,8 @@ export function StudentProfileView(props: Props) {
     const next = new URLSearchParams(params);
     next.delete('tab');
     const key = tabKeys[tabs.indexOf(tab)];
-    next.set('section', key === 'settings' ? 'documents' : key);
-    navigate(`/student/profile?${next}`, { preventScrollReset: true });
+    next.set('section', key);
+    navigate(tab === 'Documents' ? '/student/documents' : `/student/profile?${next}`, { preventScrollReset: true });
   };
   const editPersonal = () => { showTab('Overview'); setEditingPersonal(true); };
   useEffect(() => {
@@ -90,6 +91,7 @@ export function StudentProfileView(props: Props) {
       <div className="ep-hero"><img className="ep-banner" src={banner} alt="" /><div className="ep-identity"><div className="ep-profile-avatar" aria-label={`${name} initials`}>{initials}</div><div><h1>{name}</h1><p>{profile.selectedGrade || 'Grade not added yet'}{profile.location ? `  |  ${profile.location}` : ''}</p></div></div><button type="button" className="ep-hero-edit" onClick={editPersonal}><Pencil size={14} />Edit Profile</button></div>
 
     </section>
+    <nav className="ep-tabs" aria-label="Profile sections">{tabs.map(tab => <button key={tab} type="button" className={activeTab === tab ? 'is-active' : ''} aria-current={activeTab === tab ? 'page' : undefined} onClick={() => showTab(tab)}>{tab}</button>)}</nav>
     {savedMessage && <p className="ep-save-success" role="status"><Check size={16} />{savedMessage}</p>}
     <div className="ep-main-grid">
       <div id="profile-tab-content" role="region" aria-label={activeTab} className="ep-tab-content">
@@ -107,16 +109,15 @@ export function StudentProfileView(props: Props) {
         </div>}
         {activeTab === 'Overview' && editingPersonal && <div className="ep-editor" ref={personalEditor}><div className="ep-editor-title"><h2>Edit personal information</h2><button type="button" onClick={() => setEditingPersonal(false)}>Back to overview</button></div>{props.personalContent}</div>}
         {activeTab === 'Academic Details' && <div className="ep-editor">{props.academicContent}{props.readinessContent}<div className="ep-guidance-link"><Compass size={20} /><span>Review programme requirements and qualification guidance in Career Aspirations.</span><button type="button" onClick={() => showTab('Career Aspirations')}>Open guidance <ChevronRight size={14} /></button></div></div>}
-        {activeTab !== 'Overview' && <Link className="ep-text-action" to="/student/profile">Back to Profile</Link>}
         {activeTab === 'Interests & Skills' && <ProfileCard title="Interests & Skills" icon={Sparkles}><div className="ep-editor-fields">{field('Interests', 'interests', true, 'Separate your interests with commas.')}{field('Skills', 'skills', true, 'Separate your skills with commas.')}</div></ProfileCard>}
-        {activeTab === 'Career Aspirations' && <div className="ep-editor"><ProfileCard title="Career Aspirations" icon={Compass}><div className="ep-editor-fields">{field('Career goals', 'careerGoals', true)}{field('Qualifications', 'qualifications', true, 'Separate qualifications with commas.')}{field('Experience', 'experience', true, 'Separate experience entries with commas.')}</div></ProfileCard>{props.guidanceContent}</div>}
-        {activeTab === 'Goals' && <ProfileCard title="My Goals" icon={Target}><p className="ep-section-note">Your career goal is shared with Career Roadmaps and your personalised guidance.</p>{field('Career goals', 'careerGoals', true)}<div className="ep-goal-links"><Link to="/student/career-roadmaps"><Compass size={18} />Open Career Roadmaps<ChevronRight size={15} /></Link><Link to="/student/recommendations/careers"><Sparkles size={18} />Review AI Guidance<ChevronRight size={15} /></Link></div></ProfileCard>}
-        {activeTab === 'Settings' && <div className="ep-editor">{props.documentsContent}{props.savedProfilesContent}</div>}
-        {(activeTab !== 'Overview' || editingPersonal) && <div className="ep-save-bar"><p role={props.saveError ? 'alert' : undefined}>{props.saveError || 'Save to update your EduRite profile and linked guidance.'}</p><button type="button" className="ep-primary" onClick={save} disabled={props.saving}>{props.saving ? 'Saving profile…' : 'Save Profile'}</button></div>}
+        {activeTab === 'Career Aspirations' && <div className="ep-editor"><ProfileCard title="Career Aspirations" icon={Compass}><div className="ep-editor-fields">{field('Career goals', 'careerGoals', true)}{field('Qualifications', 'qualifications', true, 'Separate qualifications with commas.')}{field('Experience', 'experience', true, 'Separate experience entries with commas.')}</div></ProfileCard><ProfileAssociations />{props.guidanceContent}</div>}
+        {activeTab === 'Goals' && <ProfileCard title="My Goals" icon={Target}><p className="ep-section-note">Your career goal is shared with Career Roadmaps and your personalised guidance.</p>{field('Career goals', 'careerGoals', true)}<div className="ep-goal-links"><Link to="/student/career-roadmaps"><Compass size={18} />Open Career Roadmaps<ChevronRight size={15} /></Link><Link to="/student/ai-guidance"><Sparkles size={18} />Review EduRite AI Guidance<ChevronRight size={15} /></Link></div></ProfileCard>}
+        {activeTab === 'Documents' && <div className="ep-editor">{props.documentsContent}{props.savedProfilesContent}</div>}
+        {((activeTab !== 'Overview' && activeTab !== 'Documents') || editingPersonal) && <div className="ep-save-bar"><p role={props.saveError ? 'alert' : undefined}>{props.saveError || 'Save to update your EduRite profile and linked guidance.'}</p><button type="button" className="ep-primary" onClick={save} disabled={props.saving}>{props.saving ? 'Saving profile…' : 'Save Profile'}</button></div>}
       </div>
       <aside className="ep-right-column">
         <ProfileCard title="My Profile Completion" icon={UserRound} className="ep-completion"><div className="ep-completion-body"><ProgressRing value={profile.profileCompleteness} /><ul>{completion.map(([label, complete]) => <li key={label}><span className={`ed-check ${complete ? 'is-complete' : 'ep-incomplete'}`} aria-label={complete ? 'Complete' : 'Incomplete'}>{complete && <Check size={10} />}</span>{label}</li>)}</ul></div><button className="ep-completion-action" type="button" onClick={editPersonal}>Complete your profile for more accurate career matches and study recommendations.<ChevronRight size={19} /></button></ProfileCard>
-        <ProfileCard title="Quick Actions" icon={Zap} className="ep-quick-actions"><Link to="/student/psychometric"><Compass /><span><strong>Take Psychometric Test</strong><small>Discover your interests and strengths</small></span><ChevronRight /></Link><button type="button" onClick={() => showTab('Academic Details')}><ShieldCheck /><span><strong>Update My Results</strong><small>Keep your academic profile up to date</small></span><ChevronRight /></button><button type="button" onClick={() => showTab('Goals')}><Target /><span><strong>Update Career Goals</strong><small>Set your direction and next steps</small></span><ChevronRight /></button><Link to="/student/applications"><Wallet /><span><strong>Explore Bursaries</strong><small>Find funding opportunities</small></span><ChevronRight /></Link><Link to="/student/universities"><GraduationCap /><span><strong>Explore Universities</strong><small>Discover institutions and study options</small></span><ChevronRight /></Link><Link to="/student/recommendations/careers"><BriefcaseBusiness /><span><strong>AI Guidance</strong><small>Review personalised recommendations</small></span><ChevronRight /></Link></ProfileCard>
+        <ProfileCard title="Quick Actions" icon={Zap} className="ep-quick-actions"><Link to="/student/psychometric"><Compass /><span><strong>Take Psychometric Test</strong><small>Discover your interests and strengths</small></span><ChevronRight /></Link><button type="button" onClick={() => showTab('Academic Details')}><ShieldCheck /><span><strong>Update My Results</strong><small>Keep your academic profile up to date</small></span><ChevronRight /></button><button type="button" onClick={() => showTab('Goals')}><Target /><span><strong>Update Career Goals</strong><small>Set your direction and next steps</small></span><ChevronRight /></button><Link to="/student/applications"><Wallet /><span><strong>Explore Bursaries</strong><small>Find funding opportunities</small></span><ChevronRight /></Link><Link to="/student/universities"><GraduationCap /><span><strong>Explore Universities</strong><small>Discover institutions and study options</small></span><ChevronRight /></Link><Link to="/student/ai-guidance"><BriefcaseBusiness /><span><strong>EduRite AI Guidance</strong><small>Review personalised recommendations</small></span><ChevronRight /></Link></ProfileCard>
       </aside>
     </div>
   </div>;

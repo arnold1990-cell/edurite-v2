@@ -84,7 +84,7 @@ class CriticalApiRouteWebMvcTest {
         when(studentService.getProfile(any())).thenReturn(emptyProfile());
         when(progressScoreService.score(any())).thenReturn(new ProgressScoreResponse(0, "red", List.of(), List.of()));
         when(recommendationService.generateForStudent(any())).thenReturn(
-                new RecommendationResultDto(List.of(), List.of(), List.of(), List.of(), "test", "PLAN_BASIC", false, 3, false, null)
+                new RecommendationResultDto(List.of(), List.of(), List.of(), List.of(), "test", "PLAN_BASIC", false, 3, false, null, List.of(), List.of(), List.of())
         );
         when(psychometricService.listAssessments()).thenReturn(List.of());
         when(psychometricService.latestForStudent(any())).thenReturn(emptyPsychometricResponse());
@@ -95,6 +95,7 @@ class CriticalApiRouteWebMvcTest {
         mockMvc.perform(get("/api/recommendations/me")).andExpect(status().isOk());
         mockMvc.perform(get("/api/student/psychometric/assessments")).andExpect(status().isOk());
         mockMvc.perform(get("/api/student/psychometric/latest")).andExpect(status().isOk());
+        mockMvc.perform(get("/api/student/psychometric/history")).andExpect(status().isOk());
     }
 
     @Test
@@ -104,7 +105,7 @@ class CriticalApiRouteWebMvcTest {
         when(studentService.getProfile(any())).thenReturn(emptyProfile());
         when(progressScoreService.score(any())).thenReturn(new ProgressScoreResponse(0, "red", List.of(), List.of()));
         when(recommendationService.generateForStudent(any())).thenReturn(
-                new RecommendationResultDto(List.of(), List.of(), List.of(), List.of(), "test", "PLAN_BASIC", false, 3, false, null)
+                new RecommendationResultDto(List.of(), List.of(), List.of(), List.of(), "test", "PLAN_BASIC", false, 3, false, null, List.of(), List.of(), List.of())
         );
 
         mockMvc.perform(get("/api/v1/student/dashboard")).andExpect(status().isOk());
@@ -115,6 +116,8 @@ class CriticalApiRouteWebMvcTest {
 
     @Test
     void criticalApiRoutesRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/student/psychometric/history")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/student/psychometric/history")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/student/dashboard")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/student/profile")).andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/student/progress-score")).andExpect(status().isUnauthorized());

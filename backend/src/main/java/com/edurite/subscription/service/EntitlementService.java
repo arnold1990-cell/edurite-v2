@@ -29,9 +29,8 @@ public class EntitlementService {
     }
     public List<String> entitlements(UUID userId) {
         var resolved = access.resolveByUserId(userId);
-        boolean allowed = resolved.premium() || "TRIAL_ACTIVE".equals(resolved.status());
         PlanType plan = PlanType.fromPlanCode(resolved.planCode());
-        return Arrays.stream(Feature.values()).filter(f -> f == Feature.PROFILE || (allowed && f.allowed(plan))).map(Enum::name).toList();
+        return Arrays.stream(Feature.values()).filter(f -> f == Feature.PROFILE || f.allowed(plan)).map(Enum::name).toList();
     }
     public static int allowance(PlanType plan) {
         return switch (plan) { case BASIC -> 5; case PREMIUM -> 30; case PRO -> 100; };

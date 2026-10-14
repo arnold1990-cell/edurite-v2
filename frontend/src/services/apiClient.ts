@@ -4,7 +4,7 @@ import { normalizeBackendRole } from '@/features/auth/roleUtils';
 import type { ApiError, ApprovalStatus, BackendRole, User } from '@/types';
 
 const DEFAULT_API_PATH = '/api';
-type ApiRequestConfig = AxiosRequestConfig & { __authBaseRetried?: boolean };
+type ApiRequestConfig = AxiosRequestConfig & { __authBaseRetried?: boolean; __sessionRetried?: boolean };
 const normalizeBasePath = (value: string) => value.replace(/\/+$/, '');
 const extractErrorMessages = (errors: unknown): string[] => {
   if (!errors || typeof errors !== 'object') return [];
@@ -91,6 +91,7 @@ const baseURL = deriveApiBaseUrl();
 const normalizedBaseURL = normalizeBasePath(baseURL);
 const legacyAuthBaseURL = toLegacyAuthBaseUrl(normalizedBaseURL);
 let refreshRequest: Promise<string | null> | null = null;
+let refreshRequestToken: string | null = null;
 
 const normalizeApprovalStatus = (status?: string | null): ApprovalStatus | undefined => {
   if (!status) return undefined;
@@ -100,6 +101,7 @@ const normalizeApprovalStatus = (status?: string | null): ApprovalStatus | undef
 const normalizePlanType = (planType?: string | null): User['planType'] | undefined => {
   if (!planType) return undefined;
   const normalized = planType.trim().toUpperCase();
+  if (normalized === 'PRO') return 'PRO';
   if (normalized === 'PREMIUM') return 'PREMIUM';
   if (normalized === 'BASIC') return 'BASIC';
   return undefined;
@@ -157,6 +159,7 @@ apiClient.interceptors.response.use(
     const responseStatus = error.response?.status;
     const responseBody = error.response?.data;
     const isAuthEndpoint = isAuthPath(requestConfig?.url);
+    const canRefresh = !isAuthEndpoint || /^\/?auth\/(me|keep-alive)(?:\?|$)/.test(requestConfig?.url || '');
     const legacyAuthRetryEligible = isAuthEndpoint
       && !requestConfig?.__authBaseRetried
       && Boolean(legacyAuthBaseURL)
@@ -174,9 +177,12 @@ apiClient.interceptors.response.use(
       } as ApiRequestConfig);
     }
 
-    if (responseStatus === 401 && authStore.getRefreshToken() && !isRefreshPath(requestConfig?.url)) {
+    if (responseStatus === 401 && requestConfig?.headers?.Authorization !== `Bearer ${authStore.getAccessToken()}` && canRefresh) return Promise.reject(error);
+    if (responseStatus === 401 && authStore.getRefreshToken() && canRefresh && !requestConfig?.__sessionRetried && !isRefreshPath(requestConfig?.url)) {
+      const attemptedRefreshToken = authStore.getRefreshToken();
       try {
-        if (!refreshRequest) {
+        if (!refreshRequest || refreshRequestToken !== attemptedRefreshToken) {
+          refreshRequestToken = attemptedRefreshToken;
           refreshRequest = (async () => {
             const refreshPayload = {
               refreshToken: authStore.getRefreshToken(),
@@ -196,6 +202,7 @@ apiClient.interceptors.response.use(
               response = await axios.post(`${legacyAuthBaseURL}/auth/refresh`, refreshPayload);
             }
 
+            if (authStore.getRefreshToken() !== refreshPayload.refreshToken) throw new Error("Session changed during refresh");
             const persistSession = authStore.shouldPersistSession();
             authStore.setTokens(response.data.accessToken, response.data.refreshToken, persistSession);
             const refreshedUser = normalizeRefreshedUser(response.data);
@@ -207,20 +214,25 @@ apiClient.interceptors.response.use(
             }
             return response.data.accessToken as string;
           })().finally(() => {
-            refreshRequest = null;
+            if (refreshRequestToken === attemptedRefreshToken) {
+              refreshRequest = null;
+              refreshRequestToken = null;
+            }
           });
         }
 
         const refreshedAccessToken = await refreshRequest;
+        if (authStore.getAccessToken() !== refreshedAccessToken) return Promise.reject(error);
         if (refreshedAccessToken && requestConfig?.headers) {
           requestConfig.headers.Authorization = `Bearer ${refreshedAccessToken}`;
         }
         if (!requestConfig) {
           return Promise.reject(error);
         }
+        requestConfig.__sessionRetried = true;
         return apiClient.request(requestConfig);
       } catch {
-        authStore.clear();
+        if (authStore.getRefreshToken() === attemptedRefreshToken) authStore.clear();
       }
     }
     if (import.meta.env.DEV) {

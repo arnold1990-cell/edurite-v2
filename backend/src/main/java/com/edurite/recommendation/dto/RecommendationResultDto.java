@@ -12,7 +12,10 @@ public record RecommendationResultDto(
         boolean premiumUnlocked,
         Integer careerSuggestionLimit,
         boolean careerSuggestionsLimited,
-        String upgradeMessage
+        String upgradeMessage,
+        List<String> inputsUsed,
+        List<String> missingInformation,
+        List<String> limitations
 ) {
 }
 

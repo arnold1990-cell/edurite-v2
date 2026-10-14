@@ -1,4 +1,5 @@
-import { StudentProfileSectionsPage, StudentCareerExplorerPage, StudentLearningResourcesPage } from '@/pages/student/StudentSectionPages';
+import { StudentCareerMatchPage } from '@/pages/student/StudentCareerMatchPage';
+import { StudentProfileSectionsPage, StudentCareerExplorerPage, StudentLearningResourcesPage, StudentCareerGuidancePage } from '@/pages/student/StudentSectionPages';
 import { StudentRedirect } from '@/routes/StudentRedirect';
 import { StudentAppShell } from '@/components/student/StudentAppShell';
 import { StudentInstitutionsPage, StudentProgressPage, StudentFundingPage, StudentStudyOptionsPage, StudentMessagesPage, StudentNotFoundPage } from '@/pages/student/StudentSectionPages';
@@ -142,20 +143,21 @@ export const App = () => (
           <Route path="dashboard" element={<StudentDashboardPage />} />
           <Route path="profile" element={<StudentProfileSectionsPage />} />
           <Route path="careers" element={<StudentRedirect to="/student/career-explorer" />} />
-          <Route path="recommendations/careers" element={<StudentRedirect to="/student/career-explorer?section=guidance" />} />
+          <Route path="recommendations/careers" element={<StudentRedirect to="/student/career-match" />} />
           <Route path="academic-profile" element={<StudentRedirect to="/student/profile?section=academic" />} />
-          <Route path="documents" element={<StudentRedirect to="/student/profile?section=documents" />} />
+          <Route path="documents" element={<StudentProfilePage />} />
           <Route path="qualifications" element={<StudentRedirect to="/student/profile?section=career" />} />
           <Route path="experience" element={<StudentRedirect to="/student/profile?section=career" />} />
           <Route path="recommendations/bursaries" element={<StudentRedirect to="/student/funding?section=matches" />} />
-          <Route path="psychometric" element={<StudentRedirect to="/student/career-explorer?section=career-match" />} />
+          <Route path="psychometric" element={<StudentRedirect to="/student/career-match?step=assessment" />} />
           <Route path="cv-builder" element={<StudentRedirect to="/student/profile?section=cv" />} />
           <Route path="ai-tutor" element={<StudentRedirect to="/student/learning?section=tutor" />} />
           <Route path="interview-prep" element={<StudentRedirect to="/student/learning?section=tutor" />} />
           <Route path="learning-centre" element={<StudentRedirect to="/student/learning?section=centre" />} />
           <Route path="rewards" element={<StudentRedirect to="/student/dashboard?section=rewards" />} />
           <Route path="careers/:id" element={<StudentCareerDetailsPage />} />
-          <Route path="ai-guidance" element={<StudentRedirect to="/student/career-explorer?section=guidance" />} />
+          <Route path="career-match" element={<StudentCareerMatchPage />} />
+          <Route path="ai-guidance" element={<StudentRedirect to="/student/career-match" />} />
           <Route path="explore" element={<StudentRedirect to="/student/career-explorer" />} />
           <Route path="career-roadmaps" element={<StudentRedirect to="/student/career-explorer?section=career-path" />} />
           <Route path="saved" element={<StudentRedirect to="/student/funding?section=opportunities" />} />
@@ -183,7 +185,7 @@ export const App = () => (
           <Route path="institutions/universities" element={<StudentRedirect to="/student/study-options?section=universities" />} />
           <Route path="learning/tutor" element={<StudentRedirect to="/student/learning?section=tutor" />} />
           <Route path="career-explorer/interests" element={<StudentRedirect to="/student/career-explorer?section=interests" />} />
-          <Route path="career-explorer/match" element={<StudentRedirect to="/student/career-explorer?section=guidance" />} />
+          <Route path="career-explorer/match" element={<StudentRedirect to="/student/career-match" />} />
           <Route path="progress/rewards" element={<StudentRedirect to="/student/dashboard?section=rewards" />} />
           <Route path="funding/applications" element={<StudentRedirect to="/student/funding?section=applications" />} />
           <Route path="funding/scholarships" element={<StudentRedirect to="/student/funding?section=scholarships" />} />
@@ -191,8 +193,8 @@ export const App = () => (
           <Route path="institutions/colleges-tvets" element={<StudentRedirect to="/student/study-options?section=colleges-tvets" />} />
           <Route path="institutions/applications" element={<StudentRedirect to="/student/study-options?section=applications" />} />
           <Route path="settings/password" element={<AccountChangePasswordPage />} />
-          <Route path="psychometric-test" element={<StudentRedirect to="/student/career-explorer?section=career-match" />} />
-          <Route path="career-guidance" element={<StudentRedirect to="/student/career-explorer?section=guidance" />} />
+          <Route path="psychometric-test" element={<StudentRedirect to="/student/career-match?step=assessment" />} />
+          <Route path="career-guidance" element={<StudentCareerGuidancePage />} />
           <Route path="opportunities" element={<StudentRedirect to="/student/funding?section=opportunities" />} />
           <Route path="bursaries" element={<StudentRedirect to="/student/funding?section=bursaries" />} />
           <Route path="scholarship-assistant" element={<StudentRedirect to="/student/funding?section=scholarships" />} />

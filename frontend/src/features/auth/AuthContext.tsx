@@ -35,6 +35,7 @@ const parsePlanTypeFromAccessToken = (accessToken?: string | null): User['planTy
     const decoded = atob(padded);
     const claims = JSON.parse(decoded) as { planType?: unknown };
     const normalized = typeof claims.planType === 'string' ? claims.planType.trim().toUpperCase() : '';
+    if (normalized === 'PRO') return 'PRO';
     if (normalized === 'PREMIUM') return 'PREMIUM';
     if (normalized === 'BASIC') return 'BASIC';
   } catch {
@@ -53,7 +54,7 @@ const normalizeStoredUser = (user: User | null, accessToken?: string | null): Us
     ...user,
     roles,
     primaryRole: primaryRole ? `ROLE_${primaryRole}` : user.primaryRole,
-    planType: tokenPlanType ?? user.planType ?? 'BASIC',
+    planType: user.planType ?? tokenPlanType ?? 'BASIC',
   };
 };
 
@@ -70,9 +71,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isHydrated, setIsHydrated] = useState(false);
   const [isStudentProfileStatusSyncing, setIsStudentProfileStatusSyncing] = useState(false);
   const activeUserIdRef = useRef<string | null>(null);
+  const sessionGeneration = useRef(0);
 
   const clearSessionScopedClientState = useCallback(() => {
+    sessionGeneration.current += 1;
+    activeUserIdRef.current = null;
     setIsStudentProfileStatusSyncing(false);
+    void queryClient.cancelQueries();
     queryClient.clear();
   }, [queryClient]);
 
@@ -125,6 +130,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsStudentProfileStatusSyncing(true);
       studentService.getMe()
         .then((profile) => {
+          if (activeUserIdRef.current !== candidate?.id) return;
           syncStudentProfileState({
             profileCompleted: profile.profileCompleted,
             profileCompleteness: profile.profileCompleteness,
@@ -132,6 +138,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         })
         .catch(() => undefined)
         .finally(() => {
+          if (activeUserIdRef.current !== candidate?.id) return;
           setIsStudentProfileStatusSyncing(false);
         });
       return;
@@ -140,6 +147,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsStudentProfileStatusSyncing(false);
       companyService.getMe()
         .then((profile) => {
+          if (activeUserIdRef.current !== candidate?.id) return;
           syncCompanyApprovalState({
             status: profile?.status,
             companyName: profile?.companyName,
@@ -161,10 +169,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       authStore.clearUser();
       return null;
     }
-    const previousStoredUser = normalizeStoredUser(authStore.getUser(), authStore.getAccessToken());
-    if (previousStoredUser?.id && previousStoredUser.id !== normalizedUser.id) {
-      clearSessionScopedClientState();
-    }
+    clearSessionScopedClientState();
+    activeUserIdRef.current = normalizedUser.id;
     authStore.setTokens(payload.accessToken, payload.refreshToken, rememberMe);
     authStore.setUser(normalizedUser, rememberMe);
     flushSync(() => {
@@ -185,7 +191,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let active = true;
     const token = authStore.getAccessToken();
-    const storedUser = normalizeStoredUser(authStore.getUser(), token);
     if (!token) {
       clearSessionScopedClientState();
       authStore.clear();
@@ -195,10 +200,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       };
     }
 
+    const generation = sessionGeneration.current;
     const restoreSessionFromServer = async (hydrateWhenDone: boolean) => {
       try {
         const session = await authService.me();
-        if (!active) return;
+        if (!active || sessionGeneration.current !== generation || !authStore.getAccessToken()) return;
         const restoredUser = commitSession(session, { rememberMe: authStore.shouldPersistSession() });
         if (restoredUser) {
           syncSupplementaryProfileState(restoredUser);
@@ -207,7 +213,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
         }
       } catch (error: unknown) {
-        if (!active) return;
+        if (!active || authStore.getAccessToken() !== token) return;
         if (isUnauthorizedApiError(error)) {
           clearSessionScopedClientState();
           authStore.clear();
@@ -223,18 +229,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     };
 
-    if (storedUser) {
-      setUser(storedUser);
-      void restoreSessionFromServer(false);
-      syncSupplementaryProfileState(storedUser);
-      setIsHydrated(true);
-    } else {
-      if (import.meta.env.DEV) {
-        console.warn('[auth] stored user data is missing or invalid; attempting session recovery using the access token.');
-      }
-      authStore.clearUser();
-      void restoreSessionFromServer(true);
-    }
+    void restoreSessionFromServer(true);
     return () => {
       active = false;
     };
@@ -245,10 +240,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!event.key || !['edurite_access_token', 'edurite_refresh_token', 'edurite_user', 'edurite_session_event'].includes(event.key)) {
         return;
       }
-      if (!authStore.getAccessToken()) {
-        clearSessionScopedClientState();
-        setUser(null);
+      if (authStore.getUser()?.id === activeUserIdRef.current && authStore.getAccessToken()) return;
+      clearSessionScopedClientState();
+      setUser(null);
+      if (authStore.getAccessToken()) {
+        setIsHydrated(false);
+        window.location.reload();
       }
+
     };
     const onAuthCleared = () => {
       if (!authStore.getAccessToken()) {

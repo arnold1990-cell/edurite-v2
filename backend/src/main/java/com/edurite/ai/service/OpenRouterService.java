@@ -138,9 +138,13 @@ public class OpenRouterService implements AiProviderService {
         return value;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${openrouter.max-output-tokens:8192}")
+    private int maxOutputTokens = 8192;
+
     private String serializePayload(String resolvedModel, String prompt) {
         Map<String, Object> payload = Map.of(
                 "model", resolvedModel,
+                "max_tokens", maxOutputTokens,
                 "messages", List.of(Map.of("role", "user", "content", prompt))
         );
         try {
@@ -156,6 +160,10 @@ public class OpenRouterService implements AiProviderService {
     private String extractContent(String body) {
         try {
             JsonNode root = objectMapper.readTree(body);
+            String finish = root.path("choices").path(0).path("finish_reason").asText("");
+            if (!finish.isBlank() && !"stop".equals(finish)) throw new AiServiceException(HttpStatus.BAD_GATEWAY,
+                "AI_PROVIDER_RESPONSE_INCOMPLETE", "Provider finish reason: " + finish,
+                "The AI could not complete this answer. Please retry.");
             JsonNode content = root.path("choices").path(0).path("message").path("content");
             if (content.isMissingNode() || content.asText().isBlank()) {
                 throw new AiServiceException(HttpStatus.BAD_GATEWAY,

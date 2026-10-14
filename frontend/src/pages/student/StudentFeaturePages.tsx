@@ -227,7 +227,7 @@ export const StudentAiTutorPage = () => {
   const [question, setQuestion] = useState('');
   const [messages, setMessages] = useState<TutorMessage[]>([]);
   const ask = useMutation({
-    mutationFn: () => featureModulesService.askTutor({ sessionId, subject, question }),
+    mutationFn: (nextQuestion?: string) => featureModulesService.askTutor({ sessionId, subject, question: nextQuestion ?? question }),
     onSettled: () => { qc.invalidateQueries({ queryKey: ['subscription-access'] }); },
     onSuccess: (data) => {
       setSessionId(data.sessionId);
@@ -246,15 +246,15 @@ export const StudentAiTutorPage = () => {
   }, [activeSession.data]);
 
   if (sessions.isLoading) return <LoadingState message="Loading AI tutor..." />;
-  if (sessions.isError) return <ErrorState message="Could not load AI tutor sessions." />;
+  if (sessions.isError) return <><ErrorState message="Could not load AI tutor sessions." /><Button onClick={() => sessions.refetch()}>Retry</Button></>;
 
   return <Section title="AI Tutor">
     <AiUsageDisplay />
     {ask.isError && <p role="alert" className="text-red-700">{(ask.error as { message?: string }).message || 'Could not complete your request. Please try again.'}</p>}
     <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
       <aside className="space-y-2 rounded border bg-slate-50 p-3">
-        <h2 className="font-semibold">Previous sessions</h2>
-        {sessions.data?.length ? sessions.data.map((session) => <button key={session.id} type="button" className="block w-full rounded border bg-white px-3 py-2 text-left text-sm hover:bg-slate-100" onClick={() => setSessionId(session.id)}>
+        <h2 className="font-semibold">Previous sessions</h2><Button disabled={ask.isPending} onClick={() => { setSessionId(undefined); setMessages([]); }}>New session</Button>
+        {sessions.data?.length ? sessions.data.map((session) => <button key={session.id} type="button" className="block w-full rounded border bg-white px-3 py-2 text-left text-sm hover:bg-slate-100" disabled={ask.isPending} onClick={() => setSessionId(session.id)}>
           <span className="font-medium">{session.title}</span><br /><span className="text-xs text-slate-500">{session.subject}</span>
         </button>) : <p className="text-sm text-slate-500">No sessions yet.</p>}
       </aside>
@@ -262,10 +262,13 @@ export const StudentAiTutorPage = () => {
         <div className="min-h-[320px] space-y-3 rounded border bg-white p-4">
           {messages.length ? messages.map((message, index) => <div key={message.id ?? index} className={`rounded-lg p-3 text-sm ${message.sender === 'STUDENT' ? 'ml-auto bg-primary-50 text-primary-900' : 'mr-auto bg-slate-100 text-slate-800'} max-w-[85%]`}>
             <p className="text-xs font-semibold">{message.sender === 'STUDENT' ? 'You' : 'EduRite Tutor'}</p>
-            <p className="whitespace-pre-wrap">{message.message}</p>
+            <p className="whitespace-pre-wrap break-words">{message.message}</p>
           </div>) : <EmptyState title="Ask a question" message="Choose a subject and ask for help with a concept, problem, or study plan." />}
         </div>
-        <form className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[220px_minmax(0,1fr)_auto]" onSubmit={(event) => { event.preventDefault(); if (question.trim()) ask.mutate(); }}>
+        {messages.some(message => message.sender === 'STUDENT') && <Button disabled={ask.isPending || activeSession.isFetching} onClick={() => { const last = [...messages].reverse().find(message => message.sender === 'STUDENT'); if (last) ask.mutate(last.message); }}>Regenerate last answer</Button>}
+        {activeSession.isError && <p role="alert">Could not load this conversation. <button onClick={() => activeSession.refetch()}>Retry</button></p>}
+        {ask.isPending && <p role="status">The tutor is preparing your complete answer?</p>}
+        <form className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[220px_minmax(0,1fr)_auto]" onSubmit={(event) => { event.preventDefault(); if (question.trim()) ask.mutate(undefined); }}>
           <select className="rounded-lg border border-slate-300 px-3 py-2 text-sm" value={subject} onChange={(event) => setSubject(event.target.value)}>
             {tutorSubjects.map((item) => <option key={item}>{item}</option>)}
           </select>

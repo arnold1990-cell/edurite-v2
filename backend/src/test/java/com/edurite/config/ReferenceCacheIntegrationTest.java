@@ -187,6 +187,9 @@ class ReferenceCacheIntegrationTest {
         }
 
         @Bean
+        com.edurite.roadmap.service.CareerSelectionService careerSelectionService() { return mock(com.edurite.roadmap.service.CareerSelectionService.class); }
+
+        @Bean
         CareerRoadmapService careerRoadmapService(
                 CareerRoadmapRepository repository,
                 SavedCareerRoadmapRepository savedCareerRoadmapRepository,

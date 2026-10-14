@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createRoutesFromChildren, matchRoutes, Route, Routes, type RouteObject } from 'react-router-dom';
+import { createMemoryRouter, createRoutesFromChildren, matchRoutes, Route, Routes, type RouteObject } from 'react-router-dom';
 import { StaticRouter } from 'react-router-dom/server';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { App } from '@/app/App';
@@ -18,6 +18,22 @@ const student = flatten(routes).find(route => route.path === '/student')!;
 const elementType = (route: RouteObject) => (route.element as React.ReactElement)?.type;
 
 describe('Student portal architecture', () => {
+  it('restores navigation destinations and their selected sections with back and forward', async () => {
+    const destinations = ['/student/profile', '/student/documents', '/student/settings', '/student/career-guidance', '/student/career-explorer?section=career-path', '/student/career-match', '/student/career-match?step=assessment', '/student/learning'];
+    const router = createMemoryRouter(routes, { initialEntries: [destinations[0]] });
+    try {
+      for (const destination of destinations.slice(1)) await router.navigate(destination);
+      for (const destination of destinations.slice(0, -1).reverse()) {
+        await router.navigate(-1);
+        expect(router.state.location.pathname + router.state.location.search).toBe(destination);
+        expect(router.state.matches.slice(-1)[0]?.route.path).not.toBe('*');
+      }
+      for (const destination of destinations.slice(1)) {
+        await router.navigate(1);
+        expect(router.state.location.pathname + router.state.location.search).toBe(destination);
+      }
+    } finally { router.dispose(); }
+  });
   it('keeps every student destination under the same authenticated shell', () => {
     expect(elementType(student)).toBe(StudentAppShell);
     for (const route of student.children ?? []) {

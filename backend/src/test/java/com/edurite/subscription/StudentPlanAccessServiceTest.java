@@ -33,7 +33,7 @@ class StudentPlanAccessServiceTest {
     }
 
     @Test
-    void trialUserHasOnlyBasicAccessDuringTrialWindow() {
+    void trialUserHasPremiumAccessDuringTrialWindow() {
         UUID userId = UUID.randomUUID();
         SubscriptionRecord subscription = new SubscriptionRecord();
         subscription.setPlanCode("PLAN_BASIC");
@@ -45,8 +45,8 @@ class StudentPlanAccessServiceTest {
         when(subscriptionRepository.findTopByUserIdOrderByCreatedAtDesc(userId)).thenReturn(Optional.of(subscription));
 
         var access = service.resolveByUserId(userId);
-        assertThat(access.premium()).isFalse();
-        assertThat(access.planCode()).isEqualTo("PLAN_BASIC");
+        assertThat(access.premium()).isTrue();
+        assertThat(access.planCode()).isEqualTo("PLAN_PREMIUM");
         assertThat(access.status()).isEqualTo("TRIAL_ACTIVE");
     }
 
@@ -134,7 +134,22 @@ class StudentPlanAccessServiceTest {
         assertThat(service.hasSubscriptionAccess(id)).isTrue();
         for (String status : java.util.List.of("CANCELLED", "EXPIRED", "PENDING", "PAYMENT_FAILED")) {
             paid.setStatus(status);
-            assertThat(service.hasSubscriptionAccess(id)).isFalse();
+            assertThat(service.hasSubscriptionAccess(id)).isTrue();
         }
     }
+    @Test
+    void testingGrantSurvivesPendingAndFailedPayments() {
+        UUID id = UUID.randomUUID();
+        SubscriptionRecord grant = new SubscriptionRecord();
+        grant.setPlanCode("PLAN_PRO"); grant.setStatus("ACTIVE"); grant.setProvider("manual-testing");
+        SubscriptionRecord pending = new SubscriptionRecord();
+        pending.setPlanCode("PLAN_PREMIUM"); pending.setStatus("PENDING");
+        when(subscriptionRepository.findByUserIdOrderByCreatedAtDesc(id)).thenReturn(java.util.List.of(pending, grant));
+        assertThat(service.getCurrentPlan(id)).isEqualTo(com.edurite.subscription.entity.PlanType.PRO);
+        pending.setStatus("PAYMENT_FAILED");
+        assertThat(service.getCurrentPlan(id)).isEqualTo(com.edurite.subscription.entity.PlanType.PRO);
+        grant.setStatus("CANCELLED");
+        assertThat(service.getCurrentPlan(id)).isEqualTo(com.edurite.subscription.entity.PlanType.BASIC);
+    }
+
 }

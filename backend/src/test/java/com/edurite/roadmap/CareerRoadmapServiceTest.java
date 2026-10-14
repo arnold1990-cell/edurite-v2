@@ -115,8 +115,8 @@ class CareerRoadmapServiceTest {
                 )
         ));
 
-        assertThat(response.status()).isEqualTo("PROVISIONAL");
-        assertThat(response.totalAps()).isEqualTo(0);
+        assertThat(response.status()).isEqualTo("UNAVAILABLE");
+        assertThat(response.totalAps()).isNull();
         assertThat(response.subjects())
                 .extracting(item -> item.level() == null && item.apsPoints() == null)
                 .containsOnly(true);

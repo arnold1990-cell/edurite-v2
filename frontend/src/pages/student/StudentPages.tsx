@@ -1,8 +1,13 @@
+import { StudentRedirect } from '@/routes/StudentRedirect';
+import { StudentAssessment } from '@/components/student/career/StudentAssessment';
+import { ProfileAssociationButton } from '@/components/student/profile/ProfileAssociations';
+import { selectExtractedResult, validateAcademicResults } from './academicResults';
+import { PendingPaymentNotice } from '@/features/subscriptions/access';
+import { calculateNscLevel } from './roadmapAps.utils';
 import { useSubjectCatalogue } from '@/hooks/useSubjectCatalogue';
 import { apiClient } from '@/services/apiClient';
 import { useSubscriptionAccess, AiUsageDisplay, FeatureLock } from '@/features/subscriptions/access';
 import '@/features/subscriptions/subscription.css';
-import { AiGuidance } from '@/components/student/guidance/AiGuidance';
 import { StudentProfileView } from '@/components/student/profile/StudentProfileView';
 import { StudentDashboard as ReferenceStudentDashboard } from '@/components/student/dashboard/StudentDashboard';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -123,7 +128,7 @@ const getInitials = (firstName?: string, lastName?: string) => `${(firstName?.[0
 const toSubjectRow = (item?: StudentSubjectAchievement | null): StudentSubjectAchievement => ({
   ...item,
   subjectName: item?.subjectName ?? '',
-  achievementLevel: item?.achievementLevel ?? null,
+  achievementLevel: item?.markPercentage != null ? calculateNscLevel(item.markPercentage) : item?.achievementLevel ?? null,
 });
 
 const parseProgrammeChecks = (requirements: string[] = [], subjectNames: string[] = []): ProgrammeRequirementCheck[] => {
@@ -683,6 +688,8 @@ export const StudentProfilePage = () => {
   });
   const savedProfiles = useAppQuery({ queryKey: ['me', 'saved-profiles'], queryFn: studentService.listSavedProfiles });
   const draftDirty = useRef(false);
+  const academicBaseline = useRef<StudentSubjectAchievement[]>([]);
+  const [reviewMessage, setReviewMessage] = useState('');
   const [form, setFormState] = useState<Record<string, string>>({});
   const setForm: typeof setFormState = (next) => { draftDirty.current = true; setFormState(next); };
   const [subjectRows, setSubjectRows] = useState<StudentSubjectAchievement[]>([{ subjectName: '', achievementLevel: null }]);
@@ -732,6 +739,7 @@ export const StudentProfilePage = () => {
 
   useEffect(() => {
     if (!profile.data || draftDirty.current) return;
+    academicBaseline.current = profile.data.subjectAchievements ?? [];
     setFormState(toFormState(profile.data));
     setSubjectRows(toSubjectRows(profile.data));
   }, [profile.data]);
@@ -764,18 +772,24 @@ export const StudentProfilePage = () => {
   });
 
   const update = useMutation({
-    mutationFn: () => studentService.updateMe({
+    mutationFn: () => {
+      validateAcademicResults(subjectRows);
+      return studentService.updateMe({
       ...form,
       dateOfBirth: form.dateOfBirth || undefined,
       selectedGrade: form.selectedGrade || undefined,
       subjectAchievements: normalizedSubjects,
+      expectedSubjectAchievements: academicBaseline.current,
       qualifications: parseList(form.qualifications ?? ''),
       experience: parseList(form.experience ?? ''),
       skills: parseList(form.skills ?? ''),
       interests: parseList(form.interests ?? ''),
-    }),
+    });
+    },
     onSuccess: (updatedProfile) => {
       draftDirty.current = false;
+      academicBaseline.current = updatedProfile.subjectAchievements ?? [];
+      setReviewMessage('');
       setFormState(toFormState(updatedProfile));
       setSubjectRows(toSubjectRows(updatedProfile));
       qc.setQueryData(['me'], updatedProfile);
@@ -822,6 +836,8 @@ export const StudentProfilePage = () => {
     mutationFn: (savedProfileId: string) => studentService.applySavedProfile(savedProfileId),
     onSuccess: (updatedProfile) => {
       draftDirty.current = false;
+      academicBaseline.current = updatedProfile.subjectAchievements ?? [];
+      setReviewMessage('');
       setFormState(toFormState(updatedProfile));
       setSubjectRows(toSubjectRows(updatedProfile));
       qc.setQueryData(['me'], updatedProfile);
@@ -916,7 +932,9 @@ export const StudentProfilePage = () => {
 
   const savedProfileDetailById = useMemo(() => new Map((savedProfileDetails.data ?? []).map((item) => [item.id, item])), [savedProfileDetails.data]);
   const setSubjectField = (index: number, patch: Partial<StudentSubjectAchievement>) => {
+    update.reset();
     draftDirty.current = true;
+    if ('markPercentage' in patch) patch.achievementLevel = calculateNscLevel(patch.markPercentage);
     setSubjectRows((current) => current.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)));
   };
   const addSubjectRow = () => { draftDirty.current = true; setSubjectRows((current) => [...current, { subjectName: '', achievementLevel: null }]); };
@@ -955,7 +973,39 @@ export const StudentProfilePage = () => {
         <label className="space-y-1 text-sm font-medium text-slate-700 sm:col-span-2">Bio<Input className="transition focus:shadow-sm" placeholder="Bio" value={value('bio')} onChange={(e) => setForm((s) => ({ ...s, bio: e.target.value }))} /></label>
       </div>
     </article>);
-  const academicContent = <>
+  const reviewExtraction = (subject: StudentSubjectAchievement) => {
+    draftDirty.current = true;
+    update.reset();
+    setSubjectRows(current => selectExtractedResult(current, toSubjectRow(subject)));
+    setReviewMessage('Result added to your draft. Correct it below, then save your profile to confirm.');
+  };
+  const extractionReview = <section className="ep-form-card" aria-label="Review extracted results">
+    <h3>Review uploaded results</h3>
+    {transcripts.isLoading && <p role="status">Loading extraction history...</p>}
+    {transcripts.isError && <p role="alert">Could not load extraction results. <button onClick={() => transcripts.refetch()}>Retry</button></p>}
+    {transcripts.data?.slice(-1).map(item => <div key={item.documentId}>
+      <p>{item.extraction.message}</p><p>{item.extraction.grade} {item.extraction.year}</p>
+      {item.extraction.grade && <button type="button" className="underline" onClick={() => setForm(current => ({ ...current, selectedGrade: item.extraction.grade! }))}>Use report grade</button>}
+      <p>Choose each result to include. Replacing a mark is explicit; you can correct it in the form before saving.</p>
+      {item.extraction.subjects.map(subject => {
+        const existing = subjectRows.find(row => row.subjectName.toLowerCase() === subject.subjectName.toLowerCase());
+        return <div key={subject.subjectName} className="mt-3 rounded border p-3">
+          <strong>{subject.subjectName}</strong>: extracted {subject.markPercentage}%
+          {existing && <span> | Current draft: {existing.markPercentage != null ? `${existing.markPercentage}%` : `Level ${existing.achievementLevel ?? 'not set'}`}</span>}
+          <button type="button" className="ml-3 underline" disabled={existing?.verified || update.isPending} onClick={() => reviewExtraction(subject)}>{existing ? 'Use extracted result instead' : 'Add extracted result'}</button>
+          {existing?.verified && <p>Verified results require administrator review to change.</p>}
+        </div>;
+      })}
+    </div>)}
+    {!transcripts.isLoading && !transcripts.data?.length && <p>No academic document uploaded yet.</p>}
+    {reviewMessage && <p role="status">{reviewMessage}</p>}
+  </section>;
+  const academicContent = <fieldset disabled={update.isPending} className="space-y-4">
+    <section className="ep-form-card" aria-label="Saved academic results"><h3>Saved subjects and marks</h3>
+      {(p.subjectAchievements ?? []).length ? <ul>{p.subjectAchievements?.map(subject => <li key={subject.subjectName}>{subject.subjectName}: {subject.markPercentage != null ? `${subject.markPercentage}%` : `Level ${subject.achievementLevel ?? 'not set'}`} {[subject.curriculum, subject.gradingScale, subject.academicYear, subject.examination].filter(Boolean).join(' | ')}</li>)}</ul> : <p>No saved results yet. Add subjects below and save your profile.</p>}
+      <Link to="/student/profile?section=documents">Upload an academic document</Link>
+    </section>
+    {extractionReview}
     <article className="ep-form-card"><h3>Academic Information</h3><div className="ep-editor-fields">
       <label className="ep-field"><span>School</span><Input maxLength={200} value={value('schoolName')} onChange={event => setForm(current => ({ ...current, schoolName: event.target.value }))} /><small>Profile information only. School access still requires approval.</small></label>
       <label className="ep-field"><span>Grade</span><select value={value('selectedGrade')} onChange={(event) => setForm((current) => ({ ...current, selectedGrade: event.target.value }))}><option value="">Select grade</option>{STUDENT_GRADES.map((grade) => <option key={grade} value={grade}>{grade}</option>)}</select></label>
@@ -987,13 +1037,14 @@ export const StudentProfilePage = () => {
               </select>
             </label>
             <label className="ep-field"><span>Mark (%)</span><Input type="number" min={0} max={100} disabled={row.verified} value={row.markPercentage ?? ''} onChange={e => setSubjectField(index, { markPercentage: e.target.value === '' ? null : Number(e.target.value) })} /><small>{row.verified ? 'Verified transcript ? protected result' : row.source === 'TRANSCRIPT' ? 'Extracted transcript ? awaiting review' : 'Manual entry'}</small></label>
+            {(['curriculum', 'gradingScale', 'academicYear', 'examination'] as const).map(field => <label className="ep-field" key={field}><span>{{ curriculum: 'Curriculum', gradingScale: 'Grading scale', academicYear: 'Academic year', examination: 'Examination / term' }[field]}</span><Input disabled={row.verified} value={row[field] ?? ''} placeholder={{ curriculum: 'e.g. CAPS', gradingScale: 'e.g. NSC percentage', academicYear: 'e.g. 2026', examination: 'e.g. Final examination' }[field]} onChange={event => setSubjectField(index, { [field]: event.target.value || null })}/></label>)}
             <Button type="button" aria-label={`Remove subject ${index + 1}`} className="bg-rose-600 hover:bg-rose-500" onClick={() => removeSubjectRow(index)} disabled={subjectRows.length === 1 || row.verified}>Remove<span className="sr-only"> subject {index + 1}</span></Button>
           </div>;
         })}
       </div>
-      <p className="mt-2 text-xs text-slate-500">Achievement levels follow the NSC scale from Level 1 to Level 7.</p>
+      <p className="mt-2 text-xs text-slate-500">Achievement levels follow the NSC scale from Level 1 to Level 7. Keep the curriculum and report context with each result.</p>
     </article>
-  </>;
+  </fieldset>;
   const readinessContent = (    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <h3 className="text-lg font-semibold text-slate-900">Profile Strength / Readiness Breakdown</h3>
       <div className={`mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-2 ${isPremiumStudent ? 'xl:grid-cols-4 2xl:grid-cols-5' : ''}`}>
@@ -1009,7 +1060,7 @@ export const StudentProfilePage = () => {
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Brain className="h-5 w-5 text-primary-600" />
-            <h3 className="text-lg font-semibold text-slate-900">AI Guidance Preview / Qualification Readiness</h3>
+            <h3 className="text-lg font-semibold text-slate-900">EduRite AI Guidance Preview / Qualification Readiness</h3>
           </div>
           <Button type="button" onClick={() => setGuidanceRefresh((count) => count + 1)} disabled={Boolean(profileReadinessMessage) || aiPreview.isFetching}>{aiPreview.isFetching ? 'Analyzing...' : 'Refresh guidance'}</Button>
         </div>
@@ -1108,9 +1159,9 @@ export const StudentProfilePage = () => {
           />
         </label>
       </div>
-      {(cvUpload.isPending || transcriptUpload.isPending) && <p role="status">Uploading document...</p>}
+      {(cvUpload.isPending || transcriptUpload.isPending) && <p role="status">Uploading document and extracting results...</p>}
       {(cvUpload.isSuccess || transcriptUpload.isSuccess) && <p role="status">Document uploaded successfully.</p>}
-      {(cvUpload.isError || transcriptUpload.isError) ? <p className="mt-2 text-sm text-red-600">Could not upload one of your documents. Please try again.</p> : null}
+      {(cvUpload.isError || transcriptUpload.isError) ? <p className="mt-2 text-sm text-red-600">{(transcriptUpload.error || cvUpload.error)?.message || 'Could not upload your document. Please try again.'}</p> : null}
     </article>);
   const savedProfilesContent = (    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
       <h3 className="text-lg font-semibold text-slate-900">Saved Profile Versions</h3>
@@ -1179,334 +1230,10 @@ export const StudentDocumentsPage = StudentProfilePage;
 export const StudentQualificationsPage = StudentProfilePage;
 export const StudentExperiencePage = StudentProfilePage;
 
-export const StudentCareerRecommendationsPage = ({ onDemand = true }: { onDemand?: boolean }) => {
-  const access = useSubscriptionAccess();
-  if (access.isPending) return <LoadingState />;
-  if (access.isError) return <ErrorState message="Could not check subscription access. Please refresh." />;
-  if (!access.data.entitlements.includes('PERSONALISED_CAREER_RECOMMENDATIONS')) return <FeatureLock feature="PERSONALISED_CAREER_RECOMMENDATIONS" />;
-  return access.data.entitlements.includes('ADVANCED_MATCHING')
-    ? <AdvancedCareerRecommendations onDemand={onDemand} />
-    : <PersonalisedCareerRecommendations />;
-};
+// Compatibility export: recommendations now have one destination.
+export const StudentCareerRecommendationsPage = (_props: { onDemand?: boolean }) => <StudentRedirect to="/student/career-match" />;
 
-function PersonalisedCareerRecommendations() {
-  const qc = useQueryClient();
-  const advice = useMutation({
-    mutationFn: aiGuidanceService.getPersonalisedCareerAdvice,
-    onSettled: () => { qc.invalidateQueries({ queryKey: ['subscription-access'] }); },
-  });
-  return <Section title="Career Guidance" description="Personalised career recommendations based on your learner profile.">
-    <AiUsageDisplay />
-    <Link to="/student/profile?section=interests">Review interests and skills</Link>
-    <Button disabled={advice.isPending} onClick={() => advice.mutate()}>{advice.isPending ? 'Finding your pathways...' : 'Update Career Recommendations'}</Button>
-    {advice.isError && <p role="alert">{(advice.error as ApiError)?.message || 'Could not generate guidance. Please try again.'}</p>}
-    <div className="grid gap-4 md:grid-cols-2">{advice.data?.recommendedCareers.map(career => <article key={career.name} className="card p-5">
-      <h2 className="text-lg font-semibold">{career.name}</h2><p>{career.reason}</p>
-      <ul className="mt-3 list-disc pl-5">{career.improvements.map(item => <li key={item}>{item}</li>)}</ul>
-    </article>)}</div>
-    <FeatureLock feature="ADVANCED_MATCHING" />
-  </Section>;
-}
-
-const AdvancedCareerRecommendations = ({ onDemand = true }: { onDemand?: boolean }) => {
-  const subjectCatalogue = useSubjectCatalogue();
-  const isDemoMode = aiGuidanceService.demoModeEnabled;
-  const profile = useAppQuery({ queryKey: ['me'], queryFn: studentService.getMe });
-  const [guidanceMode, setGuidanceMode] = useState<'FAST' | 'DEEP'>('FAST');
-  const [guidanceRequest, setGuidanceRequest] = useState(onDemand ? 0 : 1);
-  const subscription = useAppQuery({ queryKey: ['sub'], queryFn: subscriptionService.current });
-  const access = useSubscriptionAccess();
-  const isPremium = Boolean(access.data?.entitlements.includes('ADVANCED_MATCHING'));
-
-  useEffect(() => {
-    if (guidanceMode === 'DEEP' && !isPremium) {
-      setGuidanceMode('FAST');
-    }
-  }, [guidanceMode, isPremium]);
-
-  const currentProfile = profile.data;
-  const qualificationLevel = currentProfile?.qualificationLevel?.trim() ?? '';
-  const careerInterest = (currentProfile?.interests ?? []).map((item) => item.trim()).filter(Boolean).join(', ');
-  const targetProgram = currentProfile?.careerGoals?.trim() || careerInterest;
-  const subjectSignals = (currentProfile?.subjectAchievements ?? [])
-    .filter((item) => item.subjectName)
-    .map((item) => `${item.subjectName}${item.achievementLevel ? ` level ${item.achievementLevel}` : ''}`);
-  const guidanceMaxRecommendations = guidanceMode === 'FAST' ? 3 : 10;
-  const profileReadinessMessage = !currentProfile
-    ? 'Student profile is required before requesting AI guidance.'
-    : !qualificationLevel || !careerInterest
-      ? 'Please complete your profile (qualification level and interests) before generating AI guidance.'
-      : null;
-
-  const defaultSources = useAppQuery({
-    queryKey: ['default-university-sources'],
-    enabled: !aiGuidanceService.demoModeEnabled && guidanceRequest > 0,
-    queryFn: aiGuidanceService.getDefaultUniversitySources,
-    staleTime: 30 * 60_000,
-    gcTime: 60 * 60_000,
-    refetchOnMount: false,
-  });
-
-  const aiAdvice = useAppQuery({
-    queryKey: ['ai-guidance-university-sources', guidanceRequest, guidanceMode, currentProfile?.id, currentProfile?.profileCompleteness, qualificationLevel, careerInterest, targetProgram, onDemand ? subjectSignals.join('|') : ''],
-    enabled: Boolean(currentProfile) && guidanceRequest > 0 && !aiGuidanceService.demoModeEnabled && !profileReadinessMessage,
-    queryFn: async () => aiGuidanceService.analyseUniversitySources({
-      urls: [], // Empty list triggers backend default-source mode.
-      targetProgram: onDemand ? [targetProgram, currentProfile?.selectedGrade].filter(Boolean).join(' | ') : targetProgram,
-      careerInterest: onDemand ? [careerInterest, (currentProfile?.skills ?? []).join(', '), subjectSignals.join(', ')].filter(Boolean).join(' | ') : careerInterest,
-      qualificationLevel: onDemand ? [qualificationLevel, currentProfile?.selectedGrade, currentProfile?.location].filter(Boolean).join(' | ') : qualificationLevel,
-      maxRecommendations: guidanceMaxRecommendations,
-    }),
-    retry: false,
-    staleTime: 15 * 60_000,
-    gcTime: 30 * 60_000,
-    refetchOnMount: false,
-    placeholderData: keepPreviousData,
-  });
-
-  const demoAdvice = useAppQuery({
-    queryKey: ['ai-guidance-demo'],
-    enabled: aiGuidanceService.demoModeEnabled,
-    queryFn: aiGuidanceService.getDemoGuidance,
-  });
-
-  if (profile.isLoading || demoAdvice.isLoading) return <LoadingState message="Generating AI guidance..." detail="We are matching your profile with the best-fit careers and programmes." />;
-  if (profile.isError) return <ErrorState message="Could not load your profile. Please refresh and try again." />;
-
-  const isSearching = !isDemoMode && (aiAdvice.isLoading || aiAdvice.isFetching || defaultSources.isLoading || defaultSources.isFetching);
-  if (!onDemand && !isDemoMode && profileReadinessMessage) return <ErrorState message={profileReadinessMessage} />;
-
-  const hasAiRequestError = !isDemoMode && aiAdvice.isError;
-
-  const demoRecommendations = (demoAdvice.data?.suggestedCareers ?? []).map((item) => item.title);
-  const careers = aiAdvice.data?.recommendedCareers ?? [];
-  const programmes = aiAdvice.data?.recommendedProgrammes ?? [];
-  const universities = aiAdvice.data?.recommendedUniversities ?? [];
-  const minimumRequirements = aiAdvice.data?.minimumRequirements ?? [];
-  const skillGaps = aiAdvice.data?.skillGaps ?? [];
-  const nextSteps = aiAdvice.data?.recommendedNextSteps ?? [];
-  const warnings = aiAdvice.data?.warnings ?? [];
-  const sourceDiagnostics = aiAdvice.data?.sourceDiagnostics ?? [];
-  const sourceCoverage = aiAdvice.data?.sourceCoverage;
-  const responseStatus = hasAiRequestError ? 'ERROR' : (aiAdvice.data?.status ?? 'ERROR');
-  const aiAvailable = hasAiRequestError ? false : (aiAdvice.data?.available ?? (aiAdvice.data?.aiLive ?? false));
-  const aiUnavailable = !isDemoMode && (hasAiRequestError || !aiAvailable || responseStatus === 'ERROR');
-  const backendMode = aiAdvice.data?.mode ?? (aiAdvice.data?.fallbackUsed ? 'FALLBACK' : aiAdvice.data?.aiLive ? 'LIVE' : 'UNAVAILABLE');
-  const requestedSources = aiAdvice.data?.sourceCoverage?.requestedSourcesCount ?? aiAdvice.data?.requestedSources?.length ?? aiAdvice.data?.sourceUrls?.length ?? 0;
-  const analysedSources = aiAdvice.data?.totalSourcesUsed ?? 0;
-  const aiPlanCode = aiAdvice.data?.planCode ?? (isPremium ? 'PLAN_PREMIUM' : 'PLAN_BASIC');
-  const aiPremiumUnlocked = isDemoMode ? isPremium : (aiAdvice.data?.premiumUnlocked ?? isPremium);
-  const aiCareerLimit = aiPremiumUnlocked ? null : (aiAdvice.data?.careerSuggestionLimit ?? 3);
-  const visibleCareers = aiPremiumUnlocked ? careers : careers.slice(0, aiCareerLimit ?? 3);
-  const visibleDemoRecommendations = isPremium ? demoRecommendations.slice(0, 10) : demoRecommendations.slice(0, 3);
-  const basicPlanLockMessage = aiAdvice.data?.upgradeMessage ?? 'Upgrade to Premium to unlock deeper AI analysis and more recommendations.';
-
-  const renderSimpleList = (items: string[], emptyText: string) => {
-    if (items.length === 0) {
-      return <p className="text-sm text-slate-500">{emptyText}</p>;
-    }
-    return <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2">{items.map((item) => <div key={item} className="border p-2 rounded text-sm">{item}</div>)}</div>;
-  };
-
-  const renderCareerCards = (items: UniversityRecommendedCareer[]) => {
-    if (items.length === 0) {
-      return <p className="text-sm text-slate-500">No career recommendations yet.</p>;
-    }
-    return <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">{items.slice(0, 10).map((career) => <article key={career.name} className="rounded border p-3 space-y-2 bg-white">
-      <h4 className="font-semibold">{career.name}</h4>
-      <p className="text-sm text-slate-600">{career.reason}</p>
-      {career.rankingCategory && <p className="text-xs font-medium text-emerald-700">{career.rankingCategory}</p>}
-      {career.recommendationReason && <p className="text-sm text-slate-700"><span className="font-medium">Why this was recommended:</span> {career.recommendationReason}</p>}
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Requirements</p>
-        <ul className="list-disc ml-5 text-sm">{career.requirements.map((requirement) => <li key={`${career.name}-${requirement}`}>{requirement}</li>)}</ul>
-      </div>
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Related programmes</p>
-        <ul className="list-disc ml-5 text-sm">{career.relatedProgrammes.map((programme) => <li key={`${career.name}-${programme}`}>{programme}</li>)}</ul>
-      </div>
-      {career.verifiedFacts?.length ? <div><p className="text-xs uppercase tracking-wide text-slate-500">Verified facts</p><ul className="list-disc ml-5 text-sm">{career.verifiedFacts.map((fact) => <li key={`${career.name}-${fact}`}>{fact}</li>)}</ul></div> : null}
-      {career.nextBestActions?.length ? <div><p className="text-xs uppercase tracking-wide text-slate-500">Next best actions</p><ul className="list-disc ml-5 text-sm">{career.nextBestActions.map((action) => <li key={`${career.name}-${action}`}>{action}</li>)}</ul></div> : null}
-    </article>)}</div>;
-  };
-
-  const renderProgrammeCards = (items: UniversityRecommendedProgramme[]) => {
-    if (items.length === 0) {
-      return <p className="text-sm text-slate-500">No programme recommendations yet.</p>;
-    }
-    return <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">{items.slice(0, 10).map((programme) => <article key={`${programme.name}-${programme.university}`} className="rounded border p-3 space-y-2 bg-white">
-      <h4 className="font-semibold">{programme.name}</h4>
-      <p className="text-sm text-slate-600">{programme.university}</p>
-      <div className="flex gap-2 text-xs">{programme.rankingCategory && <span className="rounded bg-emerald-50 px-2 py-1 text-emerald-700">{programme.rankingCategory}</span>}{programme.confidenceLevel && <span className="rounded bg-slate-100 px-2 py-1 text-slate-700">Confidence: {programme.confidenceLevel}</span>}{programme.sourceStatus && <span className="rounded bg-blue-50 px-2 py-1 text-blue-700">Source: {programme.sourceStatus}</span>}</div>
-      {programme.recommendationReason && <p className="text-sm text-slate-700"><span className="font-medium">Why this was recommended:</span> {programme.recommendationReason}</p>}
-      <div>
-        <p className="text-xs uppercase tracking-wide text-slate-500">Admission requirements</p>
-        <ul className="list-disc ml-5 text-sm">{programme.admissionRequirements.map((requirement) => <li key={`${programme.name}-${requirement}`}>{requirement}</li>)}</ul>
-      </div>
-      <div className="text-sm">
-        <p><span className="font-medium">Notes:</span> {programme.notes}</p>
-      </div>
-      {programme.verifiedFacts?.length ? <div><p className="text-xs uppercase tracking-wide text-slate-500">Verified facts</p><ul className="list-disc ml-5 text-sm">{programme.verifiedFacts.map((fact) => <li key={`${programme.name}-${fact}`}>{fact}</li>)}</ul></div> : null}
-      {programme.missingData?.length ? <div><p className="text-xs uppercase tracking-wide text-slate-500">Missing information</p><ul className="list-disc ml-5 text-sm">{programme.missingData.map((fact) => <li key={`${programme.name}-${fact}`}>{fact}</li>)}</ul></div> : null}
-      {programme.nextBestActions?.length ? <div><p className="text-xs uppercase tracking-wide text-slate-500">Next best actions</p><ul className="list-disc ml-5 text-sm">{programme.nextBestActions.map((action) => <li key={`${programme.name}-${action}`}>{action}</li>)}</ul></div> : null}
-    </article>)}</div>;
-  };
-
-  const guidanceDetails = <Section title="AI Guidance">
-    {!onDemand && <>
-    <div className="relative overflow-hidden rounded-[28px] border border-blue-900/30 bg-[#081739] p-5 text-white shadow-xl shadow-slate-900/20 md:p-6">
-      <div className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full bg-gradient-to-br from-blue-500/35 to-orange-400/30 blur-2xl" />
-      <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <p className="text-sm text-blue-100/90">Mode: {isDemoMode ? 'demo (seeded)' : `${backendMode} (${guidanceMode.toLowerCase()})`}</p>
-          <p className="mt-2 text-lg font-semibold">AI-powered university and career guidance workspace</p>
-        </div>
-        {!isDemoMode && (
-          <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm">
-            <p><span className="font-semibold">Current plan:</span> {aiPlanCode.replace('PLAN_', '')}</p>
-            <p className="mt-1 text-blue-100/90">
-              {aiPremiumUnlocked
-                ? 'Premium unlocks full guidance, expanded analysis, and uncapped career suggestions.'
-                : `Basic plan shows up to ${aiCareerLimit ?? 3} career suggestions with limited detail.`}
-            </p>
-            {!aiPremiumUnlocked ? <p className="mt-1 text-amber-200">{basicPlanLockMessage}</p> : null}
-            {!aiPremiumUnlocked ? <Link to="/student/subscription" className="mt-2 inline-block font-semibold text-white underline underline-offset-2 hover:text-blue-200">Upgrade to Premium</Link> : null}
-          </div>
-        )}
-      </div>
-    </div>
-    {!isDemoMode && <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-slate-800">Search mode</p>
-          <p className="text-xs text-slate-500">Fast returns quicker results. Deep checks more sources for richer guidance and requires an active Premium plan.</p>
-        </div>
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
-          <button
-            type="button"
-            className={`rounded-md px-3 py-1 text-sm ${guidanceMode === 'FAST' ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
-            onClick={() => setGuidanceMode('FAST')}
-          >
-            Fast
-          </button>
-          <button
-            type="button"
-            className={`rounded-md px-3 py-1 text-sm ${guidanceMode === 'DEEP' ? 'bg-primary-600 text-white' : 'text-slate-600 hover:bg-slate-100'} ${!isPremium ? 'cursor-not-allowed opacity-50' : ''}`}
-            onClick={() => setGuidanceMode('DEEP')}
-            disabled={!isPremium}
-            title={!isPremium ? 'Upgrade to Premium to use Deep mode.' : undefined}
-          >
-            Deep
-          </button>
-        </div>
-      </div>
-    </div>}
-    {onDemand && !isDemoMode ? <Button type="button" onClick={() => setGuidanceRequest((count) => count + 1)} disabled={isSearching || Boolean(profileReadinessMessage)}>{guidanceRequest ? 'Regenerate guidance' : 'Generate my guidance'}</Button> : null}
-    </>}
-    {!aiPremiumUnlocked ? <p className="text-xs text-amber-700">Deep AI mode and expanded insights are available on Pro subscriptions.</p> : null}
-    {isSearching ? <div className="rounded-[22px] border border-blue-200 bg-blue-50/70 p-4"><LoadingState message="Searching for guidance results..." detail={guidanceMode === 'FAST' ? 'Fast mode is prioritising quick source retrieval.' : 'Deep mode is checking more sources for broader coverage.'} /></div> : null}
-    {!isDemoMode && guidanceRequest > 0 && <>
-      {aiUnavailable && <div className="rounded-[22px] border border-rose-300 bg-rose-50 p-4 text-sm text-rose-900 shadow-sm">
-        <span className="font-semibold">{AI_ERROR_MESSAGE}</span>
-      </div>}
-      {!aiUnavailable && responseStatus === 'PARTIAL' && <div className="rounded border border-blue-300 bg-blue-50 p-3 text-sm text-blue-900">
-        EduRite returned partial guidance using the university sources that completed successfully.
-      </div>}
-      {!aiUnavailable && <>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <Card label="Sources used" value={analysedSources} />
-        <Card label="Requested sources" value={sourceCoverage?.requestedSourcesCount ?? requestedSources} />
-        <Card label="Suitability score" value={`${aiAdvice.data?.suitabilityScore ?? 0}%`} />
-      </div>
-      {aiAdvice.data?.warningMessage && <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-        <span className="font-semibold">Warning:</span> {aiAdvice.data.warningMessage}
-      </div>}
-      {analysedSources === 0 && <div className="rounded border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900">
-        No public university sources were analysed for this response. Please verify every recommendation on official university pages.
-      </div>}
-      {aiAdvice.data?.suitabilityScoreReason && <div className="rounded border p-3 bg-slate-50 text-sm">
-        <p><span className="font-semibold">Suitability explanation:</span> {aiAdvice.data.suitabilityScoreReason}</p>
-        {!!aiAdvice.data.suitabilitySignalsUsed?.length && <p className="mt-2"><span className="font-semibold">Signals used:</span> {aiAdvice.data.suitabilitySignalsUsed.join(', ')}</p>}
-        {!!aiAdvice.data.suitabilityScoreLimitations?.length && <p className="mt-2"><span className="font-semibold">What lowered the score:</span> {aiAdvice.data.suitabilityScoreLimitations.join(', ')}</p>}
-      </div>}
-      {sourceCoverage && <div className="rounded border p-3 bg-white text-sm">
-        <h3 className="font-semibold mb-1">Source coverage</h3>
-        <p>Successful: {sourceCoverage.successfulSourcesCount} • Failed: {sourceCoverage.failedSourcesCount} • Partial: {sourceCoverage.partialSourcesCount}</p>
-        {!!sourceCoverage.universitiesWithUsableProgrammeData?.length && <p className="mt-1">Universities with usable programme data: {sourceCoverage.universitiesWithUsableProgrammeData.join(', ')}</p>}
-      </div>}
-    </>}
-
-    {!aiUnavailable && <div className="space-y-2">
-      <h3 className="font-semibold">Recommended careers</h3>
-      {isDemoMode ? renderSimpleList(visibleDemoRecommendations, 'No career recommendations yet.') : renderCareerCards(visibleCareers)}
-      {!isDemoMode && !aiPremiumUnlocked ? <p className="text-xs text-amber-700">Showing {aiCareerLimit ?? 3} career suggestions on Basic. Upgrade for full recommendations.</p> : null}
-    </div>}
-
-    {!aiUnavailable && !isDemoMode && aiPremiumUnlocked && <>
-      <div className="space-y-2">
-        <h3 className="font-semibold">Recommended programmes</h3>
-        {renderProgrammeCards(programmes)}
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="font-semibold">Recommended universities</h3>
-        {renderSimpleList(universities, 'No university recommendations yet.')}
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="font-semibold">Minimum requirements</h3>
-        {renderSimpleList(minimumRequirements, 'Minimum requirements are currently unavailable.')}
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="font-semibold">Skill gaps</h3>
-        {renderSimpleList(skillGaps, 'No skill gaps identified.')}
-      </div>
-
-      <div className="space-y-2">
-        <h3 className="font-semibold">Recommended next steps</h3>
-        {renderSimpleList(nextSteps, 'No next steps provided.')}
-      </div>
-
-      {warnings.length > 0 && <div className="space-y-2">
-        <h3 className="font-semibold">Warnings</h3>
-        {renderSimpleList(warnings, 'No warnings.')}
-      </div>}
-
-      {sourceDiagnostics.length > 0 && <div className="space-y-2">
-        <h3 className="font-semibold">Source availability</h3>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-2">
-          {sourceDiagnostics.map((item) => (
-            <div key={item.sourceUrl} className="rounded border p-3 text-sm">
-              <p className="font-medium">{item.university ?? 'University source'}</p>
-              <p className="mt-1"><span className="font-medium">Availability:</span> {item.fetchStatus}</p>
-              {item.failureReason && <p className="mt-1 text-slate-600">{item.failureReason}</p>}
-            </div>
-          ))}
-        </div>
-      </div>}
-
-      {aiAdvice.data?.summary && <div className="rounded border p-3 bg-slate-50">
-        <h3 className="font-semibold mb-1">Summary</h3>
-        <p className="text-sm">{aiAdvice.data.summary}</p>
-      </div>}
-      </>}
-    </>}
-    {!aiUnavailable && !isDemoMode && !aiPremiumUnlocked ? (
-      <div className="rounded border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-        <p className="font-semibold">Premium detail is locked on Basic.</p>
-        <p className="mt-1">Upgrade to unlock full programme analysis, source diagnostics, and expanded next-step guidance.</p>
-      </div>
-    ) : null}
-  </Section>;
-  if (!onDemand) return guidanceDetails;
-  return <AiGuidance qualifications={aiPremiumUnlocked && !aiUnavailable ? programmes.map(programme => evaluateProgrammeQualification(programme, currentProfile?.subjectAchievements ?? [], careers.map(career => career.name), subjectCatalogue.data?.map(s => s.name))) : []} profile={currentProfile} advice={aiUnavailable ? undefined : aiAdvice.data} careers={aiUnavailable ? [] : visibleCareers} premium={aiPremiumUnlocked} loading={isSearching} error={profileReadinessMessage || (guidanceRequest > 0 && aiUnavailable ? AI_ERROR_MESSAGE : null)} details={guidanceDetails} controls={<>
-    <span>Guidance:</span><button type="button" aria-pressed={guidanceMode === 'FAST'} onClick={() => setGuidanceMode('FAST')}>Fast</button><button type="button" aria-pressed={guidanceMode === 'DEEP'} disabled={!isPremium} onClick={() => setGuidanceMode('DEEP')}>Deep</button>
-    <button type="button" className="ec-generate" disabled={isSearching || Boolean(profileReadinessMessage)} onClick={() => setGuidanceRequest(count => count + 1)}>{guidanceRequest ? 'Regenerate guidance' : 'Generate my guidance'}</button>
-    {!isPremium && <Link to="/student/subscription">Pro unlocks Deep guidance</Link>}
-  </>} />;
-};
-export const StudentBursaryRecommendationsPage = () => <StudentCareerRecommendationsPage onDemand={false} />;
+export const StudentBursaryRecommendationsPage = () => <StudentApplicationsPage />;
 
 export const StudentSavedPage = () => {
   const navigate = useNavigate();
@@ -1696,6 +1423,7 @@ export const StudentCareerDetailsPage = () => {
 
     return <Section title={career.data.title}>
       <p className="text-sm text-slate-500">Detailed information for the selected career path.</p>
+      <ProfileAssociationButton type="CAREER" targetId={career.data.id} />
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
         <div className="rounded border p-4 bg-white">
           <p className="text-xs uppercase tracking-wide text-slate-500">Industry</p>
@@ -1811,189 +1539,7 @@ const fallbackPsychometricDimensions = [
   { key: 'technical', label: 'Technical confidence' },
 ];
 
-export const StudentPsychometricPage = () => {
-  const [stage, setStage] = useState<'instructions' | 'questions' | 'results'>('instructions');
-  const qc = useQueryClient();
-  const assessments = useAppQuery({ queryKey: ['psychometric', 'assessments'], queryFn: psychometricService.assessments });
-  const latest = useAppQuery({ queryKey: ['psychometric', 'latest'], queryFn: psychometricService.latestStudent, retry: false });
-  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>('');
-  useEffect(() => {
-    if (!selectedAssessmentId && assessments.data?.length) {
-      setSelectedAssessmentId((assessments.data.find(item => item.code === 'EDURITE_CAREER_V2') || assessments.data[0]).id);
-    }
-  }, [assessments.data, selectedAssessmentId]);
-  const questions = useAppQuery({
-    queryKey: ['psychometric', 'questions', selectedAssessmentId],
-    queryFn: () => psychometricService.assessmentQuestions(selectedAssessmentId),
-    enabled: Boolean(selectedAssessmentId),
-  });
-  const history = useAppQuery({
-    queryKey: ['psychometric', 'history', selectedAssessmentId],
-    queryFn: () => psychometricService.assessmentHistory(selectedAssessmentId),
-    enabled: Boolean(selectedAssessmentId),
-  });
-  const [scores, setScores] = useState<Record<string, number>>({
-    analytical: 3,
-    communication: 3,
-    creativity: 3,
-    leadership: 3,
-    technical: 3,
-  });
-  const [questionScores, setQuestionScores] = useState<Record<string, number>>({});
-  const [activeQuestionIndex, setActiveQuestionIndex] = useState(0);
-  const assessmentQuestions = (questions.data ?? []).slice(0, 25);
-  useEffect(() => {
-    setQuestionScores({});
-    setActiveQuestionIndex(0);
-  }, [selectedAssessmentId]);
-  const toAttemptResultFromLegacy = (legacyResult: NonNullable<Awaited<ReturnType<typeof psychometricService.latestStudent>>>) => ({
-    attemptId: legacyResult.id,
-    assessmentId: selectedAssessmentId || 'LEGACY',
-    scores: legacyResult.scores,
-    strengthAreas: legacyResult.strengthAreas,
-    growthAreas: legacyResult.growthAreas,
-    interpretation: legacyResult.interpretation,
-    submittedAt: legacyResult.createdAt,
-  });
-  const submitLegacy = (answers: Array<{ dimension: string; score: number }>) =>
-    psychometricService.submitStudent(answers).then((legacyResult) => toAttemptResultFromLegacy(legacyResult));
-  const submit = useMutation({
-    mutationFn: async () => {
-      if (selectedAssessmentId && assessmentQuestions.length) {
-        const attemptAnswers = assessmentQuestions.map((question) => ({
-          questionId: question.id,
-          score: questionScores[question.id] ?? Math.round((question.minScore + question.maxScore) / 2),
-        }));
-        return await psychometricService.submitAssessmentAttempt(selectedAssessmentId, attemptAnswers);
-      }
-      return submitLegacy(Object.entries(scores).map(([dimension, score]) => ({ dimension, score })));
-    },
-    onSuccess: () => {
-      setStage('results');
-      qc.invalidateQueries({ queryKey: ['study-recommendations'] });
-      qc.invalidateQueries({ queryKey: ['profile-ai-recommendations-fallback'] });
-      if (selectedAssessmentId) {
-        qc.invalidateQueries({ queryKey: ['psychometric', 'history', selectedAssessmentId] });
-      }
-      qc.invalidateQueries({ queryKey: ['psychometric', 'latest'] });
-      qc.invalidateQueries({ queryKey: ['recs'] });
-      qc.invalidateQueries({ queryKey: ['dash'] });
-    },
-  });
-  useEffect(() => {
-    if (!assessmentQuestions.length) return;
-    if (activeQuestionIndex >= assessmentQuestions.length) {
-      setActiveQuestionIndex(assessmentQuestions.length - 1);
-    }
-  }, [activeQuestionIndex, assessmentQuestions.length]);
-
-  const totalQuestionCount = assessmentQuestions.length || fallbackPsychometricDimensions.length;
-  const answeredQuestionCount = assessmentQuestions.length
-    ? assessmentQuestions.filter((question) => questionScores[question.id] != null).length
-    : fallbackPsychometricDimensions.filter((dimension) => scores[dimension.key] != null).length;
-  const progressPercent = Math.round((answeredQuestionCount / Math.max(totalQuestionCount, 1)) * 100);
-  const currentQuestion = assessmentQuestions.length ? assessmentQuestions[Math.min(activeQuestionIndex, assessmentQuestions.length - 1)] : null;
-  const canSubmitAssessment = assessmentQuestions.length ? answeredQuestionCount === assessmentQuestions.length : true;
-
-  const result = submit.data || history.data?.[0] || latest.data;
-  if (stage === 'results' && result) return <Section title="Your assessment results"><p>This is career exploration, not a clinical diagnosis.</p><h2>Key strengths</h2><p>{result.strengthAreas?.join(', ') || 'No distinct strengths identified yet'}</p><h2>Development areas</h2><p>{result.growthAreas?.join(', ') || 'Keep exploring your skills'}</p><h2>Interests and work preferences</h2><p>{result.interpretation}</p><dl>{Object.entries(result.scores ?? {}).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{Number(value).toFixed(1)} / 5</dd></div>)}</dl><Link to="/student/career-explorer?section=guidance">Update Career Recommendations</Link><Link className="block" to="/student/study-options">Explore related study areas</Link><Button onClick={() => { submit.reset(); setQuestionScores({}); setStage('instructions'); }}>Retake assessment</Button></Section>;
-  if (stage === 'instructions') return <Section title="Discover your interests and strengths"><p>This assessment explores your interests, problem-solving, creativity, communication, leadership and practical work preferences. Your results contribute to career and study guidance.</p><p>Allow about 5?10 minutes. Answer honestly about how you usually feel or work. There are no correct personality answers and this is not a medical or psychological diagnosis.</p><p>Choose a response from strongly disagree (1) to strongly agree (5) for every statement.</p>{assessments.isLoading || questions.isLoading ? <p role="status">Loading assessment...</p> : assessments.isError || questions.isError || !assessmentQuestions.length ? <p role="alert">The assessment is unavailable. <button onClick={() => { assessments.refetch(); questions.refetch(); }}>Retry</button></p> : <Button onClick={() => setStage('questions')}>Start assessment</Button>}{result && <Button onClick={() => setStage('results')}>View previous results</Button>}</Section>;
-  return <Section title="Psychometric Test">
-    <p className="text-sm text-slate-600">Complete this quick assessment to improve guidance and learning recommendations.</p>
-    {!!assessments.data?.length && (
-      <div className="rounded border p-3">
-        <p className="text-sm font-medium">Assessment</p>
-        <select
-          value={selectedAssessmentId}
-          onChange={(event) => setSelectedAssessmentId(event.target.value)}
-          className="mt-2 w-full rounded border border-slate-300 px-3 py-2 text-sm"
-        >
-          {assessments.data.map((assessment) => (
-            <option key={assessment.id} value={assessment.id}>{assessment.name}</option>
-          ))}
-        </select>
-      </div>
-    )}
-    <div className="rounded border p-4 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium">Progress</p>
-        <p className="text-xs text-slate-600">{answeredQuestionCount}/{totalQuestionCount} answered ({progressPercent}%)</p>
-      </div>
-      <div className="h-2 w-full rounded-full bg-slate-200">
-        <div className="h-full rounded-full bg-primary-600 transition-all" style={{ width: `${progressPercent}%` }} />
-      </div>
-      <p className="text-xs text-slate-500">This assessment is capped at 25 questions for concise and accurate guidance.</p>
-    </div>
-    {assessmentQuestions.length ? (
-      <div className="space-y-3">
-        {currentQuestion ? (
-          <div className="rounded border p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium">Question {activeQuestionIndex + 1} of {assessmentQuestions.length}</p>
-              <Badge color="blue">{currentQuestion.dimensionKey}</Badge>
-            </div>
-            <p className="text-sm text-slate-800">{currentQuestion.prompt}</p>
-            <fieldset><legend>Your response</legend><div className="flex flex-wrap gap-3">{Array.from({ length: currentQuestion.maxScore - currentQuestion.minScore + 1 }, (_, i) => i + currentQuestion.minScore).map(score => <label key={score}><input type="radio" name={currentQuestion.id} checked={questionScores[currentQuestion.id] === score} onChange={() => setQuestionScores(state => ({ ...state, [currentQuestion.id]: score }))} /> {score}{score === 1 ? ' ? Strongly disagree' : score === 5 ? ' ? Strongly agree' : ''}</label>)}</div></fieldset>
-            <div className="flex flex-wrap justify-between gap-2">
-              <Button
-                onClick={() => setActiveQuestionIndex((index) => Math.max(index - 1, 0))}
-                disabled={activeQuestionIndex === 0}
-                className="bg-slate-700 hover:bg-slate-600"
-              >
-                Previous
-              </Button>
-              <Button
-                onClick={() => setActiveQuestionIndex((index) => Math.min(index + 1, assessmentQuestions.length - 1))}
-                disabled={activeQuestionIndex >= assessmentQuestions.length - 1}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    ) : (
-      <div className="space-y-3">
-        {fallbackPsychometricDimensions.map((dimension) => ({
-          key: dimension.key,
-          label: dimension.label,
-          dimension: dimension.key,
-          min: 1,
-          max: 5,
-          value: scores[dimension.key] ?? 3,
-          onChange: (value: number) => setScores((state) => ({ ...state, [dimension.key]: value })),
-        })).map((item) => <div key={item.key} className="rounded border p-3">
-          <p className="text-sm font-medium">{item.label}</p>
-          <p className="text-xs text-slate-500">{item.dimension}</p>
-          <input
-            type="range"
-            min={item.min}
-            max={item.max}
-            value={item.value}
-            onChange={(event) => item.onChange(Number(event.target.value))}
-            className="mt-2 w-full"
-          />
-          <p className="text-xs text-slate-500">Score: {item.value} / {item.max}</p>
-        </div>)}
-      </div>
-    )}
-    {!canSubmitAssessment ? <p className="text-xs text-amber-700">Answer every question before submitting your assessment.</p> : null}
-    <Button onClick={() => submit.mutate()} disabled={submit.isPending || !canSubmitAssessment}>{submit.isPending ? 'Submitting...' : 'Submit Psychometric Test'}</Button>
-    {submit.isError ? <p className="text-sm text-red-600">Could not submit the test right now. Please retry.</p> : null}
-    {history.data?.[0] ? <div className="rounded border p-4 bg-slate-50">
-      <p className="font-medium">Latest assessment result</p>
-      <p className="mt-1 text-sm text-slate-700">{history.data[0].interpretation}</p>
-      <p className="mt-3 text-sm"><span className="font-medium">Strength areas:</span> {(history.data[0].strengthAreas ?? []).join(', ') || 'None yet'}</p>
-      <p className="text-sm"><span className="font-medium">Growth areas:</span> {(history.data[0].growthAreas ?? []).join(', ') || 'None yet'}</p>
-    </div> : null}
-    {latest.data ? <div className="rounded border p-4 bg-slate-50">
-      <p className="font-medium">Latest interpretation</p>
-      <p className="mt-1 text-sm text-slate-700">{latest.data.interpretation}</p>
-      <p className="mt-3 text-sm"><span className="font-medium">Strength areas:</span> {(latest.data.strengthAreas ?? []).join(', ') || 'None yet'}</p>
-      <p className="text-sm"><span className="font-medium">Growth areas:</span> {(latest.data.growthAreas ?? []).join(', ') || 'None yet'}</p>
-    </div> : null}
-  </Section>;
-};
+export const StudentPsychometricPage = StudentAssessment;
 
 export const StudentLearningCentrePage = () => {
   type LearningTab = 'Books' | 'Study Materials' | 'Video Lessons' | 'Quizzes' | 'Coding Tutorials' | 'Past Papers';
@@ -2526,7 +2072,7 @@ export const StudentLearningCentrePage = () => {
       <div className="space-y-4">
         <div>
           <h1 className="student-page-title">Learning Centre</h1>
-          <p className="mt-2 max-w-3xl text-sm text-blue-100 sm:text-base">Find subject resources, past papers and support for your study plan.</p>
+          <p className="mt-2 max-w-3xl text-sm text-blue-100 sm:text-base">Find subject resources, past papers and support for your study plan.</p><Link to="/student/learning?section=study-plan" className="underline">Generate / View Study Plan</Link>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button className="w-full cursor-pointer rounded-2xl bg-white/15 text-white backdrop-blur hover:bg-white/25 sm:w-auto" onClick={() => applyQuickFilter('Course')}>Browse Courses</Button>
@@ -3353,6 +2899,7 @@ export const StudentSubscriptionPage = () => {
     : null;
 
   return <Section title="Subscription & Payment" description="Explore, discover your pathway, and plan your future.">
+    <PendingPaymentNotice />
     <div className="student-hero-card">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
@@ -3439,7 +2986,8 @@ export const StudentSettingsPage = () => {
     save.mutate({ ...data, [key]: !data[key] });
   };
 
-  return <Section title="Settings">
+  return <Section title="Account Settings">
+    <div className="ec-controls"><Link to="/student/settings/password">Change password</Link><Link to="/student/subscription">Manage subscription</Link><Link to="/student/profile">Edit My Profile</Link></div>
     <p className="text-sm text-slate-600">Manage how EduRite sends student notifications.</p>
     <div className="space-y-3">
       <div className="flex items-center justify-between rounded border p-3">

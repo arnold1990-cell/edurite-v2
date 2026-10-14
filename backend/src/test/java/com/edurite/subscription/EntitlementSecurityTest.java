@@ -38,7 +38,7 @@ class EntitlementSecurityTest {
         when(current.requireUser(any())).thenReturn(user);
         subscription=new SubscriptionRecord(); subscription.setPlanCode("PLAN_BASIC"); subscription.setStatus("ACTIVE");
         subscription.setEndDate(LocalDate.now(ZoneOffset.UTC).plusMonths(1));
-        subscription.setTrialStartDate(OffsetDateTime.now().minusDays(1));
+        subscription.setTrialStartDate(OffsetDateTime.now().minusDays(15));
         subscription.setTrialEndDate(subscription.getTrialStartDate().plusDays(14));
         when(subscriptions.findTopByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(Optional.of(subscription));
         mvc=MockMvcBuilders.standaloneSetup(new Endpoints()).setControllerAdvice(new ApiExceptionHandler())
@@ -74,8 +74,8 @@ class EntitlementSecurityTest {
     @ParameterizedTest @ValueSource(strings={"/api/student/career-roadmaps/generate","/api/v1/student/career-roadmaps/generate","/api/student/cv","/api/ai/analyse-university-sources","/api/student/psychometric/latest"})
     void directBasicApiDeniedEvenWithForgedPlan(String path) throws Exception { mvc.perform(post(path).principal(()->"student@example.com").param("plan","PRO").header("X-Plan","PRO")).andExpect(status().isForbidden());verifyNoInteractions(usage); }
     @Test void premiumCannotCallProApi() throws Exception {subscription.setPlanCode("PLAN_PREMIUM");mvc.perform(post("/api/ai/analyse-university-sources")).andExpect(status().isForbidden());mvc.perform(get("/api/student/cv")).andExpect(status().isForbidden());}
-    @ParameterizedTest @ValueSource(strings={"/api/student/aps/calculate", "/api/v1/student/career-roadmaps/generate", "/api/careers", "/api/student/tutor/ask"})
-    void expiredTrialCannotCallBasicApisWithForgedDates(String path) throws Exception {
+    @ParameterizedTest @ValueSource(strings={"/api/v1/student/career-roadmaps/generate", "/api/student/cv"})
+    void expiredTrialCannotCallPaidApisWithForgedDates(String path) throws Exception {
         subscription.setTrialStartDate(OffsetDateTime.now().minusDays(15));
         subscription.setTrialEndDate(subscription.getTrialStartDate().plusDays(14));
         mvc.perform(post(path).principal(() -> "student@example.com").param("trialEndDate", "2099-01-01").header("X-Plan", "PRO"))

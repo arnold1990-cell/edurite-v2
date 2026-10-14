@@ -10,7 +10,7 @@ import { learningService } from '@/services/learningService';
 import { bursaryService } from '@/services/bursaryService';
 import { schoolService } from '@/services/schoolService';
 import type { Recommendation, StudentDashboard as DashboardData } from '@/types';
-import { academicMark, careerMatch, percentage, upcomingBursaries } from './dashboardData';
+import { academicMark, percentage, upcomingBursaries } from './dashboardData';
 import classroomPhoto from '@/assets/edurite-classroom-login-bg.png';
 import careersPhoto from '@/assets/images/careers.jpeg';
 import coursesPhoto from '@/assets/images/courses.jpeg';
@@ -32,7 +32,7 @@ function DataState({ loading, error, empty }: { loading?: boolean; error?: boole
   return <p className="ed-empty" role={error ? 'alert' : 'status'}>{loading ? 'Loading your data…' : error ? 'This section is temporarily unavailable. Please try again later.' : empty}</p>;
 }
 const shortcuts = [
-  { title: 'Career Explorer', description: 'Discover careers based on your interests and strengths.', href: '/student/recommendations/careers', icon: Compass, tone: 'orange', image: careersPhoto },
+  { title: 'Career Explorer', description: 'Discover careers based on your interests and strengths.', href: '/student/career-match', icon: Compass, tone: 'orange', image: careersPhoto },
   { title: 'Study Options', description: 'Find courses and explore your next steps.', href: '/student/study-options', icon: GraduationCap, tone: 'blue', image: coursesPhoto },
   { title: 'Institutions', description: 'Explore universities, TVET colleges and more.', href: '/student/universities', icon: Layers3, tone: 'purple', image: careersPhoto },
   { title: 'Bursaries & Funding', description: 'Find bursaries and other funding opportunities.', href: '/student/applications', icon: Wallet, tone: 'green', image: bursariesPhoto },
@@ -86,8 +86,8 @@ export function StudentDashboard({ renderDetails }: { renderDetails?: (data: Das
         </Panel>
       </div>
       <div className="ed-column ed-middle-column">
-        <Panel title="My Career Matches" icon={UserRound} href="/student/recommendations/careers" className="ed-careers">
-          {careers.length ? <div className="ed-career-list">{careers.map((item) => <Link to="/student/recommendations/careers" key={item.id} className="ed-career"><div className="ed-career-art"><Compass size={28} /></div><div className="ed-career-copy"><h3>{item.title}</h3><p>{item.rationale}</p></div><div className="ed-match"><ProgressRing value={careerMatch(item)} small /><small>Match</small></div><ChevronRight size={15} /></Link>)}</div> : <DataState loading={recs.isLoading} error={recs.isError} empty="Complete your profile to discover career matches tailored to your interests." />}
+        <Panel title="My Career Matches" icon={UserRound} href="/student/career-match" className="ed-careers">
+          {careers.length ? <div className="ed-career-list">{careers.map((item) => <Link to="/student/career-match" key={item.id} className="ed-career"><div className="ed-career-art"><Compass size={28} /></div><div className="ed-career-copy"><h3>{item.title}</h3><p>{item.rationale}</p></div><ChevronRight size={15} /></Link>)}</div> : <DataState loading={recs.isLoading} error={recs.isError} empty="Complete your profile to discover career matches tailored to your interests." />}
         </Panel>
         <Panel title="Learning Resources" icon={BookOpen} href="/student/learning-centre" className="ed-learning">
           {resources.data?.length ? <div className="ed-resource-cards">{resources.data.slice(0, 3).map((item) => <Link key={item.id} to="/student/learning-centre" className="ed-resource"><div className="ed-resource-picture">{item.thumbnailUrl ? <img src={item.thumbnailUrl} alt="" loading="lazy" onError={(event) => { event.currentTarget.style.display = 'none'; }} /> : <BookOpen size={24} />}</div><div><PlayCircle size={17} /><h3>{item.title}</h3></div><small>{item.resourceType || item.provider || 'Learning resource'}</small></Link>)}</div> : <DataState loading={resources.isLoading} error={resources.isError} empty="No recommended learning resources yet. Browse the Learning Centre." />}

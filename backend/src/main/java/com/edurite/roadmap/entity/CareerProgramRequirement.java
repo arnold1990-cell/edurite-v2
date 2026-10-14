@@ -35,6 +35,16 @@ public class CareerProgramRequirement extends BaseEntity {
     @Column(name = "aps_required")
     private Integer apsRequired;
 
+    private String apsRule;
+    private String qualificationType;
+    private Integer admissionYear;
+    @Column(columnDefinition = "TEXT")
+    private String generalAdmissionRequirements;
+    @Column(columnDefinition = "TEXT")
+    private String programmeAdmissionRequirements;
+    @Column(columnDefinition = "TEXT")
+    private String additionalSelectionRequirements;
+
     @Column(name = "mathematics_requirement")
     private String mathematicsRequirement;
 

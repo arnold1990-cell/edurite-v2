@@ -127,6 +127,9 @@ public class PsychometricService {
         if (answerItems.size() != questions.size()) {
             throw new ResourceConflictException("Assessment requires " + questions.size() + " answered questions.");
         }
+        if (answerItems.stream().map(PsychometricAttemptRequest.AnswerItem::questionId).distinct().count() != questions.size()) {
+            throw new ResourceConflictException("Each assessment question must be answered exactly once.");
+        }
         if (answerItems.size() > MAX_ACTIVE_ASSESSMENT_QUESTIONS) {
             throw new ResourceConflictException("Assessment supports at most " + MAX_ACTIVE_ASSESSMENT_QUESTIONS + " questions per attempt.");
         }
@@ -210,10 +213,21 @@ public class PsychometricService {
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = studentProfileRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceConflictException("Student profile not found."));
-        findAssessmentOrThrow(assessmentId);
+        return historyFor(profile, psychometricAttemptRepository.findByStudentIdAndAssessmentIdOrderBySubmittedAtDesc(profile.getId(), assessmentId));
+    }
 
-        return psychometricAttemptRepository.findByStudentIdAndAssessmentIdOrderBySubmittedAtDesc(profile.getId(), assessmentId).stream()
+    @Transactional(readOnly = true)
+    public List<PsychometricAttemptResultDto> assessmentHistory(Principal principal) {
+        User user = currentUserService.requireUser(principal);
+        StudentProfile profile = studentProfileRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new ResourceConflictException("Student profile not found."));
+        return historyFor(profile, psychometricAttemptRepository.findByStudentIdOrderBySubmittedAtDesc(profile.getId()));
+    }
+
+    private List<PsychometricAttemptResultDto> historyFor(StudentProfile profile, List<PsychometricAttempt> attempts) {
+        return attempts.stream().filter(attempt -> profile.getId().equals(attempt.getStudentId()))
                 .map(attempt -> psychometricResultRepository.findByAttemptId(attempt.getId())
+                        .filter(result -> profile.getId().equals(result.getStudentId()))
                         .map(result -> new PsychometricAttemptResultDto(
                                 attempt.getId(),
                                 attempt.getAssessmentId(),

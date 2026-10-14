@@ -3,7 +3,7 @@ import { ExploreSearch } from '@/components/student/career/ExploreSearch';
 import '@/components/student/career/explore-workspace.css';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Bell, BookOpen, Bot, Building2, ChevronDown, ChevronRight, Compass, GraduationCap, Home, LogOut, Mail, Menu, Settings, Target, Trophy, UserRound, Wallet, X } from 'lucide-react';
+import { Bell, BookOpen, Bot, Building2, ChevronDown, ChevronRight, Compass, GraduationCap, Home, FileText, LogOut, Mail, Menu, Settings, Target, Trophy, UserRound, Wallet, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { studentService } from '@/services/studentService';
@@ -16,11 +16,14 @@ import { StudentSectionNavigation, studentSection } from './StudentSectionNaviga
 const navigation = [
   { label: 'Dashboard', to: '/student/dashboard', icon: Home },
   { label: 'My Profile', to: '/student/profile', icon: UserRound },
+  { label: 'Documents', to: '/student/documents', icon: FileText },
+  { label: 'Career Guidance', to: '/student/career-guidance', icon: Target },
   { label: 'Career Explorer', to: '/student/career-explorer', icon: Compass },
   { label: 'Study Options', to: '/student/study-options', icon: GraduationCap },
   { label: 'Bursaries & Funding', to: '/student/funding', icon: Wallet },
   { label: 'Learning Resources', to: '/student/learning', icon: BookOpen },
-  { label: 'AI Guidance', to: '/student/career-explorer?section=guidance', icon: Bot },
+  { label: 'Career Match', to: '/student/career-match', icon: Bot },
+  { label: 'Account Settings', to: '/student/settings', icon: Settings },
   { label: 'Messages', to: '/student/messages', icon: Mail },
 ];
 
@@ -93,7 +96,7 @@ export function StudentAppShell() {
         <button ref={menuButton} className="ed-menu-button" aria-label="Open navigation" aria-expanded={open} aria-controls="student-dashboard-navigation" onClick={() => setOpen(true)}><Menu size={22} /></button>
         <div className="ed-search"><ExploreSearch /></div>
         <Link to="/student/notifications" className="ed-notifications" aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}><Bell size={22} />{unreadCount > 0 && <span />}</Link>
-        <details ref={account} className="ed-account"><summary><span className="ed-avatar" aria-hidden="true">{initials}</span><span className="ed-account-name"><strong>{name}</strong><small>{profile.data?.selectedGrade || 'Student'}</small></span><ChevronDown size={15} /></summary><div className="ed-account-menu"><Link to="/student/profile"><UserRound size={15} />My Profile</Link><Link to="/student/subscription"><Wallet size={15} />Subscription</Link><Link to="/student/notifications"><Bell size={15} />Notifications</Link><Link to="/student/settings"><Settings size={15} />Settings</Link><button onClick={() => logout()}><LogOut size={15} />Log out</button></div></details>
+        <details ref={account} className="ed-account"><summary><span className="ed-avatar" aria-hidden="true">{initials}</span><span className="ed-account-name"><strong>{name}</strong><small>{profile.data?.selectedGrade || 'Student'}</small></span><ChevronDown size={15} /></summary><div className="ed-account-menu"><Link to="/student/profile"><UserRound size={15} />My Profile</Link><Link to="/student/subscription"><Wallet size={15} />Subscription</Link><Link to="/student/notifications"><Bell size={15} />Notifications</Link><Link to="/student/settings"><Settings size={15} />Account Settings</Link><button onClick={() => logout()}><LogOut size={15} />Log out</button></div></details>
       </header>
       <main id="student-dashboard-content" className="ed-content"><StudentSectionNavigation /><div className="ed-page-content"><StudentRouteAccess>{['/student/learning','/student/career-explorer'].includes(location.pathname) && <AiUsageDisplay />}<Outlet /></StudentRouteAccess></div></main>
     </div>

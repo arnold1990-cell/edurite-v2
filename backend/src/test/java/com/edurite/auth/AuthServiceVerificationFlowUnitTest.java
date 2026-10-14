@@ -254,6 +254,18 @@ class AuthServiceVerificationFlowUnitTest {
     }
 
     @Test
+    void unverifiedPasswordLoginCannotIssueSession() {
+        User user = activeStudent("unverified@example.com", "+26770000010");
+        user.setEmailVerified(false);
+        user.setEmailVerificationRequired(true);
+        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("StrongPass@123", "encoded-password")).thenReturn(true);
+        assertThatThrownBy(() -> authService.login(new com.edurite.auth.dto.LoginRequest(user.getEmail(), "StrongPass@123")))
+                .isInstanceOf(com.edurite.common.exception.EmailVerificationRequiredException.class);
+        org.mockito.Mockito.verifyNoInteractions(jwtService);
+    }
+
+    @Test
     void loginWithValidCredentialsReturnsJwtWithoutOtpOrPasswordReset() {
         String email = "student@login.com";
         String phone = "+26770000010";

@@ -22,12 +22,12 @@ class RecommendationServiceTest {
   when(access.resolveByUserId(entity.getUserId())).thenReturn(new StudentPlanAccessService.StudentPlanAccess("PLAN_PREMIUM","ACTIVE",true,10,null));
   Career nurse=career("Nurse","health helping communication"), developer=career("Software Developer","technology software analytical");
   when(careers.findAll()).thenReturn(List.of(nurse,developer));
-  var service=new RecommendationService(students,access,psycho,careers,courses);
+  var service=new RecommendationService(students,access,psycho,careers,courses,mock(com.edurite.student.repository.StudentPreferenceRepository.class),new com.fasterxml.jackson.databind.ObjectMapper());
   when(students.getProfile(principal)).thenReturn(profile(List.of("technology")));
   var first=service.generateForStudent(principal); assertThat(first.suggestedCareers().getFirst().id()).isEqualTo(developer.getId().toString());
   when(students.getProfile(principal)).thenReturn(profile(List.of("health")));
   var second=service.generateForStudent(principal); assertThat(second.suggestedCareers().getFirst().id()).isEqualTo(nurse.getId().toString());
-  assertThat(second.suggestedCareers()).hasSize(2); assertThat(second.suggestedCoursesOrImprovements()).isEmpty();
+  assertThat(second.suggestedCareers()).hasSize(1); assertThat(second.suggestedCoursesOrImprovements()).isEmpty();
   assertThat(second.suggestedBursaries()).isEmpty();
  }
  private Career career(String name,String description) { var c=new Career();c.setId(UUID.randomUUID());c.setTitle(name);c.setDescription(description);return c; }

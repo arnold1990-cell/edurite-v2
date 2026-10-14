@@ -10,7 +10,7 @@ export type Role =
   | 'TEACHER'
   | 'SCHOOL_STUDENT';
 export type BackendRole = `ROLE_${Role}`;
-export type PlanType = 'BASIC' | 'PREMIUM';
+export type PlanType = 'BASIC' | 'PREMIUM' | 'PRO';
 
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'MORE_INFO_REQUIRED' | 'PENDING_DISTRICT_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'SUSPENDED';
 
@@ -58,6 +58,10 @@ export interface StudentProfile {
 }
 
 export interface StudentSubjectAchievement {
+  curriculum?: string | null;
+  gradingScale?: string | null;
+  academicYear?: string | null;
+  examination?: string | null;
   source?: "MANUAL" | "TRANSCRIPT";
   verified?: boolean;
   documentId?: string;
@@ -258,6 +262,9 @@ export interface Institution {
 export interface Application { id: string; status: string; createdAt: string; bursaryId: string; }
 export interface RecommendationItem { id: string; title: string; score: number; rationale: string; }
 export interface Recommendation {
+  inputsUsed?: string[];
+  missingInformation?: string[];
+  limitations?: string[];
   suggestedCareers: RecommendationItem[];
   suggestedBursaries: RecommendationItem[];
   suggestedCoursesOrImprovements: RecommendationItem[];
@@ -406,6 +413,10 @@ export interface CareerRoadmapTimelineStage {
 }
 
 export interface UniversityRequirementMatch {
+  admissionYear?: number | null;
+  generalAdmissionRequirements?: string | null;
+  programmeAdmissionRequirements?: string | null;
+  additionalSelectionRequirements?: string | null;
   id?: string | null;
   institutionName: string;
   institutionType?: string;
@@ -426,12 +437,15 @@ export interface UniversityRequirementMatch {
   source?: string;
   verified: boolean;
   verificationBadge: string;
+  learnerAps?: number | null;
+  apsRule?: string | null;
+  qualificationType?: string | null;
   requirementStatus: 'Eligible' | 'Almost Eligible' | 'Not Yet Eligible' | string;
   apsGap?: number | null;
 }
 
 export interface CareerRoadmapReadiness {
-  learnerAps: number;
+  learnerAps: number | null;
   requiredAps: number;
   apsGap: number;
   readinessScore: number;
@@ -475,7 +489,7 @@ export interface SavedCareerRoadmap {
   id: string;
   careerName: string;
   roadmap: CareerRoadmapGenerateResponse;
-  learnerAps: number;
+  learnerAps: number | null;
   requiredAps?: number | null;
   apsGap?: number | null;
   readinessScore: number;
@@ -504,7 +518,7 @@ export interface CareerAdviceRequest {
 
 export interface CareerAdviceItem {
   name: string;
-  matchScore: number;
+  matchScore: number | null;
   reason: string;
   improvements: string[];
 }

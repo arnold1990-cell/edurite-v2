@@ -3,15 +3,23 @@ import type {
   OpportunityType,
   StudentDashboard,
   StudentProfile,
+  StudentSubjectAchievement,
   StudentSavedProfile,
   StudentSavedProfilePayload,
   StudentSavedProfileSummary,
   UnifiedOpportunity,
 } from '@/types';
 
+export interface ProfileAssociation {
+  type: 'COURSE' | 'CAREER' | 'PROGRAMME'; targetId: string; title: string; linkedAt: string; careerName?: string;
+}
+
 export const studentService = {
+  associations: () => apiClient.get<ProfileAssociation[]>('/student/profile/associations').then(r => r.data),
+  linkAssociation: (type: ProfileAssociation['type'], targetId: string) => apiClient.put<ProfileAssociation[]>(`/student/profile/associations/${type}/${encodeURIComponent(targetId)}`).then(r => r.data),
+  unlinkAssociation: (type: ProfileAssociation['type'], targetId: string) => apiClient.delete<ProfileAssociation[]>(`/student/profile/associations/${type}/${encodeURIComponent(targetId)}`).then(r => r.data),
   getMe: () => apiClient.get<StudentProfile>('/student/profile').then((r) => r.data),
-  updateMe: (payload: Partial<StudentProfile>) => apiClient.put<StudentProfile>('/student/profile', payload).then((r) => r.data),
+  updateMe: (payload: Partial<StudentProfile> & { expectedSubjectAchievements?: StudentSubjectAchievement[] }) => apiClient.put<StudentProfile>('/student/profile', payload).then((r) => r.data),
   listSavedProfiles: () => apiClient.get<StudentSavedProfileSummary[]>('/student/profile/saved').then((r) => r.data),
   saveProfileVersion: (name: string, profile: StudentSavedProfilePayload) =>
     apiClient.post<StudentSavedProfile>('/student/profile/saved', { name, profile }).then((r) => r.data),

@@ -32,6 +32,11 @@ public class SubscriptionController {
         return subscriptionService.current(principal);
     }
 
+    @GetMapping("/pending-payments")
+    public java.util.List<Map<String, Object>> pendingPayments(Principal principal) {
+        return subscriptionService.pendingPayments(principal);
+    }
+
     @GetMapping("/plans")
     public java.util.List<PricingPlanDto> plans() {
         return subscriptionService.plans();

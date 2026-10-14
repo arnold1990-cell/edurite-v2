@@ -4,6 +4,7 @@ import { StaticRouter } from 'react-router-dom/server';
 import { StudentProfileSectionsPage, StudentCareerExplorerPage, StudentLearningResourcesPage, StudentFundingPage, StudentInstitutionsPage, StudentProgressPage } from './StudentSectionPages';
 
 vi.mock('@/features/subscriptions/access', () => ({ AccessBadge: () => null }));
+vi.mock('@/routes/StudentRedirect', () => ({ StudentRedirect: ({ to }: { to: string }) => <div data-redirect={to} /> }));
 
 vi.mock('./StudentPages', () => Object.fromEntries([
   'StudentProfilePage', 'StudentMySchoolPage', 'StudentCareerRecommendationsPage', 'StudentPsychometricPage',
@@ -23,11 +24,8 @@ const cases = [
   [StudentProfileSectionsPage, 'profile', 'cv', 'StudentCvBuilderPage'],
   [StudentProfileSectionsPage, 'profile', 'school', 'StudentMySchoolPage'],
   ...['overview', 'academic', 'interests', 'career', 'documents'].map(section => [StudentProfileSectionsPage, 'profile', section, 'StudentProfilePage'] as const),
-  [StudentCareerExplorerPage, 'career-explorer', 'guidance', 'StudentCareerRecommendationsPage'],
-  ...['career-match', 'interests'].map(section => [StudentCareerExplorerPage, 'career-explorer', section, 'StudentPsychometricPage'] as const),
   ...['discover', 'career-path', 'learning-path', 'readiness', 'saved'].map(section => [StudentCareerExplorerPage, 'career-explorer', section, 'StudentCareerRoadmapsPage'] as const),
   [StudentLearningResourcesPage, 'learning', 'tutor', 'StudentAiTutorPage'],
-  [StudentLearningResourcesPage, 'learning', 'guidance', 'StudentCareerRecommendationsPage'],
   ...['centre', 'resources'].map(section => [StudentLearningResourcesPage, 'learning', section, 'StudentLearningCentrePage'] as const),
   [StudentLearningResourcesPage, 'learning', 'study-plan', 'StudentCareerRoadmapsPage'],
   [StudentFundingPage, 'funding', 'opportunities', 'StudentSavedPage'],
@@ -54,6 +52,15 @@ describe('consolidated feature content', () => {
   });
   it('keeps all learning tools discoverable from the overview', () => {
     const html = renderToStaticMarkup(<StaticRouter location="/student/learning"><StudentLearningResourcesPage /></StaticRouter>);
-    for (const section of ['tutor', 'guidance', 'centre', 'study-plan', 'resources']) expect(html).toContain(`learning?section=${section}`);
+    for (const section of ['tutor', 'centre', 'study-plan', 'resources']) expect(html).toContain(`learning?section=${section}`);
+    expect(html).not.toContain('learning?section=guidance');
+  });
+  it.each([StudentCareerExplorerPage, StudentLearningResourcesPage])('preserves old guidance bookmarks through the canonical route', Page => {
+    const html = renderToStaticMarkup(<StaticRouter location="/student/learning?section=guidance"><Page /></StaticRouter>);
+    expect(html).toContain('data-redirect="/student/career-match"');
+  });
+  it.each([['career-match', '/student/career-match'], ['interests', '/student/career-match?step=assessment']])('keeps the legacy %s section in the matching journey', (section, destination) => {
+    const html = renderToStaticMarkup(<StaticRouter location={`/student/career-explorer?section=${section}`}><StudentCareerExplorerPage /></StaticRouter>);
+    expect(html).toContain(`data-redirect="${destination}"`);
   });
 });

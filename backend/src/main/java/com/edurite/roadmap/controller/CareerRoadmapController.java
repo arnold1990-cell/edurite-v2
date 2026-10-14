@@ -23,6 +23,26 @@ import org.springframework.web.bind.annotation.RestController;
 public class CareerRoadmapController {
 
     private final CareerRoadmapService careerRoadmapService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.edurite.roadmap.service.CareerSelectionService selection;
+
+    @GetMapping("/selection")
+    public java.util.Map<String, String> selection(Principal principal) { return selection.selected(principal, null); }
+
+    @org.springframework.web.bind.annotation.PutMapping("/selection")
+    public java.util.Map<String, String> select(Principal principal, @Valid @RequestBody CareerRoadmapGenerateRequest request) {
+        return selection.selected(principal, request.careerName());
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/selection")
+    public java.util.Map<String, String> clearSelection(Principal principal) {
+        return selection.selected(principal, "");
+    }
+    public record ProgrammeSelection(java.util.UUID programmeId) {}
+    @org.springframework.web.bind.annotation.PutMapping("/selection/programme")
+    public java.util.Map<String, String> selectProgramme(Principal principal, @RequestBody ProgrammeSelection request) {
+        return selection.programme(principal, request.programmeId());
+    }
 
     public CareerRoadmapController(CareerRoadmapService careerRoadmapService) {
         this.careerRoadmapService = careerRoadmapService;

@@ -131,7 +131,14 @@ public final class CareerRoadmapDtos {
             boolean verified,
             String verificationBadge,
             String requirementStatus,
-            Integer apsGap
+            Integer learnerAps,
+            String apsRule,
+            String qualificationType,
+            Integer apsGap,
+            Integer admissionYear,
+            String generalAdmissionRequirements,
+            String programmeAdmissionRequirements,
+            String additionalSelectionRequirements
     ) {}
 
     public record ApsReadiness(

@@ -26,8 +26,13 @@ public class SavedCareerRoadmap extends BaseEntity {
     @Column(name = "roadmap_json", nullable = false, columnDefinition = "jsonb")
     private String roadmapJson;
 
-    @Column(name = "learner_aps", nullable = false)
-    private Integer learnerAps = 0;
+    private UUID requestKey;
+    private boolean studyPlan;
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String completedStepsJson = "[]";
+
+    @Column(name = "learner_aps")
+    private Integer learnerAps;
 
     @Column(name = "required_aps")
     private Integer requiredAps;

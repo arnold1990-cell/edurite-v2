@@ -1123,7 +1123,7 @@ public class AuthService {
         }
 
         if (user.isEmailVerificationRequired()) {
-            throw new InvalidCredentialsException("Verify your email before signing in. Use the resend verification email option.");
+            throw new com.edurite.common.exception.EmailVerificationRequiredException();
         }
         if (isOtpRequired() && !user.isEmailVerified()) {
             throw loginFailure(LoginAuditReason.EMAIL_NOT_VERIFIED, identifier);
@@ -1149,7 +1149,7 @@ public class AuthService {
     }
 
     private void validateUserEligibleForSession(User user, boolean requireVerified) {
-        if (user.isEmailVerificationRequired()) throw new InvalidCredentialsException("Verify your email before signing in.");
+        if (user.isEmailVerificationRequired()) throw new com.edurite.common.exception.EmailVerificationRequiredException();
         if (user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null) {
             throw new InvalidCredentialsException("Account is inactive or suspended.");
         }

@@ -145,6 +145,29 @@ class PsychometricServiceTest {
 
         assertThatThrownBy(() -> psychometricService.submitAssessmentAttempt(principal, assessment.getId(), request))
                 .hasMessageContaining("requires 2 answered questions");
+        var duplicate = new PsychometricAttemptRequest(List.of(
+                new PsychometricAttemptRequest.AnswerItem(questionOne.getId(), 4),
+                new PsychometricAttemptRequest.AnswerItem(questionOne.getId(), 2)));
+        assertThatThrownBy(() -> psychometricService.submitAssessmentAttempt(principal, assessment.getId(), duplicate))
+                .hasMessageContaining("exactly once");
+        org.mockito.Mockito.verifyNoInteractions(psychometricAttemptRepository, psychometricResultRepository);
+
+        var savedAttempts = new java.util.ArrayList<com.edurite.psychometric.entity.PsychometricAttempt>();
+        var savedResults = new java.util.ArrayList<com.edurite.psychometric.entity.PsychometricResult>();
+        when(psychometricAttemptRepository.save(any())).thenAnswer(i -> {
+            com.edurite.psychometric.entity.PsychometricAttempt attempt = i.getArgument(0);
+            attempt.setId(UUID.randomUUID()); savedAttempts.add(attempt); return attempt;
+        });
+        when(psychometricResultRepository.save(any())).thenAnswer(i -> { savedResults.add(i.getArgument(0)); return i.getArgument(0); });
+        when(psychometricSubmissionRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        var complete = new PsychometricAttemptRequest(List.of(
+                new PsychometricAttemptRequest.AnswerItem(questionOne.getId(), 4),
+                new PsychometricAttemptRequest.AnswerItem(questionTwo.getId(), 2)));
+        var response = psychometricService.submitAssessmentAttempt(principal, assessment.getId(), complete);
+        assertThat(response.scores()).containsEntry("analytical", 4.0).containsEntry("communication", 2.0);
+        when(psychometricAttemptRepository.findByStudentIdOrderBySubmittedAtDesc(profile.getId())).thenReturn(savedAttempts);
+        when(psychometricResultRepository.findByAttemptId(response.attemptId())).thenReturn(Optional.of(savedResults.getFirst()));
+        assertThat(psychometricService.assessmentHistory(principal)).hasSize(1).first().isEqualTo(response);
     }
 }
 

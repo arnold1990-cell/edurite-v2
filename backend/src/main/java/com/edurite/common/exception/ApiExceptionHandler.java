@@ -28,6 +28,11 @@ public class ApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ApiExceptionHandler.class);
 
+    @ExceptionHandler(com.edurite.ai.exception.AiServiceException.class)
+    public ResponseEntity<Map<String, Object>> handleAi(com.edurite.ai.exception.AiServiceException ex, HttpServletRequest request) {
+        return build(ex.getStatus(), ex.getErrorCode(), ex.getUserMessage(), request.getRequestURI(), null);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException ex,
@@ -45,9 +50,19 @@ public class ApiExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", message, request.getRequestURI(), fieldErrors);
     }
 
+    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<Map<String, Object>> handleConcurrentUpdate(RuntimeException ex, HttpServletRequest request) {
+        return build(HttpStatus.CONFLICT, "RESOURCE_CONFLICT", "Your profile changed during this save. Reload and review your results before saving again.", request.getRequestURI(), null);
+    }
+
     @ExceptionHandler({DuplicateEmailException.class, ResourceConflictException.class})
     public ResponseEntity<Map<String, Object>> handleConflict(RuntimeException ex, HttpServletRequest request) {
         return build(HttpStatus.CONFLICT, "RESOURCE_CONFLICT", ex.getMessage(), request.getRequestURI(), null);
+    }
+
+    @ExceptionHandler(EmailVerificationRequiredException.class)
+    public ResponseEntity<Map<String, Object>> handleEmailVerification(EmailVerificationRequiredException ex, HttpServletRequest request) {
+        return build(HttpStatus.FORBIDDEN, "EMAIL_VERIFICATION_REQUIRED", ex.getMessage(), request.getRequestURI(), null);
     }
 
     @ExceptionHandler({InvalidCredentialsException.class, AuthenticationException.class})

@@ -188,9 +188,20 @@ public class StudentService {
      * this method handles the "upsertProfile" step of the feature.
      * It exists to keep this class focused and reusable.
      */
+    @org.springframework.transaction.annotation.Transactional
     public StudentProfileDto upsertProfile(Principal principal, StudentProfileUpsertRequest request) {
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = repository.findByUserId(user.getId()).orElseGet(() -> createDefault(user));
+        if (request.subjectAchievements() != null && request.expectedSubjectAchievements() != null
+                && !readSubjectAchievements(profile.getSubjectAchievementsJson()).equals(normalizeSubjectAchievements(request.expectedSubjectAchievements(), null))) {
+            throw new ResourceConflictException("Your academic results changed in another session. Reload your profile and review the saved marks before saving again.");
+        }
+        if (request.subjectAchievements() != null) {
+            for (var item : request.subjectAchievements()) {
+                if (item != null && item.documentId() != null && transcriptHistory(profile).stream().noneMatch(e -> item.documentId().equals(e.get("documentId"))))
+                    throw new ResourceConflictException("The academic document does not belong to this learner.");
+            }
+        }
         String normalizedSelectedGrade = normalizeSelectedGrade(request.selectedGrade());
         String effectiveSelectedGrade = request.selectedGrade() == null
                 ? profile.getSelectedGrade()
@@ -290,11 +301,7 @@ public class StudentService {
                 entry.put("documentId", path); entry.put("uploadedAt", java.time.OffsetDateTime.now().toString());
                 entry.put("extraction", extraction); entry.put("previousResults", readSubjectAchievements(profile.getSubjectAchievementsJson()));
                 history.add(entry); profile.setTranscriptHistoryJson(writeJson(history));
-                Map<String, StudentSubjectAchievementDto> results = new LinkedHashMap<>();
-                readSubjectAchievements(profile.getSubjectAchievementsJson()).forEach(item -> results.put(item.subjectName(), item));
-                extraction.subjects().forEach(item -> { var previous = results.get(item.subjectName()); if (previous == null || !previous.verified()) results.put(item.subjectName(), item); });
-                profile.setSubjectAchievementsJson(writeJson(new ArrayList<>(results.values())));
-                if (profile.getSelectedGrade() == null && extraction.grade() != null) profile.setSelectedGrade(extraction.grade());
+
             }
         }
         profile = repository.save(profile);
@@ -308,7 +315,7 @@ public class StudentService {
      */
 
     private List<Map<String, Object>> transcriptHistory(StudentProfile profile) {
-        return new ArrayList<>(readJson(profile.getTranscriptHistoryJson(), new TypeReference<List<Map<String, Object>>>() {}));
+        return profile.getTranscriptHistoryJson() == null || profile.getTranscriptHistoryJson().isBlank() ? new ArrayList<>() : new ArrayList<>(readJson(profile.getTranscriptHistoryJson(), new TypeReference<List<Map<String, Object>>>() {}));
     }
     public List<Map<String, Object>> transcriptHistory(Principal principal) { return transcriptHistory(getProfileEntity(principal)); }
     public byte[] downloadDocument(Principal principal, String type) throws IOException {
@@ -328,8 +335,13 @@ public class StudentService {
         if (extraction.subjects().isEmpty()) throw new ResourceConflictException("No extracted marks to verify. Review requires a readable PDF.");
         Map<String, StudentSubjectAchievementDto> results = new LinkedHashMap<>();
         readSubjectAchievements(profile.getSubjectAchievementsJson()).forEach(item -> results.put(item.subjectName(), item));
+        for (var item : extraction.subjects()) {
+            var saved = results.get(item.subjectName());
+            if (saved == null || !java.util.Objects.equals(saved.markPercentage(), item.markPercentage()))
+                throw new ResourceConflictException("Learner must confirm the extracted marks before verification; corrected marks require separate review.");
+        }
         String now = java.time.OffsetDateTime.now().toString();
-        extraction.subjects().forEach(item -> results.put(item.subjectName(), new StudentSubjectAchievementDto(item.subjectName(), item.achievementLevel(), item.markPercentage(), "TRANSCRIPT", true, documentId, now)));
+        extraction.subjects().forEach(item -> results.put(item.subjectName(), new StudentSubjectAchievementDto(item.subjectName(), item.achievementLevel(), item.markPercentage(), "TRANSCRIPT", true, documentId, now, results.get(item.subjectName()).curriculum(), results.get(item.subjectName()).gradingScale(), results.get(item.subjectName()).academicYear(), results.get(item.subjectName()).examination())));
         entry.put("verifiedBy", reviewer.getId().toString()); entry.put("verifiedAt", now);
         profile.setTranscriptHistoryJson(writeJson(history)); profile.setSubjectAchievementsJson(writeJson(new ArrayList<>(results.values())));
         repository.save(profile);
@@ -1047,7 +1059,7 @@ public class StudentService {
                     Integer mark = item.markPercentage();
                     if (mark != null && (mark < 0 || mark > 100)) throw new ResourceConflictException("Marks must be between 0 and 100.");
                     Integer level = mark == null ? normalizeAchievementLevel(item.achievementLevel()) : mark >= 80 ? 7 : mark >= 70 ? 6 : mark >= 60 ? 5 : mark >= 50 ? 4 : mark >= 40 ? 3 : mark >= 30 ? 2 : 1;
-                    return new StudentSubjectAchievementDto(normalizedSubjectName, level, mark, item.source(), item.verified(), item.documentId(), item.updatedAt());
+                    return new StudentSubjectAchievementDto(normalizedSubjectName, level, mark, item.source(), item.verified(), item.documentId(), item.updatedAt(), item.curriculum(), item.gradingScale(), item.academicYear(), item.examination());
                 })
                 .toList();
     }
@@ -1064,15 +1076,37 @@ public class StudentService {
         if (incoming == null) {
             return existingJson == null ? "[]" : existingJson;
         }
+        for (var item : incoming) {
+            if (item == null || item.subjectName() == null || item.subjectName().isBlank())
+                throw new ResourceConflictException("Choose a subject for every result.");
+            if (item.markPercentage() == null && item.achievementLevel() == null)
+                throw new ResourceConflictException("Enter a percentage or achievement level for " + item.subjectName() + ".");
+        }
         List<StudentSubjectAchievementDto> existing = readSubjectAchievements(existingJson);
         Map<String, StudentSubjectAchievementDto> merged = new LinkedHashMap<>();
         for (StudentSubjectAchievementDto item : normalizeSubjectAchievements(incoming, selectedGrade)) {
-            StudentSubjectAchievementDto previous = existing.stream().filter(s -> s.subjectName().equals(item.subjectName())).findFirst().orElse(null);
-            boolean unchanged = previous != null && java.util.Objects.equals(previous.markPercentage(), item.markPercentage()) && java.util.Objects.equals(previous.achievementLevel(), item.achievementLevel());
-            merged.put(item.subjectName(), previous != null && (previous.verified() || unchanged) ? previous : new StudentSubjectAchievementDto(item.subjectName(), item.achievementLevel(), item.markPercentage(), "MANUAL", false, null, java.time.OffsetDateTime.now().toString()));
+            String key = item.subjectName().toLowerCase(Locale.ROOT);
+            StudentSubjectAchievementDto duplicate = merged.get(key);
+            if (duplicate != null) {
+                if (!java.util.Objects.equals(duplicate.markPercentage(), item.markPercentage())
+                        || !java.util.Objects.equals(duplicate.achievementLevel(), item.achievementLevel())
+                        || !sameContext(duplicate, item)) {
+                    throw new ResourceConflictException("Conflicting results for " + item.subjectName() + ". Keep one result and choose its mark and examination context explicitly.");
+                }
+                continue;
+            }
+            StudentSubjectAchievementDto previous = existing.stream().filter(s -> s.subjectName().equalsIgnoreCase(item.subjectName())).findFirst().orElse(null);
+            boolean unchanged = previous != null && java.util.Objects.equals(previous.markPercentage(), item.markPercentage()) && java.util.Objects.equals(previous.achievementLevel(), item.achievementLevel()) && sameContext(previous, item) && java.util.Objects.equals(previous.documentId(), item.documentId());
+            if (previous != null && previous.verified() && !unchanged) throw new ResourceConflictException("The verified result for " + item.subjectName() + " requires administrator review to change.");
+            merged.put(key, unchanged ? previous : new StudentSubjectAchievementDto(item.subjectName(), item.achievementLevel(), item.markPercentage(), item.documentId() == null ? "MANUAL" : "TRANSCRIPT", false, item.documentId(), java.time.OffsetDateTime.now().toString(), item.curriculum(), item.gradingScale(), item.academicYear(), item.examination()));
         }
-        existing.stream().filter(StudentSubjectAchievementDto::verified).forEach(s -> merged.put(s.subjectName(), s));
+        existing.stream().filter(StudentSubjectAchievementDto::verified).forEach(s -> merged.put(s.subjectName().toLowerCase(Locale.ROOT), s));
         return writeJson(new ArrayList<>(merged.values()));
+    }
+
+    private boolean sameContext(StudentSubjectAchievementDto a, StudentSubjectAchievementDto b) {
+        return java.util.Objects.equals(a.curriculum(), b.curriculum()) && java.util.Objects.equals(a.gradingScale(), b.gradingScale())
+                && java.util.Objects.equals(a.academicYear(), b.academicYear()) && java.util.Objects.equals(a.examination(), b.examination());
     }
 
     private List<StudentSubjectAchievementDto> readSubjectAchievements(String value) {
@@ -1162,12 +1196,7 @@ public class StudentService {
             }
             return objectMapper.readValue(value, type);
         } catch (JsonProcessingException ex) {
-            if (type == SUBJECT_ACHIEVEMENTS_TYPE) {
-                @SuppressWarnings("unchecked")
-                T empty = (T) List.<StudentSubjectAchievementDto>of();
-                return empty;
-            }
-            throw new ResourceConflictException("Saved profile data is invalid.");
+            throw new ResourceConflictException("Saved profile data is invalid. Please contact support; your saved results have not been replaced.");
         }
     }
 

@@ -10,6 +10,10 @@ public final class StudentAccessPolicy {
     public record RouteRule(String path, String section, Feature feature) {}
     private static final AntPathMatcher MATCHER = new AntPathMatcher();
     public static final List<ApiRule> API = List.of(
+        new ApiRule("POST", "/student/career-roadmaps/study-plans", Feature.CAREER_ROADMAP_ADVANCED, true),
+        new ApiRule("*", "/student/career-roadmaps/study-plans/**", Feature.CAREER_ROADMAP_ADVANCED, false),
+        new ApiRule("*", "/student/career-roadmaps/selection", Feature.CAREER_ROADMAP_PERSONALISED, false),
+        new ApiRule("*", "/student/career-roadmaps/selection/**", Feature.CAREER_ROADMAP_PERSONALISED, false),
         new ApiRule("*", "/student/psychometric/**", Feature.CAREER_ASSESSMENT, false),
         new ApiRule("*", "/public/psychometric/**", Feature.CAREER_ASSESSMENT, false),
         new ApiRule("POST", "/student/career-roadmaps/generate", Feature.CAREER_ROADMAP_PERSONALISED, true),
@@ -42,11 +46,11 @@ public final class StudentAccessPolicy {
         new ApiRule("*", "/learning-centre/recommended", Feature.LEARNING_RESOURCES_FULL, false)
     );
     public static final List<RouteRule> ROUTES = List.of(
+        new RouteRule("/student/ai-guidance", null, Feature.PERSONALISED_CAREER_RECOMMENDATIONS),
         new RouteRule("/student/career-explorer", "career-path", Feature.CAREER_ROADMAP_PERSONALISED),
         new RouteRule("/student/career-explorer", "learning-path", Feature.CAREER_ROADMAP_PERSONALISED),
         new RouteRule("/student/career-explorer", "readiness", Feature.ACADEMIC_ANALYSIS),
         new RouteRule("/student/career-explorer", "guidance", Feature.PERSONALISED_CAREER_RECOMMENDATIONS),
-        new RouteRule("/student/career-explorer", "career-match", Feature.CAREER_ASSESSMENT),
         new RouteRule("/student/career-explorer", "interests", Feature.CAREER_ASSESSMENT),
         new RouteRule("/student/career-explorer", "saved", Feature.CAREER_ROADMAP_PERSONALISED),
         new RouteRule("/student/profile", "cv", Feature.APPLICATION_SUPPORT),

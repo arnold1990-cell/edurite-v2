@@ -21,13 +21,15 @@ public class StudentSubjectCatalogue {
                 ? s.getName() + " " + s.getLanguageLevel() : s.getName();
     }
     public String canonicalize(String value) {
-        String normalized = value.trim().replaceAll("(?i)\\bHL$", "Home Language")
+        String normalized = value.trim().replaceAll("\\s+", " ").replaceAll("(?i)\\bHL$", "Home Language")
                 .replaceAll("(?i)\\bFAL$", "First Additional Language").replaceAll("(?i)\\bSAL$", "Second Additional Language");
         normalized = switch (normalized.toLowerCase(Locale.ROOT)) {
-            case "maths" -> "Mathematics";
-            case "math lit" -> "Mathematical Literacy";
+            case "math", "maths" -> "Mathematics";
+            case "math lit", "maths literacy", "mathematics literacy" -> "Mathematical Literacy";
             case "physical science" -> "Physical Sciences";
             case "life science" -> "Life Sciences";
+            case "account", "accpount" -> "Accounting";
+            case "business study" -> "Business Studies";
             case "cat" -> "Computer Applications Technology";
             default -> normalized;
         };

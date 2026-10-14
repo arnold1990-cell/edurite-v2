@@ -1,3 +1,4 @@
+import { verificationDestination, verificationNoticePath } from '@/features/auth/verificationNavigation';
 import { type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -709,7 +710,8 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
   const [googleConsent, setGoogleConsent] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
+  const fromLocation = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | undefined)?.from;
+  const from = fromLocation?.pathname ? fromLocation.pathname + (fromLocation.search || '') + (fromLocation.hash || '') : undefined;
   const [serverError, setServerError] = useState<string | null>(null);
   const [form, setForm] = useState<LoginFormValues>(EMPTY_LOGIN_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -791,19 +793,13 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
 
     try {
       const loggedInUser = await login({ email: form.email, password: form.password }, { rememberMe: form.rememberMe, popiaConsentAccepted: googleConsent });
-      const expectedRole = expectedRoleForSelection(selectedRole);
-      const actualRole = resolvePrimaryRole(loggedInUser);
-      if (expectedRole && actualRole && expectedRole !== actualRole) {
-        setServerError(
-          selectedPortal === 'SCHOOL'
-            ? 'This account does not match the selected role. Please choose the correct school role.'
-            : 'This account does not match the selected portal. Please choose the correct portal.',
-        );
-        return;
-      }
       await routeAuthenticatedUser(loggedInUser);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to sign you in.';
+      if ((error as { code?: string })?.code === 'EMAIL_VERIFICATION_REQUIRED' || message.includes('Verify your email before signing in')) {
+        navigate(verificationNoticePath(form.email, from), { replace: true });
+        return;
+      }
       setServerError(message);
     } finally {
       setIsSubmitting(false);
@@ -968,16 +964,6 @@ const SignInForm = ({ role }: { role: AuthRole }) => {
     return 'Sign in to AI Career Guidance';
   })();
 
-  const expectedRoleForSelection = (selection: SelectedRoleOption): Role | null => {
-    if (selection === 'TEACHER') return 'TEACHER';
-    if (selection === 'SCHOOL_ADMIN') return 'SCHOOL_ADMIN';
-    if (selection === 'SCHOOL_STUDENT') return 'SCHOOL_STUDENT';
-    if (selection === 'COMPANY') return 'COMPANY';
-    if (selection === 'DISTRICT_ADMIN') return 'DISTRICT_ADMIN';
-    if (selection === 'PLATFORM_ADMIN') return 'ADMIN';
-    if (selection === 'STUDENT') return 'STUDENT';
-    return null;
-  };
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
@@ -1101,7 +1087,8 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
   const [googleConsent, setGoogleConsent] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const from = (location.state as { from?: { pathname?: string } } | undefined)?.from?.pathname;
+  const fromLocation = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | undefined)?.from;
+  const from = fromLocation?.pathname ? fromLocation.pathname + (fromLocation.search || '') + (fromLocation.hash || '') : undefined;
   const [serverError, setServerError] = useState<string | null>(null);
   const [form, setForm] = useState<LoginFormValues>(EMPTY_LOGIN_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -1167,16 +1154,6 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
     navigate(finalPath, { replace: true, state: roleMismatch ? { roleMismatch } : undefined });
   }, [from, navigate, role]);
 
-  const expectedRoleForSelection = (selection: SelectedRoleOption): Role | null => {
-    if (selection === 'TEACHER') return 'TEACHER';
-    if (selection === 'SCHOOL_ADMIN') return 'SCHOOL_ADMIN';
-    if (selection === 'SCHOOL_STUDENT') return 'SCHOOL_STUDENT';
-    if (selection === 'COMPANY') return 'COMPANY';
-    if (selection === 'DISTRICT_ADMIN') return 'DISTRICT_ADMIN';
-    if (selection === 'PLATFORM_ADMIN') return 'ADMIN';
-    if (selection === 'STUDENT') return 'STUDENT';
-    return null;
-  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1188,19 +1165,13 @@ const PremiumSignInForm = ({ role }: { role: AuthRole }) => {
         ? { schoolName: form.schoolName.trim() || undefined, emisNumber: form.emisNumber, password: form.password }
         : { email: form.email, password: form.password };
       const loggedInUser = await login(loginPayload, { rememberMe: form.rememberMe, popiaConsentAccepted: googleConsent });
-      const expectedRole = expectedRoleForSelection(selectedRole);
-      const actualRole = resolvePrimaryRole(loggedInUser);
-      if (expectedRole && actualRole && expectedRole !== actualRole) {
-        setServerError(
-          selectedRole === 'SCHOOL_ADMIN' || selectedRole === 'TEACHER'
-            ? 'This account does not match the selected role. Please choose the correct school role.'
-            : 'This account does not match the selected portal. Please choose the correct portal.',
-        );
-        return;
-      }
       await routeAuthenticatedUser(loggedInUser);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unable to sign you in.';
+      if ((error as { code?: string })?.code === 'EMAIL_VERIFICATION_REQUIRED' || message.includes('Verify your email before signing in')) {
+        navigate(verificationNoticePath(form.email, from), { replace: true });
+        return;
+      }
       setServerError(message);
     } finally {
       setIsSubmitting(false);
@@ -2265,6 +2236,7 @@ export const ResetPasswordPage = () => {
 
 function StudentEmailVerification() {
   const [params] = useSearchParams();
+  const navigate = useNavigate();
   const [email, setEmail] = useState(params.get('email') || '');
   const [message, setMessage] = useState('Check your email and spam folder for your verification link.');
   const [error, setError] = useState('');
@@ -2274,7 +2246,11 @@ function StudentEmailVerification() {
     setBusy(true); setError('');
     try {
       const result = verify ? await authService.verifyEmail(email, params.get('token') || '') : await authService.resendEmail(email);
-      setMessage(result.message); if (verify) setVerified(true);
+      setMessage(result.message); if (verify) {
+        setVerified(true);
+        const next = verificationDestination(email, params.get('next'));
+        navigate('/auth/login', { replace: true, state: { from: { pathname: next }, emailVerified: true } });
+      }
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to verify. Request a new link.'); }
     finally { setBusy(false); }
   };

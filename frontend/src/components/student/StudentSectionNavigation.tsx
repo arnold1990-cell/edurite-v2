@@ -8,7 +8,6 @@ export const studentSections = [
     "paths": [
       "profile",
       "academic-profile",
-      "documents",
       "qualifications",
       "experience",
       "my-school",
@@ -37,7 +36,7 @@ export const studentSections = [
       ],
       [
         "Documents",
-        "profile?section=documents"
+        "documents"
       ],
       [
         "CV Builder",
@@ -50,12 +49,10 @@ export const studentSections = [
     "label": "Career Explorer",
     "paths": [
       "career-explorer",
-      "psychometric",
-      "psychometric-test",
       "explore",
       "careers",
       "career-roadmaps",
-      "recommendations/careers"
+      "career-path"
     ],
     "links": [
       [
@@ -64,15 +61,11 @@ export const studentSections = [
       ],
       [
         "Career Guidance",
-        "career-explorer?section=guidance"
+        "career-guidance"
       ],
       [
         "Career Match",
-        "career-explorer?section=career-match"
-      ],
-      [
-        "Psychometric / Interests",
-        "career-explorer?section=interests"
+        "career-match"
       ],
       [
         "Career Path",
@@ -183,7 +176,6 @@ export const studentSections = [
     "paths": [
       "learning",
       "ai-tutor",
-      "ai-guidance",
       "learning-centre",
       "interview-prep"
     ],
@@ -195,10 +187,6 @@ export const studentSections = [
       [
         "EduRite Tutor",
         "learning?section=tutor"
-      ],
-      [
-        "AI Guidance",
-        "learning?section=guidance"
       ],
       [
         "Learning Centre",
@@ -214,6 +202,10 @@ export const studentSections = [
       ]
     ]
   },
+  { to: '/student/documents', label: 'Documents', paths: ['documents'], links: [] },
+  { to: '/student/settings', label: 'Account Settings', paths: ['settings'], links: [] },
+  { to: '/student/career-guidance', label: 'Career Guidance', paths: ['career-guidance'], links: [] },
+  { to: '/student/career-match', label: 'Career Match', paths: ['career-match', 'ai-guidance', 'recommendations/careers', 'psychometric', 'psychometric-test'], links: [] },
   {
     "to": "/student/messages",
     "label": "Messages",
@@ -228,6 +220,9 @@ export function studentSection(pathname: string, search = '') {
   const path = pathname.replace(/^\/student\/?/, '').replace(/\/$/, '');
   if (['progress', 'goals', 'rewards'].some(prefix => path === prefix || path.startsWith(prefix + '/'))) return '/student/dashboard';
   const params = new URLSearchParams(search);
+  if (path === 'profile' && ['documents', 'settings'].includes(params.get('section') || params.get('tab') || '')) return '/student/documents';
+  if (['career-explorer', 'learning'].includes(path) && params.get('section') === 'guidance') return '/student/career-match';
+  if (path === 'career-explorer' && ['career-match', 'interests'].includes(params.get('section') || '')) return '/student/career-match';
   if (path === 'profile' && params.get('tab') === 'goals') return '/student/profile';
   if (path === 'explore' || path === 'career-explorer') {
     const category = params.get('category');
@@ -240,17 +235,19 @@ export function studentSection(pathname: string, search = '') {
 }
 
 export const studentTools = [
+  { label: 'Career Match / EduRite AI Guidance', to: '/student/career-match' },
+  { label: 'Career Match / Psychometric assessment', to: '/student/career-match?step=assessment' },
   { label: 'Points & Rewards', to: '/student/dashboard?section=rewards' },
   { label: 'Goals', to: '/student/profile?section=goals' },
   ...studentSections.flatMap(group => [{ label: group.label, to: group.to }, ...group.links.map(([label, path]) => ({ label: `${group.label} / ${label}`, to: `/student/${path}` }))]),
   { label: 'Qualifications and Experience', to: '/student/profile?section=career' },
-  { label: 'Saved Profiles and Documents', to: '/student/profile?section=documents' },
+  { label: 'Saved Profiles and Documents', to: '/student/documents' },
   { label: 'Bursary Finder', to: '/student/funding?section=bursaries' },
   { label: 'Scholarship Assistant', to: '/student/funding?section=scholarships' },
   { label: 'University Explorer / Universities', to: '/student/study-options?section=universities' },
   { label: 'University Applications', to: '/student/study-options?section=applications' },
   { label: 'Career Roadmaps', to: '/student/career-explorer?section=career-path' },
-  ...['Subscription', 'Notifications', 'Settings'].map(label => ({ label, to: `/student/${label.toLowerCase()}` })),
+  ...['Subscription', 'Notifications'].map(label => ({ label, to: `/student/${label.toLowerCase()}` })),
 ];
 
 export function StudentSectionNavigation() {

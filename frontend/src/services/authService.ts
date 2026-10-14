@@ -45,6 +45,7 @@ const normalizeApprovalStatus = (status?: string | null): ApprovalStatus | undef
 const normalizePlanType = (planType?: string | null): User['planType'] | undefined => {
   if (!planType) return undefined;
   const normalized = planType.trim().toUpperCase();
+  if (normalized === 'PRO') return 'PRO';
   if (normalized === 'PREMIUM') return 'PREMIUM';
   if (normalized === 'BASIC') return 'BASIC';
   return undefined;

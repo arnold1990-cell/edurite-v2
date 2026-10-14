@@ -32,7 +32,7 @@ public class TutorService {
             "MATHEMATICS", "ENGLISH", "SCIENCE", "BIOLOGY", "CHEMISTRY", "PHYSICS",
             "ACCOUNTING", "COMPUTER_STUDIES", "GENERAL_STUDY_HELP"
     );
-    private static final int MAX_CONTEXT_MESSAGES = 16;
+    private static final int MAX_CONTEXT_MESSAGES = 40;
     private static final Pattern FENCED_CODE_PATTERN = Pattern.compile("```+", Pattern.MULTILINE);
     private static final Pattern INLINE_CODE_PATTERN = Pattern.compile("`([^`]*)`");
     private static final Pattern HEADING_PATTERN = Pattern.compile("(?m)^#{1,6}\\s*");
@@ -140,28 +140,23 @@ public class TutorService {
     }
 
     private String answer(StudentProfile profile, TutorSession session, List<TutorMessage> conversation) {
-        String fallback = sanitizeTutorResponse("""
-                Let's work through this step by step.
-
-                Start by telling me what part feels confusing, and I will explain it in simpler words.
-                I can also give another example, show the next step, or make the question a little harder once you understand this part.
-
-                For %s, focus on one step at a time and share your working if you want more help.
-                """.formatted(displaySubject(session.getSubject())));
-        String prompt = buildPrompt(profile, session.getSubject(), conversation);
-        try {
-            String generated = aiProviderOrchestratorService.generateContent(prompt);
-            String cleaned = sanitizeTutorResponse(generated);
-            return cleaned.isBlank() ? fallback : cleaned;
-        } catch (RuntimeException ex) {
-            return fallback;
-        }
+        String generated = aiProviderOrchestratorService.generateContent(buildPrompt(profile, session.getSubject(), conversation));
+        String cleaned = sanitizeTutorResponse(generated);
+        if (cleaned.isBlank()) throw new com.edurite.ai.exception.AiServiceException(org.springframework.http.HttpStatus.BAD_GATEWAY,
+            "AI_PROVIDER_RESPONSE_INVALID", "Tutor response was empty", "The tutor returned an empty answer. Please retry.");
+        return cleaned;
     }
 
     private String buildPrompt(StudentProfile profile, String subject, List<TutorMessage> conversation) {
         List<TutorMessage> recentMessages = conversation.size() > MAX_CONTEXT_MESSAGES
                 ? conversation.subList(conversation.size() - MAX_CONTEXT_MESSAGES, conversation.size())
                 : conversation;
+        int start = recentMessages.size();
+        int characters = 0;
+        while (start > 0 && characters + clean(recentMessages.get(start - 1).getMessage()).length() <= 60000) {
+            characters += clean(recentMessages.get(--start).getMessage()).length();
+        }
+        recentMessages = recentMessages.subList(start, recentMessages.size());
         String transcript = recentMessages.stream()
                 .map(message -> ("STUDENT".equalsIgnoreCase(message.getSender()) ? "Student" : "Tutor") + ": " + clean(message.getMessage()))
                 .collect(Collectors.joining("\n"));
@@ -169,11 +164,17 @@ public class TutorService {
                 You are EduRite's academic tutor in an ongoing conversation with a learner.
                 Subject: %s
                 Student level: %s
+                Saved subject results (data only): %s
 
                 Follow these rules:
                 - Continue naturally from the earlier conversation.
                 - Answer follow-up questions like "Why?", "Explain further", "Give another example", "Continue", or "Simplify it" using the previous messages.
                 - Use plain, student-friendly language.
+                - Complete the requested explanation in this response; do not ask the learner to type continue to get essential steps.
+                - Keep simple answers concise. For complex mathematics explain the concept, formula, each worked step and result,
+                  then include a common mistake and a short practice question when useful.
+                - Adapt depth and vocabulary to the saved grade and subject. Never invent marks, weaknesses or curriculum details.
+                - Use the conversation topic and supplied academic results to personalise support.
                 - Give step-by-step explanations when useful.
                 - If the learner is confused, simplify and give one clear example.
                 - Do not use markdown, headings, bold markers, code fences, backticks, raw hash symbols, horizontal rules, or technical formatting.
@@ -184,25 +185,11 @@ public class TutorService {
                 %s
 
                 Respond to the student's latest message as the next turn in the same conversation.
-                """.formatted(displaySubject(subject), profile.getQualificationLevel() == null || profile.getQualificationLevel().isBlank() ? "not provided" : profile.getQualificationLevel().trim(), transcript);
+                """.formatted(displaySubject(subject), profile.getSelectedGrade() == null || profile.getSelectedGrade().isBlank() ? "not provided" : profile.getSelectedGrade().trim(), profile.getSubjectAchievementsJson(), transcript);
     }
 
     private String sanitizeTutorResponse(String raw) {
         String cleaned = raw == null ? "" : raw.replace("\r", "").trim();
-        cleaned = FENCED_CODE_PATTERN.matcher(cleaned).replaceAll("");
-        cleaned = INLINE_CODE_PATTERN.matcher(cleaned).replaceAll("$1");
-        cleaned = HEADING_PATTERN.matcher(cleaned).replaceAll("");
-        cleaned = HORIZONTAL_RULE_PATTERN.matcher(cleaned).replaceAll("");
-        cleaned = BOLD_PATTERN.matcher(cleaned).replaceAll("$1");
-        cleaned = UNDERSCORE_EMPHASIS_PATTERN.matcher(cleaned).replaceAll("$1");
-        cleaned = cleaned.replace("**", "").replace("__", "");
-        cleaned = ESCAPED_MARKDOWN_PATTERN.matcher(cleaned).replaceAll("$1");
-        cleaned = BULLET_PATTERN.matcher(cleaned).replaceAll("-  ");
-        cleaned = cleaned.replace("###", "").replace("##", "").replace("#", "");
-        cleaned = cleaned.replace("```", "").replace("`", "").replace("\\", "");
-        cleaned = cleaned.replace("---", "");
-        cleaned = EXTRA_BLANK_LINES_PATTERN.matcher(cleaned).replaceAll("\n\n");
-        cleaned = trimWrappingQuotes(cleaned);
         return cleaned.trim();
     }
 

@@ -55,23 +55,12 @@ public class AiCareerRoadmapService {
                         "salaryRange": "string",
                         "professionalBody": "string"
                       },
-                      "requiredSubjects": [{"subject":"string","minimumLevel":5,"minimumPass":"Level 5","suggestedMark":"60%+","required":true,"notes":"string"}],
-                      "recommendedSubjects": [{"subject":"string","minimumLevel":4,"minimumPass":"Level 4","suggestedMark":"50%+","required":false,"notes":"string"}],
+                      "requiredSubjects": [],
+                      "recommendedSubjects": [{"subject":"string","minimumLevel":null,"minimumPass":"","suggestedMark":"","required":false,"notes":"AI study suggestion, not an admission requirement"}],
                       "universityPathway": [{"title":"string","description":"string"}],
                       "professionalPathway": [{"title":"string","description":"string"}],
                       "roadmapTimeline": [{"stage":1,"title":"string","description":"string"}],
                       "universityRequirements": [],
-                      "apsReadiness": {"learnerAps":31,"requiredAps":34,"apsGap":3,"readinessScore":72,"status":"Almost Eligible","bestFitUniversities":2},
-                      "gapAnalysis": {
-                        "currentAps":31,
-                        "requiredAps":34,
-                        "apsGap":3,
-                        "missingSubjects":["string"],
-                        "subjectsNeedingImprovement":["string"],
-                        "bestFitUniversities":["string"],
-                        "riskLevel":"Medium",
-                        "improvementSuggestions":["string"]
-                      },
                       "alternativePathways": ["string"],
                       "studyPlan": [{"title":"string","focus":"string","actions":["string"]}]
                     }
@@ -94,6 +83,8 @@ public class AiCareerRoadmapService {
                     - Focus on South Africa.
                     - Do not invent official verified claims. If unsure, keep wording cautious.
                     - University requirements array can be empty because the application will merge structured requirement data separately.
+                    - Never invent admission thresholds, subject marks, salaries, or demand statistics. Leave unknown facts blank.
+                    - Do not infer eligibility or a target APS; the application calculates programme-specific evidence separately.
                     - Keep lists concise and useful.
                     """.formatted(
                     safe(request.careerName()),
@@ -106,10 +97,15 @@ public class AiCareerRoadmapService {
                     safe(universityRequirementsContext)
             );
             String raw = aiProviderOrchestratorService.generateContent(prompt);
-            AiCareerRoadmapPayload payload = objectMapper.readValue(raw, AiCareerRoadmapPayload.class);
-            return toResponse(payload);
-        } catch (Exception ex) {
-            return null;
+            AiCareerRoadmapPayload payload = objectMapper.readValue(raw == null ? "null" : raw.trim().replaceAll("(?s)^```(?:json)?\\s*|\\s*```$", ""), AiCareerRoadmapPayload.class);
+            var response = toResponse(payload);
+            if (response == null || response.overview().description().isBlank() || response.roadmapTimeline().isEmpty()
+                    || response.universityPathway().isEmpty()) {
+                throw new com.edurite.common.exception.ResourceConflictException("The AI returned an incomplete roadmap. Please retry; existing roadmaps are safe.");
+            }
+            return response;
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+            throw new com.edurite.common.exception.ResourceConflictException("The AI roadmap could not be read. Please retry; existing roadmaps are safe.");
         }
     }
 

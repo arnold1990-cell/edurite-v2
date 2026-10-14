@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @EnabledIfEnvironmentVariable(named = "EDURITE_TRIAL_TEST_DB_URL", matches = "jdbc:postgresql://127\\.0\\.0\\.1:.*")
 class TrialMigrationTest {
     @Test void backfillPreservesPaidPaymentsAndLearnerDataAndNeverRestartsTrial() throws Exception {
-        try (var connection = DriverManager.getConnection(System.getenv("EDURITE_TRIAL_TEST_DB_URL"), "postgres", "")) {
+        try (var connection = DriverManager.getConnection(System.getenv("EDURITE_TRIAL_TEST_DB_URL"), System.getenv().getOrDefault("EDURITE_TRIAL_TEST_DB_USER", "postgres"), System.getenv().getOrDefault("EDURITE_TRIAL_TEST_DB_PASSWORD", ""))) {
             connection.setAutoCommit(false);
             try (var sql = connection.createStatement()) {
                 // Temporary tables shadow public tables; rollback also removes all fixtures.
@@ -53,6 +53,14 @@ class TrialMigrationTest {
                 sql.execute("UPDATE subscriptions SET trial_end_date='2026-01-05T12:00:00Z' WHERE plan_code='PLAN_BASIC'");
                 sql.execute(migration);
                 try (var result = sql.executeQuery("SELECT count(*) FROM subscriptions WHERE plan_code='PLAN_BASIC' AND trial_end_date='2026-01-05T12:00:00Z'")) { result.next(); assertThat(result.getInt(1)).isEqualTo(3); }
+                sql.execute("ALTER TABLE payments ADD COLUMN metadata jsonb DEFAULT '{}'::jsonb");
+                sql.execute("UPDATE payments SET metadata='{\"response\":{\"formFields\":{\"signature\":\"signed\"}}}'::jsonb");
+                sql.execute(Files.readString(Path.of("src/main/resources/db/migration/V75__premium_trial_and_free_basic.sql")));
+                try (var result = sql.executeQuery("SELECT checkout_payload::jsonb -> 'formFields' ->> 'signature', status, amount FROM payments")) {
+                    result.next(); assertThat(result.getString(1)).isEqualTo("signed");
+                    assertThat(result.getString(2)).isEqualTo("COMPLETED");
+                    assertThat(result.getInt(3)).isEqualTo(59);
+                }
             } finally { connection.rollback(); }
         }
     }

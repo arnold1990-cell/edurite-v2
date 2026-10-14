@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
  * It groups related logic so the project stays organized and easier to learn.
  */
 public interface CareerRepository extends JpaRepository<Career, UUID> {
+    java.util.Optional<Career> findFirstByTitleIgnoreCase(String title);
     @Query("""
             SELECT c FROM Career c
             WHERE (

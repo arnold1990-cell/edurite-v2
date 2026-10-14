@@ -78,6 +78,27 @@ class SubscriptionServiceTest {
     private Principal principal;
 
     @Test
+    void pendingPaymentsAreScopedToCurrentAccountAndExcludeTerminalStates() {
+        var subscription = new SubscriptionRecord(); subscription.setId(UUID.randomUUID());
+        when(subscriptionRepository.findByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(List.of(subscription));
+        var payments = new java.util.ArrayList<PaymentRecord>();
+        for (String status : List.of("PENDING", "FAILED", "CANCELLED", "COMPLETED")) {
+            var payment = new PaymentRecord(); payment.setStatus(status); payment.setReference(status);
+            payment.setCheckoutUrl("https://example.test/checkout"); payments.add(payment);
+            payment.setCheckoutPayload("{\"formFields\":{\"m_payment_id\":\"PENDING\",\"signature\":\"signed\"}}");
+            payment.setMetadata("{\"event\":\"CONFIRMATION\",\"response\":{\"secret\":\"not-for-browser\"}}");
+        }
+        when(paymentRepository.findBySubscriptionIdOrderByCreatedAtDesc(subscription.getId())).thenReturn(payments);
+        assertThat(subscriptionService.pendingPayments(principal)).hasSize(1).first()
+                .satisfies(row -> {
+                    assertThat(row).containsEntry("status", "PENDING").containsEntry("paymentReference", "PENDING");
+                    assertThat(row.get("formFields")).isEqualTo(Map.of("m_payment_id", "PENDING", "signature", "signed"));
+                    assertThat(row.toString()).doesNotContain("not-for-browser");
+                });
+        verify(subscriptionRepository).findByUserIdOrderByCreatedAtDesc(user.getId());
+    }
+
+    @Test
     void newStudentReceivesExactlyFourteenDaysFromAccountCreation() {
         var start = OffsetDateTime.parse("2026-10-01T10:15:30Z");
         user.setCreatedAt(start);
@@ -337,6 +358,10 @@ class SubscriptionServiceTest {
 
     @Test
     void confirmCheckoutActivatesSubscriptionWhenProviderReportsCompleted() {
+        SubscriptionRecord testingGrant = new SubscriptionRecord();
+        testingGrant.setId(UUID.randomUUID()); testingGrant.setUserId(user.getId());
+        testingGrant.setPlanCode("PLAN_PRO"); testingGrant.setStatus("ACTIVE"); testingGrant.setProvider("manual-testing");
+        when(subscriptionRepository.findByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(List.of(testingGrant));
         PricingPlan plan = premiumPlan();
 
         SubscriptionRecord subscription =
@@ -411,6 +436,8 @@ class SubscriptionServiceTest {
 
         assertThat(response.paymentStatus())
                 .isEqualTo("COMPLETED");
+
+        assertThat(testingGrant.getStatus()).isEqualTo("ACTIVE");
 
         assertThat(response.subscriptionStatus())
                 .isEqualTo("ACTIVE");

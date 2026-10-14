@@ -56,7 +56,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class CareerRoadmapService {
 
     private static final TypeReference<List<StudentSubjectAchievementDto>> SUBJECT_ACHIEVEMENTS_TYPE = new TypeReference<>() { };
-    private static final Pattern LEVEL_PATTERN = Pattern.compile("(?i)(?:level\\s*)?(\\d)");
+    private static final Pattern LEVEL_PATTERN = Pattern.compile("(?i)\\blevel\\s*([1-7])\\b");
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private CareerSelectionService selection;
 
     private final CareerRoadmapRepository repository;
     private final SavedCareerRoadmapRepository savedCareerRoadmapRepository;
@@ -126,6 +129,7 @@ public class CareerRoadmapService {
     }
 
     public CareerRoadmapGenerateResponse generate(Principal principal, CareerRoadmapGenerateRequest request) {
+        selection.requireCareer(request.careerName());
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElseGet(() -> createDefaultProfile(user.getId()));
         ApsCalculationResponse aps = calculateAps(
@@ -138,12 +142,9 @@ public class CareerRoadmapService {
         );
         List<UniversityRequirementResponse> universityRequirements = buildUniversityRequirements(request.careerName(), aps.totalAps(), aps.subjects());
         CareerRoadmap legacy = repository.findTopByTitleContainingIgnoreCaseAndActiveTrue(request.careerName()).orElse(null);
-        Integer requiredAps = universityRequirements.stream()
-                .filter(UniversityRequirementResponse::verified)
-                .map(UniversityRequirementResponse::apsRequired)
-                .filter(value -> value != null && value > 0)
-                .min(Integer::compareTo)
-                .orElse(null);
+        // A career spans multiple programmes and scoring systems. No cross-programme APS minimum is meaningful.
+        // Programme-specific required APS and comparable learner scores are returned on each requirement row.
+        Integer requiredAps = null;
         CareerRoadmapGenerateResponse aiRoadmap = aiCareerRoadmapService.generate(
                 new CareerRoadmapGenerateRequest(request.careerName(), aps.grade(), aps.province(), normalizeSubjectInputs(request.subjects(), profile)),
                 profile,
@@ -155,7 +156,7 @@ public class CareerRoadmapService {
         ApsReadiness readiness = buildReadiness(aps.totalAps(), requiredAps, universityRequirements);
         GapAnalysis gapAnalysis = buildGapAnalysis(aps, requiredAps, universityRequirements);
         return new CareerRoadmapGenerateResponse(
-                firstNonBlank(base.careerName(), request.careerName()),
+                selection.requireCareer(request.careerName()),
                 base.overview(),
                 mergeRequiredSubjects(base, universityRequirements),
                 mergeRecommendedSubjects(base),
@@ -174,14 +175,28 @@ public class CareerRoadmapService {
     public SavedCareerRoadmapResponse save(Principal principal, CareerRoadmapSaveRequest request) {
         User user = currentUserService.requireUser(principal);
         StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElseGet(() -> createDefaultProfile(user.getId()));
+        String career = selection.requireCareer(request.careerName());
+        if (request.roadmap() == null || !career.equalsIgnoreCase(request.roadmap().careerName())) {
+            throw new ResourceConflictException("The roadmap must belong to the selected supported career.");
+        }
+        // Client snapshots are narrative only. Rebuild academic and institutional evidence server-side.
+        var aps = apsProfile(principal);
+        var requirements = buildUniversityRequirements(career, aps.totalAps(), aps.subjects());
+        var readiness = buildReadiness(aps.totalAps(), null, requirements);
+        var gaps = buildGapAnalysis(aps, null, requirements);
+        var narrative = request.roadmap();
+        var snapshot = new CareerRoadmapGenerateResponse(career, narrative.overview(),
+            mergeRequiredSubjects(narrative, requirements), narrative.recommendedSubjects(),
+            narrative.universityPathway(), narrative.professionalPathway(), narrative.roadmapTimeline(),
+            requirements, readiness, gaps, narrative.alternativePathways(), narrative.studyPlan());
         SavedCareerRoadmap entity = new SavedCareerRoadmap();
         entity.setLearnerId(profile.getId());
-        entity.setCareerName(request.careerName().trim());
-        entity.setLearnerAps(nullSafe(request.learnerAps()));
-        entity.setRequiredAps(request.requiredAps());
-        entity.setApsGap(request.apsGap());
-        entity.setReadinessScore(nullSafe(request.readinessScore()));
-        entity.setRoadmapJson(writeJson(request.roadmap()));
+        entity.setCareerName(career);
+        entity.setLearnerAps(aps.totalAps());
+        entity.setRequiredAps(null);
+        entity.setApsGap(null);
+        entity.setReadinessScore(readiness.readinessScore());
+        entity.setRoadmapJson(writeJson(snapshot));
         SavedCareerRoadmap saved = savedCareerRoadmapRepository.save(entity);
         return toSavedResponse(saved);
     }
@@ -217,98 +232,22 @@ public class CareerRoadmapService {
         if (!rows.isEmpty()) {
             return rows;
         }
-        return estimatedRequirements(career, learnerAps, learnerSubjects);
-    }
-
-    private List<UniversityRequirementResponse> estimatedRequirements(String career, Integer learnerAps, List<ApsSubjectResult> learnerSubjects) {
-        String normalizedCareer = career == null ? "" : career.toLowerCase(Locale.ROOT);
-        int estimatedAps = switch (normalizedCareer) {
-            case "doctor", "medicine", "mbchb" -> 42;
-            case "lawyer", "law" -> 33;
-            case "chartered accountant", "accountant" -> 30;
-            case "software engineer", "engineer", "engineering" -> 32;
-            case "nurse", "nursing" -> 28;
-            default -> 28;
-        };
-        String mathematics = normalizedCareer.contains("engineer") || normalizedCareer.contains("account") || normalizedCareer.contains("doctor")
-                ? "Level 5"
-                : "Level 4";
-        String english = "Level 4";
-        String physicalSciences = normalizedCareer.contains("doctor") || normalizedCareer.contains("engineer") ? "Level 5" : null;
-        String lifeSciences = normalizedCareer.contains("doctor") || normalizedCareer.contains("nurse") ? "Level 5" : null;
-        List<Institution> institutions = institutionRepository.findByActiveTrueOrderByFeaturedDescNameAsc().stream()
-                .filter(item -> isSouthAfrican(item.getCountry()))
-                .limit(6)
-                .toList();
-        List<UniversityRequirementResponse> estimates = new ArrayList<>();
-        for (Institution institution : institutions) {
-            estimates.add(toEstimatedRequirementResponse(
-                    institution,
-                    career,
-                    estimatedAps,
-                    mathematics,
-                    english,
-                    normalizedCareer.contains("account") ? "Level 4" : null,
-                    physicalSciences,
-                    lifeSciences,
-                    learnerAps,
-                    learnerSubjects
-            ));
-        }
-        return estimates;
-    }
-
-    private UniversityRequirementResponse toEstimatedRequirementResponse(
-            Institution institution,
-            String career,
-            Integer apsRequired,
-            String mathematicsRequirement,
-            String englishRequirement,
-            String accountingRequirement,
-            String physicalSciencesRequirement,
-            String lifeSciencesRequirement,
-            Integer learnerAps,
-            List<ApsSubjectResult> learnerSubjects
-    ) {
-        String status = "Unable to verify";
-        return new UniversityRequirementResponse(
-                null,
-                institution.getName(),
-                firstNonBlank(institution.getCategory(), "University"),
-                institution.getProvince(),
-                "Related qualification for " + career,
-                null,
-                apsRequired,
-                mathematicsRequirement,
-                null,
-                englishRequirement,
-                accountingRequirement,
-                physicalSciencesRequirement,
-                lifeSciencesRequirement,
-                "3-4 years",
-                null,
-                institution.getWebsite(),
-                "Estimated pathway only. EduRite could not verify institution-specific admission requirements for this programme.",
-                "AI estimated from career pathway alignment",
-                false,
-                "AI Estimate - Verify with University",
-                status,
-                null
-        );
+        return List.of();
     }
 
     private UniversityRequirementResponse toRequirementResponse(CareerProgramRequirement item, Integer learnerAps, List<ApsSubjectResult> learnerSubjects) {
         boolean verified = item.isVerified();
+        learnerAps = programmeAps(item.getApsRule(), learnerSubjects);
         String status = determineStatus(
                 verified,
                 learnerAps,
                 item.getApsRequired(),
                 learnerSubjects,
                 item.getMathematicsRequirement(),
-                item.getMathematicalLiteracyRequirement(),
-                item.getEnglishRequirement(),
-                item.getAccountingRequirement(),
-                item.getPhysicalSciencesRequirement(),
+                verified ? item.getMathematicalLiteracyRequirement() : null,
+                verified ? item.getEnglishRequirement() : null,
+                verified ? item.getAccountingRequirement() : null,
+                verified ? item.getPhysicalSciencesRequirement() : null,
                 item.getLifeSciencesRequirement()
         );
         return new UniversityRequirementResponse(
@@ -318,23 +257,40 @@ public class CareerRoadmapService {
                 item.getProvince(),
                 item.getQualificationName(),
                 item.getFaculty(),
-                item.getApsRequired(),
-                item.getMathematicsRequirement(),
-                item.getMathematicalLiteracyRequirement(),
-                item.getEnglishRequirement(),
-                item.getAccountingRequirement(),
-                item.getPhysicalSciencesRequirement(),
-                item.getLifeSciencesRequirement(),
+                verified ? item.getApsRequired() : null,
+                verified ? item.getMathematicsRequirement() : null,
+                verified ? item.getMathematicalLiteracyRequirement() : null,
+                verified ? item.getEnglishRequirement() : null,
+                verified ? item.getAccountingRequirement() : null,
+                verified ? item.getPhysicalSciencesRequirement() : null,
+                verified ? item.getLifeSciencesRequirement() : null,
                 item.getDuration(),
                 item.getNqfLevel(),
                 item.getApplicationUrl(),
                 item.getNotes(),
                 item.getSource(),
                 verified,
-                verified ? "Verified Requirement" : "AI Estimate - Verify with University",
+                verified ? "Published requirement - confirm current intake" : "Admission requirements not yet verified.",
                 status,
-                verified ? apsGap(learnerAps, item.getApsRequired()) : null
+                learnerAps,
+                item.getApsRule(),
+                item.getQualificationType(),
+                verified && learnerAps != null && item.getApsRequired() != null ? apsGap(learnerAps, item.getApsRequired()) : null,
+                verified ? item.getAdmissionYear() : null,
+                verified ? item.getGeneralAdmissionRequirements() : null,
+                verified ? item.getProgrammeAdmissionRequirements() : null,
+                verified ? item.getAdditionalSelectionRequirements() : null
         );
+    }
+
+    public static Integer programmeAps(String rule, List<ApsSubjectResult> subjects) {
+        if (rule == null || subjects == null) return null;
+        boolean includeLo = "NSC_ALL_INCL_LO".equals(rule);
+        if (!includeLo && !"NSC_ALL_EXCL_LO".equals(rule) && !"NSC_BEST_6_EXCL_LO".equals(rule)) return null;
+        var counted = subjects.stream().filter(s -> includeLo || !s.subjectName().equalsIgnoreCase("Life Orientation")).toList();
+        if (counted.size() < 6 || counted.stream().anyMatch(s -> s.level() == null)) return null;
+        return counted.stream().map(ApsSubjectResult::level).sorted(Comparator.reverseOrder())
+            .limit("NSC_BEST_6_EXCL_LO".equals(rule) ? 6 : counted.size()).mapToInt(Integer::intValue).sum();
     }
 
     private ApsReadiness buildReadiness(Integer learnerAps, Integer requiredAps, List<UniversityRequirementResponse> rows) {
@@ -348,7 +304,7 @@ public class CareerRoadmapService {
                 .filter(item -> "Eligible".equalsIgnoreCase(item.requirementStatus()) || "Almost Eligible".equalsIgnoreCase(item.requirementStatus()))
                 .count();
         int score = Math.max(0, Math.min(100, 100 - (gap * 12) + (int) bestFit * 5));
-        String status = gap == 0 && bestFit > 0 ? "Eligible" : gap <= 3 ? "Almost Eligible" : "Not Yet Eligible";
+        String status = rows.stream().anyMatch(row -> "Eligible".equals(row.requirementStatus())) ? "Meets recorded minimums - confirm admission conditions" : rows.stream().anyMatch(row -> "Almost Eligible".equals(row.requirementStatus())) ? "Almost Eligible" : "Not Yet Eligible";
         return new ApsReadiness(nullSafe(learnerAps), requiredAps, gap, score, status, (int) bestFit);
     }
 
@@ -460,6 +416,9 @@ public class CareerRoadmapService {
         if (!verifiedRequirement || requiredAps == null || learnerAps == null) {
             return "Unable to verify";
         }
+        for (String requirement : java.util.Arrays.asList(mathematicsRequirement, mathematicalLiteracyRequirement, englishRequirement, accountingRequirement, physicalSciencesRequirement, lifeSciencesRequirement)) {
+            if (notBlank(requirement) && extractLevel(requirement) == null) return "Unable to verify subject conditions";
+        }
         boolean subjectRequirementsMet = meetsRequirement(learnerSubjects, "mathematics", mathematicsRequirement)
                 && meetsRequirement(learnerSubjects, "mathematical literacy", mathematicalLiteracyRequirement)
                 && meetsRequirement(learnerSubjects, "english", englishRequirement)
@@ -477,6 +436,12 @@ public class CareerRoadmapService {
     }
 
     private boolean meetsRequirement(List<ApsSubjectResult> learnerSubjects, String keyword, String requirement) {
+        Matcher percentage = Pattern.compile("(\\d{1,3})\\s*%").matcher(requirement == null ? "" : requirement);
+        if (percentage.find()) {
+            int minimum = Integer.parseInt(percentage.group(1));
+            return learnerSubjects != null && learnerSubjects.stream().anyMatch(subject -> subject.subjectName().toLowerCase(Locale.ROOT).contains(keyword)
+                && subject.markPercentage() != null && subject.markPercentage() >= minimum && subject.markPercentage() <= 100);
+        }
         Integer neededLevel = extractLevel(requirement);
         if (neededLevel == null || neededLevel <= 0) {
             return true;
@@ -498,6 +463,8 @@ public class CareerRoadmapService {
         if (requirement == null || requirement.isBlank()) {
             return null;
         }
+        Matcher percent = Pattern.compile("(\\d{1,3})\\s*%").matcher(requirement);
+        if (percent.find()) return normalizeLevel(Integer.parseInt(percent.group(1)), null, null);
         Matcher matcher = LEVEL_PATTERN.matcher(requirement);
         if (matcher.find()) {
             try {
@@ -515,11 +482,7 @@ public class CareerRoadmapService {
 
     private List<SubjectRequirement> mergeRequiredSubjects(CareerRoadmapGenerateResponse base, List<UniversityRequirementResponse> requirements) {
         LinkedHashMap<String, SubjectRequirement> merged = new LinkedHashMap<>();
-        if (base.requiredSubjects() != null) {
-            for (SubjectRequirement item : base.requiredSubjects()) {
-                merged.put(item.subject().toLowerCase(Locale.ROOT), item);
-            }
-        }
+        requirements = requirements.stream().filter(UniversityRequirementResponse::verified).toList();
         mergeRequirementSubject(merged, "Mathematics", requirements.stream().map(UniversityRequirementResponse::mathematicsRequirement).toList(), true);
         mergeRequirementSubject(merged, "Mathematical Literacy", requirements.stream().map(UniversityRequirementResponse::mathematicalLiteracyRequirement).toList(), true);
         mergeRequirementSubject(merged, "English", requirements.stream().map(UniversityRequirementResponse::englishRequirement).toList(), true);
@@ -698,11 +661,13 @@ public class CareerRoadmapService {
         List<String> missingRequirements = new ArrayList<>();
         int total = 0;
         int includedSubjects = 0;
+        Set<String> countedNames = new java.util.HashSet<>();
         if (subjects != null) {
             for (ApsSubjectInput subject : subjects) {
                 if (subject == null || subject.subjectName() == null || subject.subjectName().isBlank()) {
                     continue;
                 }
+                if (!countedNames.add(subject.subjectName().trim().toLowerCase(Locale.ROOT))) continue;
                 Integer level = normalizeLevel(subject.markPercentage(), subject.level(), subject.apsPoints());
                 Integer aps = level == null ? null : Math.max(1, Math.min(7, level));
                 boolean includeInTotal = !isLifeOrientation(subject.subjectName());
@@ -716,7 +681,7 @@ public class CareerRoadmapService {
         }
         String status;
         Integer totalValue;
-        if (resolved.isEmpty()) {
+        if (resolved.isEmpty() || includedSubjects == 0) {
             status = "UNAVAILABLE";
             totalValue = null;
             missingRequirements.add("Add at least one valid subject result.");
@@ -746,10 +711,10 @@ public class CareerRoadmapService {
             return 1;
         }
         if (level != null) {
-            return Math.max(1, Math.min(7, level));
+            return level >= 1 && level <= 7 ? level : null;
         }
         if (apsPoints != null) {
-            return Math.max(1, Math.min(7, apsPoints));
+            return apsPoints >= 1 && apsPoints <= 7 ? apsPoints : null;
         }
         return null;
     }

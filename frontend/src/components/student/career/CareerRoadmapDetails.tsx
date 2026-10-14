@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/Badge';
+import { ProfileAssociationButton } from '@/components/student/profile/ProfileAssociations';
 import { EmptyState } from '@/components/feedback/States';
 import { InstitutionLogo } from '@/components/institutions/InstitutionLogo';
 import { resolveInstitutionDisplay } from '@/lib/institutionRegistry';
@@ -66,6 +67,7 @@ export function CareerRoadmapDetails({ current, activeTab, setActiveTab, display
             ))}
           </div>
           <div className="p-5">
+            {current && <p className="mb-4 text-sm text-slate-600">Career explanations and learning activities are AI-generated guidance. Only programme records marked as published requirements provide institutional evidence. Meeting a threshold does not guarantee admission.</p>}
             {!current ? <EmptyState title="Generate a roadmap" message="Search a career, enter your subjects and marks, then generate your AI career and university readiness roadmap." /> : null}
 
             {current && activeTab === 'Roadmap' ? <div className="space-y-4">
@@ -115,6 +117,7 @@ export function CareerRoadmapDetails({ current, activeTab, setActiveTab, display
             </div> : null}
 
             {current && activeTab === 'University Requirements' ? <div className="space-y-4">
+              {!current.universityRequirements.length && <p>Admission requirements are not currently available. Please confirm with the institution.</p>}
               <div className="grid gap-3 lg:grid-cols-2">
                 {current.universityRequirements.map((item) => {
                   const institution = resolveInstitutionDisplay({ name: item.institutionName, province: item.province, applicationUrl: item.applicationUrl, institutionType: item.institutionType });
@@ -134,14 +137,25 @@ export function CareerRoadmapDetails({ current, activeTab, setActiveTab, display
                       </div>
                     </div>
                     <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
-                      <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">{item.verified ? 'APS' : 'Estimated APS'}</p><p>{item.apsRequired ?? 'Verify'}{item.apsGap != null ? ` · Gap ${item.apsGap}` : ''}</p></div>
+                      <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Required / Target APS</p><p>{item.verified ? item.apsRequired ?? 'Unavailable' : 'Unavailable'}{item.apsGap != null ? ` · Gap ${item.apsGap}` : ''}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Province</p><p>{item.province || 'South Africa'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Mathematics</p><p>{item.mathematicsRequirement || 'Not stated'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">English</p><p>{item.englishRequirement || 'Not stated'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Accounting</p><p>{item.accountingRequirement || 'Not stated'}</p></div>
                       <div><p className="text-xs uppercase tracking-[0.2em] text-slate-400">Duration</p><p>{item.duration || 'Verify with institution'}</p></div>
                     </div>
-                    <p className="mt-3 text-sm text-slate-600">{normalizeText(item.notes || item.source) || 'Verify the full admission requirement directly with the institution.'}</p>
+                    <p>Mathematical Literacy: {item.mathematicalLiteracyRequirement || 'Not stated'}</p>
+                    <p>Physical Sciences: {item.physicalSciencesRequirement || 'Not stated'}</p>
+                    <p>Life Sciences: {item.lifeSciencesRequirement || 'Not stated'}</p>
+                    <p>Qualification type: {item.qualificationType || 'Not published'}</p><p>Programme learner APS: {item.learnerAps ?? 'Unavailable'} ({item.apsRule || 'Institution scoring rule unavailable'})</p><p>Qualification level: {item.nqfLevel || 'Not published'}</p>
+                    <p>Admission source: {item.source || 'Unavailable'}</p>
+                    {item.id && <ProfileAssociationButton type="PROGRAMME" targetId={item.id} />}
+                    <p>Admission year: {item.admissionYear ?? 'Not verified for a specific intake'}</p>
+                    <p>General admission requirements: {item.generalAdmissionRequirements || 'Not recorded; confirm with the institution.'}</p>
+                    <p>Programme requirements: {item.programmeAdmissionRequirements || 'Confirm the full conditions with the institution.'}</p>
+                    <p>Additional selection: {item.additionalSelectionRequirements || 'Not recorded; this does not mean no additional conditions apply.'}</p>
+                    {!item.verified && <p>Admission requirements not yet verified.</p>}
+                    <p className="mt-3 text-sm text-slate-600">{normalizeText(item.notes) || 'Verify the full admission requirement directly with the institution.'}</p>
                     {item.applicationUrl ? <a className="mt-3 inline-block text-sm font-medium text-primary-600 hover:text-primary-500" href={item.applicationUrl} target="_blank" rel="noreferrer">Application link</a> : null}
                   </article>
                 );

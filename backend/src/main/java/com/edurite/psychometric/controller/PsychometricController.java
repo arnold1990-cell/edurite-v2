@@ -34,6 +34,11 @@ public class PsychometricController {
         return psychometricService.listAssessments();
     }
 
+    @GetMapping("/student/psychometric/history")
+    public List<PsychometricAttemptResultDto> history(Principal principal) {
+        return psychometricService.assessmentHistory(principal);
+    }
+
     @GetMapping("/student/psychometric/assessments/{assessmentId}/questions")
     public List<PsychometricQuestionDto> studentAssessmentQuestions(@PathVariable UUID assessmentId) {
         return psychometricService.assessmentQuestions(assessmentId);

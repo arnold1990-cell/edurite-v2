@@ -1,5 +1,5 @@
-import { type ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +15,32 @@ export interface SubscriptionAccess {
 export function useSubscriptionAccess() {
   const { user } = useAuth();
   return useQuery({ queryKey: ['subscription-access', user?.id], queryFn: () => apiClient.get<SubscriptionAccess>('/subscriptions/entitlements').then(r => r.data), enabled: Boolean(user), staleTime: 0, refetchInterval: 30000 });
+}
+export function usePendingPayments() {
+  const { user } = useAuth();
+  return useQuery({ queryKey: ['pending-payments', user?.id], enabled: Boolean(user),
+    queryFn: () => apiClient.get<{ paymentReference: string; provider: string; status: string; checkoutUrl?: string; formFields?: Record<string, string> }[]>('/subscriptions/pending-payments').then(r => r.data),
+    staleTime: 0, refetchInterval: 10000 });
+}
+export function PendingPaymentNotice() {
+  const pending = usePendingPayments();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const cancel = async (paymentReference: string) => {
+    setBusy(true); setError('');
+    try { await apiClient.post('/subscriptions/cancel', { paymentReference }); await pending.refetch(); }
+    catch { setError('Could not cancel the payment. Please try again.'); }
+    finally { setBusy(false); }
+  };
+  return <>{error && <p role="alert">{error}</p>}{pending.data?.map(payment => <aside key={payment.paymentReference} role="alert" className="my-4 rounded-xl border border-amber-400 bg-amber-50 p-4">
+    <strong>Payment pending</strong><p>Complete your payment. Purchased access activates only after payment confirmation.</p>
+    {payment.checkoutUrl && payment.formFields && Object.keys(payment.formFields).length > 0
+      ? <form method="POST" action={payment.checkoutUrl}>{Object.entries(payment.formFields).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}<button className="underline" type="submit">Complete payment</button></form>
+      : payment.checkoutUrl && payment.provider !== 'payfast'
+        ? <a className="underline" href={payment.checkoutUrl}>Complete payment</a>
+        : <p>Checkout details are unavailable. Cancel this pending payment and select your plan again.</p>}
+    <button className="ml-4 underline" disabled={busy} onClick={() => cancel(payment.paymentReference)}>Cancel pending payment</button>
+  </aside>)}</>;
 }
 export function featureForUrl(access: SubscriptionAccess | undefined, url: string) {
   const target = new URL(url, 'https://edurite.local');
@@ -38,7 +64,7 @@ export function RequireEntitlement({ feature, children }: { feature: string; chi
 export function TrialNotice({ access }: { access: SubscriptionAccess }) {
   if (!access.trialActive) return null;
   return <aside role="status" className={`mb-4 rounded-xl border p-4 ${access.trialDaysRemaining <= 3 ? 'border-amber-500 bg-amber-50' : 'border-blue-200 bg-blue-50'}`}>
-    <strong>Free Trial</strong><p>{access.trialDaysRemaining} days remaining</p>
+    <strong>Premium trial</strong><p>{access.trialDaysRemaining} days remaining</p>
     {access.trialEndDate && <p>Trial ends on {new Date(access.trialEndDate).toLocaleDateString()}</p>}
     <Link className="font-semibold text-blue-700 underline" to="/student/subscription">Upgrade</Link>
   </aside>;
@@ -53,11 +79,14 @@ export function TrialExpired() {
 export function StudentRouteAccess({ children }: { children: ReactNode }) {
   const location=useLocation();
   const access=useSubscriptionAccess();
+  const pending=usePendingPayments();
   // Account management must remain reachable if the entitlement request fails.
-  if (['/student/subscription','/student/settings','/student/notifications'].includes(location.pathname)) return <>{children}</>;
-  if (access.isPending) return <p role="status">Checking access...</p>;
+  if ((['/student/subscription','/student/settings','/student/notifications'].includes(location.pathname) || location.pathname.startsWith('/student/settings/'))) return <>{children}</>;
+  if (access.isPending || pending.isPending) return <p role="status">Checking access...</p>;
+  if (pending.isError) return <p role="alert">Payment status could not be checked. <button onClick={() => pending.refetch()}>Retry</button></p>;
   if (access.isError) return <p role="alert">Access could not be checked. <button onClick={() => access.refetch()}>Retry</button></p>;
-  if (location.pathname === "/student/profile" && new URLSearchParams(location.search).get("section") !== "cv") return <>{children}</>;
+  if (pending.data?.length) return <Navigate to="/student/subscription" replace />;
+  if (location.pathname === "/student/documents" || (location.pathname === "/student/profile" && new URLSearchParams(location.search).get("section") !== "cv")) return <>{children}</>;
   if (!access.data.accessAllowed) return <TrialExpired />;
   const feature=featureForUrl(access.data, location.pathname+location.search);
   return <><TrialNotice access={access.data} />{feature && !access.data.entitlements.includes(feature) ? <FeatureLock feature={feature} /> : children}</>;

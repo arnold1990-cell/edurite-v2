@@ -196,7 +196,7 @@ export const DashboardLayout = () => {
     }, []);
 
     const aliases: Record<string, string[]> = {
-      'AI Guidance': ['ai', 'guidance', 'recommendations'],
+      'EduRite AI Guidance': ['ai', 'guidance', 'recommendations'],
       'AI Tutor': ['ai', 'tutor'],
       'My Profile': ['profile'],
       'Psychometric Test': ['psychometric', 'test'],
