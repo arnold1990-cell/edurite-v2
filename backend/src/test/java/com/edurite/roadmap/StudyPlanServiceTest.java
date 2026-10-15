@@ -61,4 +61,19 @@ class StudyPlanServiceTest {
         assertThatThrownBy(()->service.generate(principal,new StudyPlanService.Generate(key,"Nurse",null))).hasMessageContaining("incomplete");
         verify(store,never()).saveAndFlush(any());
     }
+    @Test void missingAcademicInformationDoesNotCallProvidersOrPersistAPlan() {
+        for (String results : List.of("[]", "null", "[{\"subjectName\":\"Maths\"}]", "[{\"subjectName\":\"Maths\",\"markPercentage\":101}]")) {
+            student.setSubjectAchievementsJson(results);
+            assertThatThrownBy(() -> service.generate(principal, new StudyPlanService.Generate(key,"Nurse",null)))
+                    .hasMessageContaining("Save your grade");
+        }
+        verifyNoInteractions(ai, roadmaps);
+        verify(store, never()).saveAndFlush(any());
+    }
+    @Test void missingGradeDoesNotGenerateMisleadingPersonalisation() {
+        student.setSelectedGrade(null);
+        assertThatThrownBy(() -> service.generate(principal, new StudyPlanService.Generate(key,"Nurse",null)))
+                .hasMessageContaining("Save your grade");
+        verifyNoInteractions(ai, roadmaps);
+    }
 }

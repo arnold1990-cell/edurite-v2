@@ -11,6 +11,8 @@ build/
 scripts/.envd
 backend/.m2/
 .m2/
+__pycache__/
+*.pyc
 
 # Persistent local document storage is deployment data, never source.
 backend/data/uploads/

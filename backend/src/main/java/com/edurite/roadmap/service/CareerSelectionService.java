@@ -30,9 +30,7 @@ public class CareerSelectionService {
     public Map<String, String> selected(Principal principal, String name) {
         var profile = context.requireStudent(principal);
         try {
-            var stored = profile.getPreferencesJson();
-            ObjectNode preferences = stored == null || stored.isBlank() ? mapper.createObjectNode() : (ObjectNode) mapper.readTree(stored);
-            if (preferences == null) preferences = mapper.createObjectNode();
+            ObjectNode preferences = readPreferences(profile.getPreferencesJson());
             if (name != null) {
                 if (!name.equalsIgnoreCase(preferences.path("selectedCareer").asText(""))) preferences.remove("selectedProgramme");
                 if (name.isBlank()) preferences.remove("selectedCareer");
@@ -49,7 +47,7 @@ public class CareerSelectionService {
     public Map<String, String> programme(Principal principal, java.util.UUID id) {
         var profile = context.requireStudent(principal);
         try {
-            var preferences = (ObjectNode) mapper.readTree(profile.getPreferencesJson() == null ? "{}" : profile.getPreferencesJson());
+            ObjectNode preferences = readPreferences(profile.getPreferencesJson());
             if (id == null) preferences.remove("selectedProgramme");
             else {
                 var programme = programmes.findById(id).orElseThrow(() -> new ResourceConflictException("Programme not found"));
@@ -62,5 +60,12 @@ public class CareerSelectionService {
         } catch (com.fasterxml.jackson.core.JsonProcessingException | ClassCastException ex) {
             throw new ResourceConflictException("Your saved preferences could not be read. Nothing was changed.");
         }
+    }
+    private ObjectNode readPreferences(String stored) throws com.fasterxml.jackson.core.JsonProcessingException {
+        if (stored == null || stored.isBlank()) return mapper.createObjectNode();
+        var parsed = mapper.readTree(stored);
+        if (parsed == null || parsed.isNull()) return mapper.createObjectNode();
+        if (!parsed.isObject()) throw new ResourceConflictException("Your saved preferences could not be read. Nothing was changed.");
+        return (ObjectNode) parsed;
     }
 }

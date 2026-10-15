@@ -39,6 +39,7 @@ class StudyPlanPersistenceIntegrationTest {
                 var context=mock(StudentContextService.class); var profiles=mock(StudentProfileRepository.class);
                 var roadmaps=mock(CareerRoadmapService.class); var ai=mock(AiProviderOrchestratorService.class);
                 var alice=new StudentProfile(); alice.setId(UUID.randomUUID()); alice.setUserId(UUID.randomUUID());
+                alice.setSelectedGrade("Grade 12"); alice.setSubjectAchievementsJson("[{\"subjectName\":\"Mathematics\",\"markPercentage\":55}]");
                 var bob=new StudentProfile(); bob.setId(UUID.randomUUID());
                 java.security.Principal a=()->"alice", b=()->"bob";
                 when(context.requireStudent(a)).thenReturn(alice); when(context.requireStudent(b)).thenReturn(bob);

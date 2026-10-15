@@ -41,6 +41,101 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 @SuppressWarnings("resource")
 class DevProfileDatasourceIntegrationTest {
 
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private software.amazon.awssdk.services.sesv2.SesV2Client verificationSes;
+
+    @org.springframework.test.context.bean.override.mockito.MockitoBean
+    private com.edurite.ai.service.AiProviderOrchestratorService journeyAi;
+
+    @Test
+    void registrationVerificationLoginAndAcademicProfilePersistThroughHttp() throws Exception {
+        String email = "verification-" + UUID.randomUUID() + "@example.test";
+        String password = "Isolated-Learner-2026!";
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        org.mockito.Mockito.when(verificationSes.sendEmail(org.mockito.ArgumentMatchers.any(software.amazon.awssdk.services.sesv2.model.SendEmailRequest.class)))
+                .thenReturn(software.amazon.awssdk.services.sesv2.model.SendEmailResponse.builder().messageId("isolated-test").build());
+        mockMvc.perform(post("/api/auth/register").contentType("application/json").content(mapper.writeValueAsString(java.util.Map.of(
+                "firstName", "Synthetic", "lastName", "Learner", "email", email,
+                "phoneNumber", "+278" + String.format("%08d", Math.floorMod(UUID.randomUUID().hashCode(), 100000000)),
+                "password", password, "popiaConsentAccepted", true))))
+                .andExpect(status().isCreated());
+        String login = mapper.writeValueAsString(java.util.Map.of("email", email, "password", password));
+        mockMvc.perform(post("/api/auth/login").contentType("application/json").content(login))
+                .andExpect(status().isForbidden());
+        var captured = org.mockito.ArgumentCaptor.forClass(software.amazon.awssdk.services.sesv2.model.SendEmailRequest.class);
+        org.mockito.Mockito.verify(verificationSes).sendEmail(captured.capture());
+        String body = captured.getValue().content().simple().body().text().data();
+        String token = body.split("token=")[1].split("\\s")[0];
+        assertThat(body).contains("https://edurite.co.za/verify-email?");
+        String storedHash = jdbcTemplate.queryForObject("SELECT email_verification_hash FROM users WHERE email=?", String.class, email);
+        assertThat(storedHash).hasSize(64).isNotEqualTo(token);
+        mockMvc.perform(post("/api/auth/email-verification/resend").contentType("application/json")
+                .content(mapper.writeValueAsString(java.util.Map.of("email", email)))).andExpect(status().isOk());
+        org.mockito.Mockito.verify(verificationSes, org.mockito.Mockito.times(1)).sendEmail(org.mockito.ArgumentMatchers.any(software.amazon.awssdk.services.sesv2.model.SendEmailRequest.class));
+        String verification = mapper.writeValueAsString(java.util.Map.of("email", email, "token", token));
+        mockMvc.perform(post("/api/auth/email-verification/verify").contentType("application/json").content(verification)).andExpect(status().isOk());
+        mockMvc.perform(post("/api/auth/email-verification/verify").contentType("application/json").content(verification)).andExpect(status().isConflict());
+        String session = mockMvc.perform(post("/api/auth/login").contentType("application/json").content(login))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String bearer = "Bearer " + mapper.readTree(session).path("accessToken").asText();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/student/profile")
+                .header("Authorization", bearer).contentType("application/json")
+                .content("{\"selectedGrade\":\"Grade 12\",\"subjectAchievements\":[{\"subjectName\":\"Mathematics\",\"markPercentage\":63}]}"))
+                .andExpect(status().isOk());
+        String nextSession = mockMvc.perform(post("/api/auth/login").contentType("application/json").content(login))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String nextBearer = "Bearer " + mapper.readTree(nextSession).path("accessToken").asText();
+        mockMvc.perform(get("/api/student/profile").header("Authorization", nextBearer)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.selectedGrade").value("Grade 12"))
+                .andExpect(jsonPath("$.subjectAchievements[0].markPercentage").value(63));
+        assertThat(jdbcTemplate.queryForObject("SELECT email_verified AND NOT email_verification_required AND email_verification_hash IS NULL FROM users WHERE email=?", Boolean.class, email)).isTrue();
+
+        // Synthetic entitlement fixture only; no real invitation or purchased access is changed.
+        jdbcTemplate.update("INSERT INTO subscriptions(user_id,plan_code,status,provider,start_date,end_date,trial_used) SELECT id,'PLAN_PRO','ACTIVE','integration-test',current_date,current_date+30,true FROM users WHERE email=?", email);
+        mockMvc.perform(get("/api/recommendations/me").header("Authorization", nextBearer)).andExpect(status().isOk());
+        String catalogue = mockMvc.perform(get("/api/careers?size=1").header("Authorization", nextBearer))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String career = mapper.readTree(catalogue).path("content").get(0).path("title").asText();
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/student/career-roadmaps/selection")
+                .header("Authorization", nextBearer).contentType("application/json")
+                .content(mapper.writeValueAsString(java.util.Map.of("careerName", career)))).andExpect(status().isOk());
+        String aiRoadmap = mapper.writeValueAsString(java.util.Map.of("careerName", career,
+                "overview", java.util.Map.of("description", "Synthetic educational roadmap"),
+                "universityPathway", List.of(java.util.Map.of("title", "Research", "description", "Review institution sources")),
+                "roadmapTimeline", List.of(java.util.Map.of("stage", 1, "title", "Prepare", "description", "Practise saved subjects"))));
+        String step = "{\"title\":\"Weekly practice\",\"focus\":\"Mathematics diagnostics\",\"actions\":[\"Monday 25 minutes\",\"Solve five equations\",\"Review errors on Friday\"]}";
+        org.mockito.Mockito.when(journeyAi.generateContent(org.mockito.ArgumentMatchers.anyString())).thenAnswer(invocation -> {
+            String prompt = invocation.getArgument(0);
+            if (prompt.contains("Create a complete, realistic weekly study plan")) return "[" + String.join(",", java.util.Collections.nCopies(4, step)) + "]";
+            if (prompt.contains("learner career roadmap")) return aiRoadmap;
+            return "Step 1: Subtract 2 from both sides. Step 2: Divide by 3. The solution is x = 4.";
+        });
+        String roadmap = mockMvc.perform(post("/api/student/career-roadmaps/generate").header("Authorization", nextBearer)
+                .contentType("application/json").content(mapper.writeValueAsString(java.util.Map.of("careerName", career))))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        mockMvc.perform(post("/api/student/career-roadmaps/save").header("Authorization", nextBearer)
+                .contentType("application/json").content(mapper.writeValueAsString(java.util.Map.of("careerName", career, "roadmap", mapper.readTree(roadmap)))))
+                .andExpect(status().isOk());
+        String planRequest = mapper.writeValueAsString(java.util.Map.of("requestKey", UUID.randomUUID(), "careerName", career));
+        String plan = mockMvc.perform(post("/api/student/career-roadmaps/study-plans").header("Authorization", nextBearer)
+                .contentType("application/json").content(planRequest)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String planId = mapper.readTree(plan).path("id").asText();
+        mockMvc.perform(post("/api/student/career-roadmaps/study-plans").header("Authorization", nextBearer)
+                .contentType("application/json").content(planRequest)).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(planId));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put("/api/student/career-roadmaps/study-plans/" + planId + "/progress")
+                .header("Authorization", nextBearer).contentType("application/json").content("{\"completedSteps\":[0]}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.completedSteps[0]").value(0));
+        mockMvc.perform(get("/api/student/career-roadmaps/study-plans").header("Authorization", nextBearer))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(planId));
+        String tutor = mockMvc.perform(post("/api/student/tutor/ask").header("Authorization", nextBearer).contentType("application/json")
+                .content("{\"subject\":\"MATHEMATICS\",\"question\":\"Solve 3x + 2 = 14\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.answer").value(org.hamcrest.Matchers.containsString("x = 4")))
+                .andReturn().getResponse().getContentAsString();
+        String sessionId = mapper.readTree(tutor).path("sessionId").asText();
+        mockMvc.perform(get("/api/student/tutor/sessions/" + sessionId).header("Authorization", nextBearer))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.messages.length()").value(2));
+    }
+
     private static final String EXTERNAL_DB_URL = System.getenv("EDURITE_TEST_DB_URL");
     private static final boolean USE_EXTERNAL_DB = EXTERNAL_DB_URL != null && !EXTERNAL_DB_URL.isBlank();
     private static PostgreSQLContainer<?> postgres;

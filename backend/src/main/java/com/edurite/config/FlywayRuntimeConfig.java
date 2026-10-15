@@ -21,14 +21,13 @@ public class FlywayRuntimeConfig {
 
     @Bean
     public FlywayMigrationStrategy flywayMigrationStrategy() {
-        return this::migrateWithRepairForDev;
+        return this::migrateAndVerify;
     }
 
-    private void migrateWithRepairForDev(Flyway flyway) {
-        // TODO: REMOVE repair() before production deployment.
-        log.warn("Flyway repair is running before migration (development safety mode).");
-        flyway.repair();
+    private void migrateAndVerify(Flyway flyway) {
+        // Never rewrite migration history at startup. Checksum conflicts must stop deployment.
         flyway.migrate();
+        flyway.validate();
         logMigrationSummary(flyway);
         verifySubscriptionTrialColumnsExist(flyway);
     }

@@ -38,6 +38,9 @@ public class StudyPlanService {
         var profile = profiles.findByUserIdForUpdate(student.getUserId()).orElseThrow();
         var previous = plans.findByLearnerIdAndRequestKey(profile.getId(), request.requestKey());
         if (previous.isPresent()) return response(previous.get());
+        if (profile.getSelectedGrade() == null || profile.getSelectedGrade().isBlank() || !hasAcademicResults(profile.getSubjectAchievementsJson())) {
+            throw new ResourceConflictException("Save your grade and at least one subject mark or achievement level in Academic Results before generating a personalised study plan.");
+        }
         String career = request.careerName() == null ? "" : request.careerName().trim();
         if (career.isBlank()) throw new ResourceConflictException("Choose a supported career before generating your plan.");
         var roadmap = roadmaps.generate(principal, new CareerRoadmapGenerateRequest(career, profile.getSelectedGrade(), profile.getLocation(), List.of()));
@@ -105,5 +108,23 @@ public class StudyPlanService {
             return new Plan(saved.getId(), saved.getCareerName(), saved.getCreatedAt(), mapper.readValue(saved.getRoadmapJson(), CareerRoadmapGenerateResponse.class).studyPlan(),
                 new HashSet<>(Arrays.asList(mapper.readValue(saved.getCompletedStepsJson(), Integer[].class))));
         } catch (com.fasterxml.jackson.core.JsonProcessingException ex) { throw new ResourceConflictException("Saved study plan could not be read. Contact support."); }
+    }
+
+    private boolean hasAcademicResults(String json) {
+        if (json == null || json.isBlank()) return false;
+        try {
+            var results = mapper.readTree(json);
+            if (results == null || !results.isArray()) return false;
+            for (var result : results) {
+                if (result.path("subjectName").asText("").isBlank()) continue;
+                var mark = result.path("markPercentage");
+                var level = result.path("achievementLevel");
+                if ((mark.isNumber() && mark.asDouble() >= 0 && mark.asDouble() <= 100)
+                        || (level.isIntegralNumber() && level.asInt() >= 1 && level.asInt() <= 7)) return true;
+            }
+            return false;
+        } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
+            throw new ResourceConflictException("Your saved academic results could not be read. Review Academic Results before generating a plan.");
+        }
     }
 }

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAppQuery } from '@/hooks/useAppQuery';
 import { studyPlanService } from '@/services/studyPlanService';
 import { Button } from '@/components/ui/Button';
+import { Link } from 'react-router-dom';
 
 export function StudyPlans({ careerName, programmeId }: { careerName: string; programmeId?: string }) {
   const client = useQueryClient();
@@ -27,7 +28,7 @@ export function StudyPlans({ careerName, programmeId }: { careerName: string; pr
     <p>AI-generated study guidance. Official admission requirements must be checked with the institution.</p>
     {!careerName && <p>Choose a supported career above to generate a plan. Your saved plans remain available below.</p>}
     {!history.isLoading && !history.isError && !history.data?.length && <p>No saved study plans yet.</p>}
-    <p>Uses your saved grade, subjects and marks{careerName ? ` for ${careerName}` : ''}. Save academic edits to your profile first. New generations preserve earlier plans.</p>
+    <p>Uses your saved grade, subjects and marks{careerName ? ` for ${careerName}` : ''}. Save your grade and at least one subject result in <Link className="underline" to="/student/profile?section=academic">Academic Results</Link> first. New generations preserve earlier plans.</p>
     <Button disabled={!careerName || generate.isPending} onClick={() => generate.mutate()}>{generate.isPending ? 'Generating and saving your plan…' : generate.isError ? 'Retry study plan' : selected ? 'Generate a new study plan' : 'Generate Study Plan'}</Button>
     {generate.isError && <p role="alert">{generate.error.message}</p>}
     {history.isLoading && <p role="status">Loading saved plans…</p>}

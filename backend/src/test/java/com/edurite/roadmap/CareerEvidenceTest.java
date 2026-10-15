@@ -15,6 +15,18 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class CareerEvidenceTest {
+    @Test void emptyLegacyPreferencesAllowClearingProgrammeWithoutServerError() {
+        for (String stored : Arrays.asList(null, "", "null", "{}")) {
+            var profile = new StudentProfile(); profile.setPreferencesJson(stored);
+            var context = mock(StudentContextService.class);
+            var profiles = mock(StudentProfileRepository.class);
+            java.security.Principal learner = () -> "synthetic@example.test";
+            when(context.requireStudent(learner)).thenReturn(profile);
+            var service = new CareerSelectionService(mock(CareerRepository.class), context, profiles, new ObjectMapper());
+            assertThat(service.programme(learner, null).get("programmeId")).isEmpty();
+            verify(profiles).save(profile);
+        }
+    }
     @Test void percentageThresholdIsNotRoundedDownToAnAchievementLevel() {
         var requirements=mock(CareerProgramRequirementRepository.class);
         var record=new com.edurite.roadmap.entity.CareerProgramRequirement(); record.setVerified(true); record.setApsRequired(24); record.setApsRule("NSC_ALL_EXCL_LO"); record.setMathematicsRequirement("55%");

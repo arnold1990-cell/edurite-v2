@@ -74,7 +74,7 @@ services:
       APP_FRONTEND_BASE_URL: ${APP_FRONTEND_BASE_URL:-https://edurite.org}
       BACKEND_BASE_URL: ${BACKEND_BASE_URL:-https://edurite.org}
 
-      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://edurite.org,http://www.edurite.org,https://edurite.org,https://www.edurite.org,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173,http://edurite.org,http://www.edurite.org,https://edurite.org,https://www.edurite.org,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net,https://edurite.co.za,https://www.edurite.co.za}
 
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-https://edurite.org/login/oauth2/code/google}
 

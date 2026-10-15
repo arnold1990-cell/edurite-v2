@@ -1,171 +1,87 @@
 name: Deploy EduRite V2
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
   workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Full tested main commit SHA
+        required: true
+      ci_run_id:
+        description: Successful CI run that published this release
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: edurite-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.head_branch == 'main')
+    if: github.ref == 'refs/heads/main'
+    environment: production
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
-
-      - name: Deploy to AWS EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USERNAME }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          timeout: 30m
-          command_timeout: 30m
-
-          script: |
-            set -euo pipefail
-
-            PROJECT_DIR="/opt/edurite-v2"
-            REPO_URL="https://github.com/arnold1990-cell/edurite-v2.git"
-
-            echo "======================================"
-            echo " Deploying EduRite V2 to AWS EC2"
-            echo "======================================"
-
-            echo "Host: $(hostname)"
-            echo "User: $(whoami)"
-
-            # Make sure Docker is available
-            if ! command -v docker >/dev/null 2>&1; then
-              echo "ERROR: Docker is not installed."
-              exit 1
-            fi
-
-            if ! docker compose version >/dev/null 2>&1; then
-              echo "ERROR: Docker Compose plugin is not installed."
-              exit 1
-            fi
-
-            # Clone repository on first deployment
-            if [ ! -d "$PROJECT_DIR/.git" ]; then
-              echo "==> Repository not found at $PROJECT_DIR"
-
-              sudo mkdir -p "$PROJECT_DIR"
-              sudo chown -R "$(whoami):$(whoami)" "$PROJECT_DIR"
-
-              git clone "$REPO_URL" "$PROJECT_DIR"
-            fi
-
-            cd "$PROJECT_DIR"
-
-            echo "==> Updating repository"
-
-            git fetch origin
-            git checkout main
-            git reset --hard origin/main
-
-            echo "==> Deploying commit:"
-            git rev-parse --short HEAD
-
-            # Production secrets/config must already exist on EC2
-            if [ ! -f ".env" ]; then
-              echo "ERROR: Production .env is missing:"
-              echo "$PROJECT_DIR/.env"
-              exit 1
-            fi
-
-            echo "==> Validating Docker Compose"
-            docker compose config >/dev/null
-
-            echo "==> Building EduRite images"
-            docker compose build --progress=plain backend frontend
-
-            echo "==> Starting services"
-            docker compose up -d
-
-            echo "==> Waiting for containers"
-            sleep 10
-
-            docker compose ps
-
-            echo "==> Checking PostgreSQL"
-            if ! docker compose exec -T postgres pg_isready; then
-              echo "ERROR: PostgreSQL is not ready."
-              docker compose logs --tail=100 postgres || true
-              exit 1
-            fi
-
-            echo "==> Checking Redis"
-            if ! docker compose exec -T redis redis-cli ping | grep -q PONG; then
-              echo "ERROR: Redis is not responding."
-              docker compose logs --tail=100 redis || true
-              exit 1
-            fi
-
-            echo "==> Waiting for backend"
-
-            BACKEND_OK=false
-
-            for i in $(seq 1 30); do
-              if docker compose exec -T backend \
-                curl -fsS http://127.0.0.1:8080/actuator/health/readiness >/dev/null; then
-
-                BACKEND_OK=true
-                echo "Backend is healthy."
-                break
-              fi
-
-              echo "Waiting for backend... attempt $i/30"
-              sleep 10
-            done
-
-            if [ "$BACKEND_OK" != "true" ]; then
-              echo "ERROR: Backend failed health check."
-
-              docker compose ps || true
-              docker compose logs --tail=300 backend || true
-              docker compose logs --tail=100 postgres || true
-              docker compose logs --tail=100 redis || true
-
-              exit 1
-            fi
-
-            echo "==> Checking frontend container"
-
-            if ! docker compose exec -T frontend \
-              wget -qO- http://127.0.0.1/ >/dev/null; then
-
-              echo "ERROR: Frontend is not responding."
-              docker compose logs --tail=200 frontend || true
-              exit 1
-            fi
-
-            echo "==> Checking Vite production bundle"
-
-            if docker compose exec -T frontend \
-              test -f /usr/share/nginx/html/assets/main.js; then
-
-              echo "ERROR: Legacy frontend bundle detected."
-              exit 1
-            fi
-
-            if docker compose exec -T frontend \
-              sh -lc 'grep -R "import.meta.glob" /usr/share/nginx/html/assets >/dev/null 2>&1'; then
-
-              echo "ERROR: Frontend bundle contains unresolved import.meta.glob."
-              exit 1
-            fi
-
-            echo "==> Final container status"
-            docker compose ps
-
-            echo "======================================"
-            echo " EduRite V2 deployment successful"
-            echo "======================================"
+          fetch-depth: 0
+      - name: Verify release and successful CI provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CI_RUN_ID: ${{ inputs.ci_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$CI_RUN_ID" =~ ^[0-9]+$ ]]
+          git merge-base --is-ancestor "$RELEASE_SHA" origin/main
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$CI_RUN_ID" > ci-run.json
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('ci-run.json'))
+          assert run['head_sha'] == os.environ['RELEASE_SHA']
+          assert run['conclusion'] == 'success' and run['status'] == 'completed'
+          assert run['event'] == 'push' and run['head_branch'] == 'main'
+          assert run['path'] == '.github/workflows/ci.yml'
+          assert run['repository']['full_name'] == os.environ['GITHUB_REPOSITORY']
+          PY
+          mkdir release
+          gh run download "$CI_RUN_ID" --name "release-$RELEASE_SHA" --dir release
+          git archive "$RELEASE_SHA" docker-compose.yml docker-compose.production.yml scripts/release.py | tar -x -C release
+          python3 - <<'PY'
+          import json, os
+          m = json.load(open('release/release.json'))
+          assert m['commit'] == os.environ['RELEASE_SHA']
+          assert str(m['ci_run_id']) == os.environ['CI_RUN_ID']
+          PY
+          tar -czf release.tgz -C release .
+      - name: Transfer release without changing production checkout
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test -n "$KNOWN_HOSTS"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          target="$EC2_USERNAME@$EC2_HOST"
+          stage="/opt/edurite-releases/$RELEASE_SHA-$GITHUB_RUN_ID"
+          ssh "$target" "umask 077; mkdir -p '$stage'"
+          scp release.tgz "$target:$stage/release.tgz"
+          ssh "$target" "set -eu; tar -xzf '$stage/release.tgz' -C '$stage'; python3 '$stage/scripts/release.py' deploy --release-dir '$stage' --project-dir /opt/edurite-v2 --commit '$RELEASE_SHA' --backup /opt/edurite-backups/release.dump --evidence /opt/edurite-backups/restore-evidence.json"
+      - name: Record workflow outcome
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: printf 'Release `%s` deployment workflow result %s. Host state records contain container results.\n' "$RELEASE_SHA" "$RESULT" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove runner SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519

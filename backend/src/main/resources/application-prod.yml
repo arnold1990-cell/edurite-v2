@@ -50,7 +50,7 @@ app:
     base-url: ${APP_FRONTEND_BASE_URL:${APP_BASE_URL:https://edurite.org}}
   frontend-url: ${APP_FRONTEND_URL:${APP_FRONTEND_BASE_URL:${APP_BASE_URL:https://edurite.org}}}
   cors:
-    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://edurite.org,http://www.edurite.org,https://edurite.org,https://www.edurite.org,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net}
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://edurite.org,http://www.edurite.org,https://edurite.org,https://www.edurite.org,http://edurite.net,http://www.edurite.net,https://edurite.net,https://www.edurite.net,https://edurite.co.za,https://www.edurite.co.za}
 
 edurite:
   flyway:
