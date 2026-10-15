@@ -1,0 +1,13 @@
+# Applied over the release's base compose file. Never build on the production host.
+# --project-directory must point at the existing production checkout, preserving .env.
+services:
+  backend:
+    image: ${BACKEND_IMAGE:?Set the tested backend image digest}
+    volumes:
+      - type: bind
+        source: ${DOCUMENT_UPLOADS_HOST_DIRECTORY:-/opt/edurite-uploads}
+        target: ${DOCUMENT_STORAGE_DIRECTORY:-/app/data/uploads}
+        bind:
+          create_host_path: false
+  frontend:
+    image: ${FRONTEND_IMAGE:?Set the tested frontend image digest}
