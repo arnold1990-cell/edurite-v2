@@ -13,7 +13,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import release
 
 SHA = 'a' * 40
-MANIFEST = dict(commit=SHA, backend='ghcr.io/example/backend@sha256:' + 'b' * 64,
+MIGRATIONS = [dict(version='79', script='V79__fixture.sql', checksum=123, sha256='e' * 64)]
+SNAPSHOT = dict(project='existing-project',
+                containers={s: 'container-' + s for s in ('backend', 'frontend', 'postgres', 'redis')},
+                images={s: 'sha256:' + 'd' * 64 for s in ('backend', 'frontend')},
+                revisions={s: 'f' * 40 for s in ('backend', 'frontend')})
+MANIFEST = dict(commit=SHA, migrations=MIGRATIONS, protected_files={p: 'f' * 64 for p in release.PROTECTED},
+ backend='ghcr.io/example/backend@sha256:' + 'b' * 64,
                 frontend='ghcr.io/example/frontend@sha256:' + 'c' * 64)
 
 
@@ -33,7 +39,7 @@ class ReleaseSafetyTests(unittest.TestCase):
             release.validate_backup(evidence, backup, SHA, now=100001)
             for change in (dict(validated_at=0), dict(backup_created_at=0), dict(restored=False),
                            dict(migrated=False), dict(data_preserved=False), dict(commit='wrong'),
-                           dict(backup_sha256='wrong'), dict(validated_at=100002)):
+                           dict(backup_sha256='wrong'), dict(validated_at=float('nan')), dict(backup_created_at=float('inf')), dict(validated_at=100002)):
                 with self.subTest(change=change), self.assertRaises(ValueError):
                     release.validate_backup(dict(evidence, **change), backup, SHA, now=100001)
 
@@ -47,6 +53,9 @@ class ReleaseSafetyTests(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text('preserve me')
         release.write_json(staged / 'release.json', MANIFEST)
+        release.write_json(staged / 'deployment-plan.json', dict(commit=SHA, classification='DATABASE_MIGRATION',
+            backend_base='f' * 40, frontend_base='f' * 40, changes=['backend/src/main/resources/application.yml'],
+            baseline_migrations=MIGRATIONS, migrations=MIGRATIONS, protected_files=MANIFEST['protected_files'], expected_inventory=SNAPSHOT))
         for name in ('docker-compose.yml', 'docker-compose.production.yml'):
             (staged / name).write_text('services: {}')
         files = {p: release.digest(project / p) for p in ('backend/pom.xml', 'backend/src/main/java/com/edurite/auth/service/EmailVerificationService.java')}
@@ -55,8 +64,8 @@ class ReleaseSafetyTests(unittest.TestCase):
         backup.write_bytes(b'synthetic')
         evidence = root / 'evidence.json'
         release.write_json(evidence, dict(commit=SHA, restored=True, migrated=True, data_preserved=True,
-                                         backup_sha256=release.digest(backup), validated_at=time.time(), backup_created_at=time.time()))
-        args = SimpleNamespace(action='deploy', commit=SHA, backup=backup, evidence=evidence, state=None, schema_compatibility_reviewed=False)
+                                         backup_sha256=release.digest(backup), validated_at=time.time(), backup_created_at=time.time(), source_version='79', target_version='79', migrations=MIGRATIONS))
+        args = SimpleNamespace(action='deploy', commit=SHA, backup=backup, evidence=evidence, state=None, schema_compatibility_reviewed=False, migration_approved=True, public_url='https://edurite.co.za')
         return args, project, staged, state
 
     def fake_run(self, calls, failure=False):
@@ -69,12 +78,16 @@ class ReleaseSafetyTests(unittest.TestCase):
                     'GEMINI_API_KEY': 'synthetic', 'APP_CORS_ALLOWED_ORIGINS': 'https://edurite.co.za',
                     'SPRING_FLYWAY_ENABLED': 'true', 'APP_EMAIL_VERIFICATION_BASE_URL': 'https://edurite.co.za',
                     'APP_EMAIL_VERIFICATION_AWS_REGION': 'af-south-1', 'APP_EMAIL_VERIFICATION_FROM': 'info@edurite.co.za'}}}})
+            if 'SELECT coalesce(json_agg' in ' '.join(args):
+                return json.dumps([dict(MIGRATIONS[0], success=True, type='SQL')])
+            if args[:2] == ('docker', 'ps'):
+                return 'container-' + args[-1].split('=')[-1]
             if 'ps' in args:
                 return 'container-' + args[-1]
             if 'inspect' in args:
                 if '{{json .Mounts}}' in args: return '[]'
                 if 'com.docker.compose.project' in ' '.join(args): return 'existing-project'
-                if 'image.revision' in ' '.join(args): return SHA
+                if 'image.revision' in ' '.join(args): return 'f' * 40 if args[-1].startswith('sha256:') else SHA
                 return 'sha256:' + 'd' * 64
             if 'ping' in args: return 'PONG'
             if 'up' in args and args[-1] == 'backend' and failure:

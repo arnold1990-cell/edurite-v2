@@ -1,4 +1,4 @@
-"""Restore a custom-format V74 dump to a NEW private local cluster, then test migrations.
+"""Restore a custom-format production dump to a NEW private local cluster, then test migrations.
 
 Run on an isolated validation machine, never the production EC2 host. Requires native
 PostgreSQL tools, Java 21+, Maven and this exact release checkout. Never accepts a DB URL.
@@ -16,6 +16,7 @@ import subprocess
 import tempfile
 import time
 from release import digest, run, write_json
+from classify_release import inventory
 
 
 def main():
@@ -30,8 +31,10 @@ def main():
     root = Path(__file__).resolve().parents[1]
     if run('git', '-C', str(root), 'rev-parse', 'HEAD') != args.commit:
         raise ValueError('Checkout does not match release commit')
-    if run('git', '-C', str(root), 'status', '--porcelain', '--', 'backend', 'scripts/RestoreValidation.java', 'scripts/validate-restore.py'):
+    if run('git', '-C', str(root), 'status', '--porcelain', '--', 'backend', 'scripts/RestoreValidation.java', 'scripts/validate-restore.py', 'scripts/release.py', 'scripts/classify_release.py'):
         raise ValueError('Restore validation requires committed backend and validation tools')
+    migrations = inventory(root, args.commit)
+    target_version = migrations[-1]['version']
     backup_hash = digest(args.backup)
     suffix = '.exe' if os.name == 'nt' else ''
     pg = lambda name: str(args.pg_bin / (name + suffix))
@@ -68,15 +71,18 @@ def main():
             classpath = classpath_file.read_text().strip()
             run('javac', '-cp', classpath, '-d', str(work), str(root / 'scripts/RestoreValidation.java'))
             output = run('java', '-cp', str(work) + os.pathsep + classpath, 'RestoreValidation',
-                         f'jdbc:postgresql://127.0.0.1:{port}/restore_validation', str(root / 'backend/src/main/resources/db/migration'))
+                         f'jdbc:postgresql://127.0.0.1:{port}/restore_validation', str(root / 'backend/src/main/resources/db/migration'), target_version)
             if 'RESTORE_DATA_PRESERVED' not in output:
                 raise RuntimeError('Restore validation did not complete')
             if digest(args.backup) != backup_hash:
                 raise ValueError('Backup changed during restore validation')
+            match = re.search(r'RESTORE_VERSIONS source=([0-9.]+) target=([0-9.]+)', output)
+            if not match or match.group(2) != target_version:
+                raise RuntimeError('Missing actual restored migration versions')
             write_json(args.output, dict(commit=args.commit, backup_sha256=backup_hash,
                        backup_created_at=backup_created, validated_at=time.time(), restored=True,
-                       migrated=True, data_preserved=True, source_version=74, target_version=79))
-            print('Restore, V74 to V79 migration and existing-row preservation verified; evidence written.')
+                       migrated=True, data_preserved=True, source_version=match.group(1), target_version=target_version, migrations=migrations))
+            print('Isolated restore, migration and existing-row preservation verified; evidence written.')
         finally:
             run(pg('pg_ctl'), '-D', str(data), '-m', 'fast', '-w', 'stop')
 

@@ -1,0 +1,294 @@
+import copy
+import importlib.util
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+from unittest.mock import patch
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import classify_release as classifier
+import release
+import test_release as fixtures
+from test_release import MANIFEST, MIGRATIONS, SHA, SNAPSHOT
+
+
+class ClassificationTests(unittest.TestCase):
+    def classify(self, changes, added=False, frontend=None, diff_text=''):
+        old = MIGRATIONS
+        new = old + [dict(version='80', script='V80__new.sql', checksum=456, sha256='a' * 64)] if added else old
+
+        def git(root, *args):
+            if args[0] == 'diff':
+                if '-U0' in args:
+                    return diff_text.encode()
+                paths = changes if '--' not in args else (frontend if frontend is not None else [p for p in changes if p.startswith('frontend/')])
+                return '\n'.join(paths).encode()
+            if args[0] == 'show':
+                return b'protected source'
+            raise AssertionError(args)
+
+        with patch.object(classifier, 'revision'), patch.object(classifier, 'inventory', side_effect=[old, new]), \
+             patch.object(classifier, 'git', side_effect=git), patch.object(classifier.subprocess, 'run'):
+            return classifier.classify(Path('.'), SHA, 'f' * 40, 'f' * 40)
+
+    def test_frontend_only(self):
+        self.assertEqual(self.classify(['frontend/src/app/App.tsx'])['classification'], 'FRONTEND_ONLY')
+
+    def test_backend_without_schema(self):
+        self.assertEqual(self.classify(['backend/src/main/java/com/edurite/tutor/service/TutorService.java'])['classification'], 'BACKEND_NO_SCHEMA_CHANGE')
+
+    def test_mixed_release(self):
+        self.assertEqual(self.classify(['frontend/package.json', 'backend/pom.xml'])['classification'], 'BACKEND_NO_SCHEMA_CHANGE')
+
+    def test_pending_migration_cannot_hide_behind_latest_frontend_commit(self):
+        self.assertEqual(self.classify(['frontend/src/app/App.tsx'], added=True)['classification'], 'DATABASE_MIGRATION')
+
+    def test_schema_sensitive_changes_fail_conservatively(self):
+        for path in ['backend/src/main/java/com/edurite/user/entity/User.java', 'backend/src/main/resources/application.yml', 'database/schema.sql']:
+            with self.subTest(path=path):
+                self.assertEqual(self.classify([path])['classification'], 'DATABASE_MIGRATION')
+
+    def test_inline_ddl_and_schema_annotations_take_migration_gate(self):
+        for text in ['+@Entity', '+ execute("ALTER TABLE learners ADD COLUMN value TEXT")']:
+            self.assertEqual(self.classify(['backend/src/main/java/com/edurite/custom/Schema.java'], diff_text=text)['classification'], 'DATABASE_MIGRATION')
+
+    def test_unknown_path_fails_closed(self):
+        with self.assertRaises(ValueError):
+            self.classify(['unknown-root-script.sh'])
+
+    def test_deleted_or_edited_migrations_fail_closed(self):
+        with patch.object(classifier, 'revision'), patch.object(classifier.subprocess, 'run'), \
+             patch.object(classifier, 'inventory', side_effect=[MIGRATIONS, []]):
+            with self.assertRaises(ValueError):
+                classifier.classify(Path('.'), SHA, 'f' * 40, 'f' * 40)
+
+    def test_nonancestor_baseline_fails_closed(self):
+        with patch.object(classifier, 'revision'), patch.object(classifier.subprocess, 'run', side_effect=subprocess.CalledProcessError(1, 'git')):
+            with self.assertRaises(subprocess.CalledProcessError):
+                classifier.classify(Path('.'), SHA, 'f' * 40, 'f' * 40)
+
+    def test_missing_or_nonsha_revision_fails_closed(self):
+        with self.assertRaises(ValueError):
+            classifier.revision(Path('.'), 'latest')
+
+    def test_repository_inventory_is_complete_and_deterministic(self):
+        root = Path(__file__).resolve().parents[2]
+        sha = classifier.git(root, 'rev-parse', 'HEAD').decode().strip()
+        rows = classifier.inventory(root, sha)
+        self.assertTrue(rows)
+        paths = classifier.git(root, 'ls-tree', '-r', '--name-only', sha, '--', classifier.MIGRATIONS).decode().splitlines()
+        self.assertEqual(len(rows), len(paths))
+        self.assertEqual(rows, classifier.inventory(root, sha))
+
+    def test_history_checksums_and_pending_schema(self):
+        rows = [dict(MIGRATIONS[0], success=True, type='SQL')]
+        self.assertEqual(classifier.validate_history(rows, MIGRATIONS), '79')
+        for change in [dict(checksum=0), dict(success=False), dict(type='BASELINE'), dict(script='different.sql')]:
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                classifier.validate_history([dict(rows[0], **change)], MIGRATIONS)
+        pending = MIGRATIONS + [dict(version='80', script='V80__new.sql', checksum=456, sha256='a' * 64)]
+        with self.assertRaises(ValueError):
+            classifier.validate_history(rows, pending)
+        self.assertEqual(classifier.validate_history(rows, pending, allow_pending=True), '79')
+        with self.assertRaises(ValueError):
+            classifier.validate_history([], MIGRATIONS)
+
+
+class ClassifiedReleaseTests(unittest.TestCase):
+    setup_release = fixtures.ReleaseSafetyTests.setup_release
+    fake_run = fixtures.ReleaseSafetyTests.fake_run
+
+    def configure(self, staged, kind):
+        plan = json.loads((staged / 'deployment-plan.json').read_text())
+        plan['classification'] = kind
+        plan['changes'] = ['frontend/src/app/App.tsx'] if kind == 'FRONTEND_ONLY' else ['backend/src/main/java/com/edurite/tutor/service/TutorService.java']
+        release.write_json(staged / 'deployment-plan.json', plan)
+
+    def test_frontend_needs_no_restore_or_ses_attestation_and_never_touches_data_services(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(release.os.environ):
+            args, project, staged, state = self.setup_release(directory)
+            self.configure(staged, 'FRONTEND_ONLY')
+            args.backup = args.evidence = None
+            (state / 'production-checkout-review.json').unlink()
+            calls = []
+            with patch.object(release, 'run', side_effect=self.fake_run(calls)):
+                release.execute(args, project, staged, state)
+            self.assertEqual([c[-1] for c in calls if 'up' in c], ['frontend'])
+            self.assertEqual([c[-1] for c in calls if 'pull' in c], ['frontend'])
+            self.assertFalse(any('exec' in c and ('postgres' in c or 'redis' in c or 'backend' in c) for c in calls))
+            self.assertFalse(any('build' in c or 'down' in c for c in calls))
+            self.assertTrue(any(c[0] == 'curl' and c[-1] == 'https://edurite.co.za/' for c in calls))
+            self.assertEqual((project / '.env').read_text(), 'preserve me')
+
+    def test_frontend_failure_rolls_back_only_frontend(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(release.os.environ):
+            args, project, staged, state = self.setup_release(directory)
+            self.configure(staged, 'FRONTEND_ONLY')
+            calls, delegate = [], self.fake_run([])
+            failed = False
+            def runner(*command, **kwargs):
+                nonlocal failed
+                calls.append(command)
+                if 'up' in command and not failed:
+                    failed = True
+                    raise RuntimeError('synthetic unhealthy frontend')
+                return delegate(*command, **kwargs)
+            with patch.object(release, 'run', side_effect=runner), self.assertRaises(RuntimeError):
+                release.execute(args, project, staged, state)
+            self.assertEqual([c[-1] for c in calls if 'up' in c], ['frontend', 'frontend'])
+            self.assertEqual(release.os.environ['FRONTEND_IMAGE'], SNAPSHOT['images']['frontend'])
+            self.assertEqual(json.loads(next(state.glob(SHA + '-*.json')).read_text())['status'], 'rolled-back')
+
+    def test_recorded_frontend_rollback_needs_no_schema_review(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(release.os.environ):
+            args, project, staged, state = self.setup_release(directory)
+            self.configure(staged, 'FRONTEND_ONLY')
+            with patch.object(release, 'run', side_effect=self.fake_run([])):
+                release.execute(args, project, staged, state)
+            args.action, args.state = 'rollback', next(state.glob(SHA + '-*.json'))
+            calls = []
+            with patch.object(release, 'run', side_effect=self.fake_run(calls)):
+                release.execute(args, project, staged, state)
+            self.assertEqual([c[-1] for c in calls if 'up' in c], ['frontend'])
+            self.assertFalse(any('pull' in c for c in calls))
+
+    def test_backend_no_schema_uses_history_without_restore(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(release.os.environ):
+            args, project, staged, state = self.setup_release(directory)
+            self.configure(staged, 'BACKEND_NO_SCHEMA_CHANGE')
+            args.backup = args.evidence = None
+            calls = []
+            with patch.object(release, 'run', side_effect=self.fake_run(calls)):
+                release.execute(args, project, staged, state)
+            self.assertTrue(any('flyway_schema_history' in ' '.join(c) for c in calls))
+            self.assertEqual([c[-1] for c in calls if 'up' in c], ['backend', 'frontend'])
+
+    def test_backend_pending_or_drifted_schema_blocks_replacement(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args, project, staged, state = self.setup_release(directory)
+            self.configure(staged, 'BACKEND_NO_SCHEMA_CHANGE')
+            calls, delegate = [], self.fake_run([])
+            def runner(*command, **kwargs):
+                calls.append(command)
+                if 'SELECT coalesce(json_agg' in ' '.join(command):
+                    return '[]'
+                return delegate(*command, **kwargs)
+            with patch.object(release, 'run', side_effect=runner), self.assertRaises(ValueError):
+                release.execute(args, project, staged, state)
+            self.assertFalse(any('up' in c for c in calls))
+
+    def test_migration_cannot_bypass_approval_or_restore(self):
+        for field in ['migration_approved', 'backup', 'evidence']:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as directory:
+                args, project, staged, state = self.setup_release(directory)
+                setattr(args, field, False if field == 'migration_approved' else None)
+                calls = []
+                with patch.object(release, 'run', side_effect=self.fake_run(calls)), self.assertRaises(ValueError):
+                    release.execute(args, project, staged, state)
+                self.assertFalse(any('up' in c for c in calls))
+
+    def test_migration_evidence_must_match_live_source_and_inventory(self):
+        for change in [dict(source_version='78'), dict(target_version='80'), dict(migrations=[])]:
+            with self.subTest(change=change), tempfile.TemporaryDirectory() as directory:
+                args, project, staged, state = self.setup_release(directory)
+                evidence = json.loads(args.evidence.read_text())
+                release.write_json(args.evidence, dict(evidence, **change))
+                calls = []
+                with patch.object(release, 'run', side_effect=self.fake_run(calls)), self.assertRaises(ValueError):
+                    release.execute(args, project, staged, state)
+                self.assertFalse(any('up' in c for c in calls))
+
+    def test_classification_downgrade_fails(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args, project, staged, state = self.setup_release(directory)
+            plan = json.loads((staged / 'deployment-plan.json').read_text())
+            plan['classification'] = 'FRONTEND_ONLY'
+            release.write_json(staged / 'deployment-plan.json', plan)
+            with patch.object(release, 'run') as runner, self.assertRaises(ValueError):
+                release.execute(args, project, staged, state)
+            runner.assert_not_called()
+
+    def test_changed_production_inventory_invalidates_plan(self):
+        with tempfile.TemporaryDirectory() as directory:
+            args, project, staged, state = self.setup_release(directory)
+            with patch.object(release, 'inspect_running', return_value=dict(SNAPSHOT, project='different')), self.assertRaises(ValueError):
+                release.execute(args, project, staged, state)
+
+
+    def test_backend_rollback_without_schema_review(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(release.os.environ):
+            args, project, staged, state = self.setup_release(directory)
+            self.configure(staged, 'BACKEND_NO_SCHEMA_CHANGE')
+            with patch.object(release, 'run', side_effect=self.fake_run([])):
+                release.execute(args, project, staged, state)
+            args.action, args.state = 'rollback', next(state.glob(SHA + '-*.json'))
+            calls = []
+            with patch.object(release, 'run', side_effect=self.fake_run(calls)):
+                release.execute(args, project, staged, state)
+            self.assertFalse(any('pull' in c for c in calls))
+            self.assertEqual([c[-1] for c in calls if 'up' in c], ['backend', 'frontend'])
+
+    def test_frontend_rollback_refuses_configuration_or_backend_drift(self):
+        for drift in ('env', 'backend'):
+            with self.subTest(drift=drift), tempfile.TemporaryDirectory() as directory, patch.dict(release.os.environ):
+                args, project, staged, state = self.setup_release(directory)
+                self.configure(staged, 'FRONTEND_ONLY')
+                with patch.object(release, 'run', side_effect=self.fake_run([])):
+                    release.execute(args, project, staged, state)
+                args.action, args.state = 'rollback', next(state.glob(SHA + '-*.json'))
+                snapshot = copy.deepcopy(SNAPSHOT)
+                if drift == 'env':
+                    (project / '.env').write_text('changed configuration')
+                else:
+                    snapshot['containers']['backend'] = 'different-backend'
+                calls = []
+                with patch.object(release, 'inspect_running', return_value=snapshot), \
+                     patch.object(release, 'run', side_effect=self.fake_run(calls)), self.assertRaises(ValueError):
+                    release.execute(args, project, staged, state)
+                self.assertFalse(any('up' in c for c in calls))
+
+
+    def test_ses_review_reused_only_for_identical_production_and_release_sources(self):
+        for change in (False, True):
+            with self.subTest(source_changed=change), tempfile.TemporaryDirectory() as directory, patch.dict(release.os.environ):
+                args, project, staged, state = self.setup_release(directory)
+                self.configure(staged, 'BACKEND_NO_SCHEMA_CHANGE')
+                path = state / 'production-checkout-review.json'
+                review = json.loads(path.read_text())
+                review.pop('commit')
+                review['release_files'] = dict(MANIFEST['protected_files'])
+                if change:
+                    review['release_files'][release.PROTECTED[0]] = '0' * 64
+                release.write_json(path, review)
+                calls = []
+                with patch.object(release, 'run', side_effect=self.fake_run(calls)):
+                    if change:
+                        with self.assertRaises(ValueError):
+                            release.execute(args, project, staged, state)
+                    else:
+                        release.execute(args, project, staged, state)
+                if change:
+                    self.assertFalse(any('up' in c for c in calls))
+
+    def test_stale_application_rollback_refused(self):
+        for kind in ('FRONTEND_ONLY', 'BACKEND_NO_SCHEMA_CHANGE'):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory() as directory, patch.dict(release.os.environ):
+                args, project, staged, state = self.setup_release(directory)
+                self.configure(staged, kind)
+                with patch.object(release, 'run', side_effect=self.fake_run([])):
+                    release.execute(args, project, staged, state)
+                args.action, args.state = 'rollback', next(state.glob(SHA + '-*.json'))
+                snapshot = copy.deepcopy(SNAPSHOT)
+                snapshot['images']['frontend'] = 'sha256:' + '0' * 64
+                calls = []
+                with patch.object(release, 'inspect_running', return_value=snapshot), \
+                     patch.object(release, 'run', side_effect=self.fake_run(calls)), self.assertRaises(ValueError):
+                    release.execute(args, project, staged, state)
+                self.assertFalse(any('up' in c for c in calls))
+
+
+if __name__ == '__main__':
+    unittest.main()

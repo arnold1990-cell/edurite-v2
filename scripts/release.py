@@ -2,12 +2,14 @@
 import argparse
 import hashlib
 import json
+import math
 import os
 import posixpath
 from pathlib import Path
 import re
 import subprocess
 import time
+from classify_release import CLASSES, PROTECTED, validate_history, schema_sensitive
 
 
 def run(*args, input=None):
@@ -42,11 +44,27 @@ def validate_manifest(manifest, expected):
             raise ValueError(f'{service} must use a GHCR image digest')
 
 
+    migrations = manifest.get('migrations')
+    if not isinstance(migrations, list) or not migrations:
+        raise ValueError('CI migration inventory is required')
+    versions = set()
+    for row in migrations:
+        if (not re.fullmatch(r'[0-9]+(?:\.[0-9]+)*', str(row.get('version', '')))
+            or not re.fullmatch(r'V[0-9._]+__[^/\\]+\.sql', row.get('script', ''))
+            or not re.fullmatch(r'[0-9a-f]{64}', row.get('sha256', ''))
+            or type(row.get('checksum')) is not int or row['version'] in versions):
+            raise ValueError('Invalid CI migration inventory')
+        versions.add(row['version'])
+    if set(manifest.get('protected_files', {})) != set(PROTECTED) or any(
+            not re.fullmatch(r'[0-9a-f]{64}', value) for value in manifest['protected_files'].values()):
+        raise ValueError('Missing tested SES source hashes')
+
+
 def validate_backup(evidence, backup, commit, now=None):
     now = time.time() if now is None else now
     for field in ('validated_at', 'backup_created_at'):
         age = now - float(evidence.get(field, 0))
-        if age < 0 or age > 86400:
+        if not math.isfinite(age) or age < 0 or age > 86400:
             raise ValueError('Backup and restore validation must be less than 24 hours old')
     if evidence.get('commit') != commit or evidence.get('restored') is not True or evidence.get('migrated') is not True:
         raise ValueError('Missing restore and migration evidence for selected release')
@@ -62,17 +80,141 @@ def write_json(path, data):
     temporary.replace(path)
 
 
+
+def inspect_running():
+    """Read container metadata only; frontend releases never exec into data services."""
+    project = run('docker', 'inspect', '--format', '{{index .Config.Labels "com.docker.compose.project"}}', 'edurite-postgres')
+    if not re.fullmatch(r'[a-z0-9][a-z0-9_-]*', project):
+        raise ValueError('Existing Compose project not found')
+    containers, images, revisions = {}, {}, {}
+    for service in ('backend', 'frontend', 'postgres', 'redis'):
+        cid = run('docker', 'ps', '-q', '--filter', 'label=com.docker.compose.project=' + project,
+                  '--filter', 'label=com.docker.compose.service=' + service)
+        if not cid or '\n' in cid:
+            raise ValueError('Expected one running container for ' + service)
+        containers[service] = cid
+        if service in ('backend', 'frontend'):
+            images[service] = run('docker', 'inspect', '--format', '{{.Image}}', cid)
+            revisions[service] = run('docker', 'image', 'inspect', '--format',
+                                    '{{index .Config.Labels "org.opencontainers.image.revision"}}', images[service])
+            if not re.fullmatch(r'[0-9a-f]{40}', revisions[service]):
+                raise ValueError('Deployed image lacks a verified revision; reconcile baseline first')
+    return dict(project=project, containers=containers, images=images, revisions=revisions)
+
+
+def validate_plan(plan, manifest, commit):
+    if plan.get('commit') != commit or plan.get('classification') not in CLASSES:
+        raise ValueError('Missing verified release classification')
+    if plan.get('migrations') != manifest.get('migrations') or plan.get('protected_files') != manifest.get('protected_files'):
+        raise ValueError('Classification differs from CI artifact')
+    expected = plan.get('expected_inventory', {})
+    if plan.get('backend_base') != expected.get('revisions', {}).get('backend') or plan.get('frontend_base') != expected.get('revisions', {}).get('frontend'):
+        raise ValueError('Classification baseline does not match deployed images')
+    old = plan.get('baseline_migrations')
+    new = plan.get('migrations')
+    if not old or not new or any(row not in new for row in old):
+        raise ValueError('Invalid migration baseline')
+    changes = plan.get('changes')
+    if not isinstance(changes, list):
+        raise ValueError('Missing Git change evidence')
+    if type(plan.get('schema_edits', False)) is not bool:
+        raise ValueError('Invalid schema classification evidence')
+    schema = old != new or schema_sensitive(changes) or plan.get('schema_edits', False)
+    kind = 'DATABASE_MIGRATION' if schema else (
+        'FRONTEND_ONLY' if changes and all(p.startswith('frontend/') for p in changes) else 'BACKEND_NO_SCHEMA_CHANGE')
+    if plan['classification'] != kind:
+        raise ValueError('Classification downgrade rejected')
+
+
+def frontend_release(args, project, release, state_dir, manifest, plan, current, env_hash):
+    """Use existing Compose files, replacing only the tested frontend image."""
+    hashes = {p: digest(release / p) for p in ('docker-compose.yml', 'docker-compose.production.yml')}
+    image = manifest['frontend']
+    if args.action == 'rollback':
+        if not args.state:
+            raise ValueError('Frontend rollback requires recorded state')
+        previous = json.loads(args.state.read_text())
+        if previous.get('commit') != args.commit or previous.get('classification') != 'FRONTEND_ONLY':
+            raise ValueError('Wrong frontend rollback state')
+        if previous.get('env_sha256') != env_hash or previous.get('compose_sha256') != hashes:
+            raise ValueError('Configuration drift blocks rollback')
+        if any(current['containers'][s] != previous['untouched'][s] for s in ('backend', 'postgres', 'redis')):
+            raise ValueError('Backend/data services changed since frontend deployment')
+        if current['images']['frontend'] not in (previous.get('selected_image_id'), previous['previous']['frontend']):
+            raise ValueError('A different frontend release is running; stale rollback rejected')
+        image = previous['previous']['frontend']
+        if not re.fullmatch(r'sha256:[0-9a-f]{64}', image):
+            raise ValueError('Missing immutable rollback image')
+        run('docker', 'image', 'inspect', image)
+    os.environ['BACKEND_IMAGE'] = current['images']['backend']
+    os.environ['FRONTEND_IMAGE'] = image
+    compose = ['docker', 'compose', '--project-directory', str(project), '--env-file', str(project / '.env'),
+               '-p', current['project'], '-f', str(release / 'docker-compose.yml'), '-f', str(release / 'docker-compose.production.yml')]
+    if args.action == 'deploy':
+        run(*compose, 'pull', 'frontend')
+        if run('docker', 'image', 'inspect', '--format', '{{index .Config.Labels "org.opencontainers.image.revision"}}', image) != args.commit:
+            raise ValueError('Frontend image revision differs from tested commit')
+    selected_id = run('docker', 'image', 'inspect', '--format', '{{.Id}}', image)
+    old = current['images']['frontend']
+    run('docker', 'image', 'inspect', old)
+
+    def up():
+        run(*compose, 'up', '-d', '--no-build', '--no-deps', '--pull', 'never', '--wait', '--wait-timeout', '120', 'frontend')
+
+    def healthy():
+        run(*compose, 'exec', '-T', 'frontend', 'wget', '-T', '10', '-t', '1', '-qO-', 'http://127.0.0.1/')
+        run('curl', '--location', '--fail', '--silent', '--show-error', '--max-time', '20', args.public_url + '/')
+        after = inspect_running()
+        if any(after['containers'][s] != current['containers'][s] for s in ('backend', 'postgres', 'redis')):
+            raise RuntimeError('Frontend deployment changed an unrelated container')
+        if digest(project / '.env') != env_hash:
+            raise RuntimeError('Production environment changed')
+
+    state = dict(commit=args.commit, classification='FRONTEND_ONLY', action=args.action,
+                 previous={'frontend': old}, selected={'frontend': image}, selected_image_id=selected_id, env_sha256=env_hash,
+                 compose_sha256=hashes, untouched={s: current['containers'][s] for s in ('backend', 'postgres', 'redis')},
+                 started_at=time.time(), status='deploying')
+    path = state_dir / f'{args.commit}-{time.time_ns()}.json'
+    write_json(path, state)
+    try:
+        up()
+        healthy()
+        state['status'] = 'healthy'
+    except Exception:
+        state['status'] = 'failed'
+        if args.action == 'deploy':
+            os.environ['FRONTEND_IMAGE'] = old
+            try:
+                up()
+                healthy()
+                state['status'] = 'rolled-back'
+            except Exception:
+                state['status'] = 'rollback-failed'
+        raise
+    finally:
+        state['finished_at'] = time.time()
+        write_json(path, state)
+        print(f'Deployment result: {state["status"]}; record: {path}')
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['deploy', 'rollback'])
-    parser.add_argument('--release-dir', required=True, type=Path)
+    parser.add_argument('action', choices=['inspect', 'deploy', 'rollback'])
+    parser.add_argument('--release-dir', type=Path)
     parser.add_argument('--project-dir', required=True, type=Path)
-    parser.add_argument('--commit', required=True)
+    parser.add_argument('--commit')
+    parser.add_argument('--migration-approved', action='store_true', help='Supplied after protected environment approval')
+    parser.add_argument('--public-url', default='https://edurite.co.za')
     parser.add_argument('--backup', type=Path)
     parser.add_argument('--evidence', type=Path)
     parser.add_argument('--state', type=Path, help='Deployment state to roll back')
     parser.add_argument('--schema-compatibility-reviewed', action='store_true')
     args = parser.parse_args()
+    if args.action == 'inspect':
+        print(json.dumps(inspect_running()))
+        return
+    if not args.release_dir or not args.commit:
+        parser.error('--release-dir and --commit are required')
     project, release = args.project_dir.resolve(), args.release_dir.resolve()
     if project == release:
         raise ValueError('Release must be staged outside the production checkout')
@@ -91,20 +233,32 @@ def execute(args, project, release, state_dir):
     if not (project / '.env').is_file():
         raise ValueError('Existing production .env is required')
     env_hash = digest(project / '.env')
+    plan = json.loads((release / 'deployment-plan.json').read_text())
+    validate_plan(plan, manifest, args.commit)
+    kind = plan['classification']
+    if args.action == 'rollback' and (not args.state or (kind == 'DATABASE_MIGRATION' and not args.schema_compatibility_reviewed)):
+        raise ValueError('Rollback requires recorded state and migration schema review where applicable')
+    current = inspect_running()
+    if args.action == 'deploy' and current != plan['expected_inventory']:
+        raise ValueError('Production changed since classification; rerun the workflow')
+    if kind == 'FRONTEND_ONLY':
+        return frontend_release(args, project, release, state_dir, manifest, plan, current, env_hash)
     compose_hashes = {name: digest(release / name) for name in ('docker-compose.yml', 'docker-compose.production.yml')}
     protected = ['backend/pom.xml', 'backend/src/main/java/com/edurite/auth/service/EmailVerificationService.java']
     checkout_hashes = {name: digest(project / name) for name in protected}
     # The operator creates this file only after reviewing the production SES diff.
     review = json.loads((state_dir / 'production-checkout-review.json').read_text())
-    if review.get('commit') != args.commit or review.get('files') != checkout_hashes:
+    if review.get('files') != checkout_hashes or not (review.get('release_files') == manifest.get('protected_files') or review.get('commit') == args.commit):
         raise ValueError('Production SES differences must be reviewed for this release')
     previous = None
-    if args.action == 'deploy':
+    if args.action == 'deploy' and kind == 'DATABASE_MIGRATION':
+        if not getattr(args, 'migration_approved', False):
+            raise ValueError('Migration release requires protected production approval')
         if not args.backup or not args.evidence:
             raise ValueError('Backup and separate restore evidence are required')
         validate_backup(json.loads(args.evidence.read_text()), args.backup, args.commit)
-    else:
-        if not args.state or not args.schema_compatibility_reviewed:
+    elif args.action == 'rollback':
+        if not args.state or (kind == 'DATABASE_MIGRATION' and not args.schema_compatibility_reviewed):
             raise ValueError('Rollback requires recorded state and explicit schema compatibility review')
         previous = json.loads(args.state.read_text())
         if previous['commit'] != args.commit:
@@ -115,6 +269,12 @@ def execute(args, project, release, state_dir):
             raise ValueError('Release Compose configuration changed since deployment')
         if any(not re.fullmatch(r'sha256:[0-9a-f]{64}', previous.get('previous', {}).get(service, '')) for service in ('backend', 'frontend')):
             raise ValueError('Rollback requires recorded immutable local image IDs')
+        if current['project'] != previous.get('project') or any(
+                current['containers'][service] != previous.get('data_containers', {}).get(service) for service in ('postgres', 'redis')):
+            raise ValueError('Data services or Compose project changed since deployment')
+        if any(current['images'][service] not in (previous['previous'][service], previous.get('selected_image_ids', {}).get(service))
+               for service in ('backend', 'frontend')):
+            raise ValueError('Another application release is running; stale rollback rejected')
         manifest = dict(manifest, **previous['previous'])
     os.environ['BACKEND_IMAGE'] = manifest['backend']
     os.environ['FRONTEND_IMAGE'] = manifest['frontend']
@@ -156,6 +316,14 @@ def execute(args, project, release, state_dir):
         if run(*compose, 'exec', '-T', 'redis', 'redis-cli', 'ping') != 'PONG':
             raise RuntimeError('Redis health check failed')
     dependencies_healthy()
+    history = json.loads(run(*compose, 'exec', '-T', 'postgres', 'sh', '-c',
+        'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -Atc ' +
+        "'SELECT coalesce(json_agg(row_to_json(h)), $[]$::json) FROM (SELECT version,script,checksum,success,type FROM flyway_schema_history ORDER BY installed_rank) h'"))
+    source_version = validate_history(history, manifest['migrations'], allow_pending=kind == 'DATABASE_MIGRATION')
+    if args.action == 'deploy' and kind == 'DATABASE_MIGRATION':
+        evidence = json.loads(args.evidence.read_text())
+        if evidence.get('source_version') != source_version or evidence.get('target_version') != manifest['migrations'][-1]['version'] or evidence.get('migrations') != manifest['migrations']:
+            raise ValueError('Restore evidence does not match live schema and tested migrations')
     if args.action == 'deploy':
         run(*compose, 'pull', 'backend', 'frontend')
         for service in ('backend', 'frontend'):
@@ -185,7 +353,10 @@ def execute(args, project, release, state_dir):
     run('docker', 'run', '--rm', '--network', 'none', '--entrypoint', 'sh',
         '--mount', f'type=bind,source={planned_mount["source"]},target={storage}', manifest['backend'],
         '-c', 'test -w "$1"', 'storage-check', storage)
-    state = dict(commit=args.commit, previous=old_images, selected={s: manifest[s] for s in old_images},
+    selected_ids = {service: run('docker', 'image', 'inspect', '--format', '{{.Id}}', manifest[service])
+                    for service in ('backend', 'frontend')}
+    state = dict(commit=args.commit, classification=kind, previous=old_images,
+                 selected_image_ids=selected_ids, data_containers={s: containers[s] for s in ('postgres', 'redis')}, selected={s: manifest[s] for s in old_images},
                  env_sha256=env_hash, compose_sha256=compose_hashes, checkout_sha256=checkout_hashes, project=project_name,
                  started_at=time.time(), status='deploying', action=args.action)
     state_path = state_dir / f'{args.commit}-{time.time_ns()}.json'
@@ -203,9 +374,10 @@ def execute(args, project, release, state_dir):
                 raise RuntimeError('Data service container unexpectedly changed')
         if digest(project / '.env') != env_hash or any(digest(project / p) != h for p, h in checkout_hashes.items()):
             raise RuntimeError('Protected production files changed during deployment')
+        run('curl', '--location', '--fail', '--silent', '--show-error', '--max-time', '20', args.public_url + '/')
         state['status'] = 'healthy'
     except Exception:
-        state['status'] = 'failed-review-schema-before-rollback'
+        state['status'] = 'failed-review-schema-before-rollback' if kind == 'DATABASE_MIGRATION' else 'failed-safe-to-rollback'
         raise
     finally:
         state['finished_at'] = time.time()

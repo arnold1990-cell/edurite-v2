@@ -206,6 +206,7 @@ jobs:
           docker rm edurite-frontend-ci || true
 
   release-images:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [backend, frontend, deployment-tests]
     runs-on: ubuntu-latest
     permissions:
@@ -213,6 +214,11 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
       - uses: actions/download-artifact@v4
         with:
           name: verified-backend
@@ -250,27 +256,45 @@ jobs:
             VITE_GOOGLE_OAUTH_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
             VITE_GOOGLE_SIGNIN_ENABLED=${{ vars.VITE_GOOGLE_SIGNIN_ENABLED || 'false' }}
             VITE_GOOGLE_OAUTH_ENABLED=${{ vars.VITE_GOOGLE_SIGNIN_ENABLED || 'false' }}
+      - name: Verify published immutable frontend image
+        env:
+          FRONTEND_IMAGE: ${{ steps.names.outputs.repository }}-frontend@${{ steps.frontend.outputs.digest }}
+        run: |
+          set -euo pipefail
+          docker pull "$FRONTEND_IMAGE"
+          trap 'docker stop tested-release-frontend >/dev/null 2>&1 || true' EXIT
+          docker run --rm -d --name tested-release-frontend --add-host backend:127.0.0.1 -p 127.0.0.1:8089:80 "$FRONTEND_IMAGE"
+          node frontend/scripts/verify-served-build.mjs http://127.0.0.1:8089
       - name: Record tested image digests
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           REPOSITORY: ${{ steps.names.outputs.repository }}
           BACKEND_DIGEST: ${{ steps.backend.outputs.digest }}
           FRONTEND_DIGEST: ${{ steps.frontend.outputs.digest }}
+          BASE_SHA: ${{ github.event.before }}
         run: |
           python3 - <<'PY'
-          import json, os
+          import json, os, sys
           from pathlib import Path
+          sys.path.insert(0, 'scripts')
+          from classify_release import classify
           e = os.environ
+          # CI classification is advisory; CD recomputes against actual running images.
+          plan = classify(Path('.'), e['GITHUB_SHA'], e['BASE_SHA'], e['BASE_SHA'])
+          Path('ci-classification.json').write_text(json.dumps(plan, indent=2))
           Path('release.json').write_text(json.dumps(dict(
               commit=e['GITHUB_SHA'], ci_run_id=e['GITHUB_RUN_ID'],
               backend=e['REPOSITORY']+'-backend@'+e['BACKEND_DIGEST'],
-              frontend=e['REPOSITORY']+'-frontend@'+e['FRONTEND_DIGEST'])))
+              frontend=e['REPOSITORY']+'-frontend@'+e['FRONTEND_DIGEST'],
+              migrations=plan['migrations'], protected_files=plan['protected_files'])))
           PY
       - uses: actions/upload-artifact@v4
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
           name: release-${{ github.sha }}
-          path: release.json
+          path: |
+            release.json
+            ci-classification.json
           retention-days: 90
 
   deployment-tests:
@@ -278,3 +302,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 -m unittest discover -s scripts/tests -v
+      - name: Validate GitHub Actions workflows
+        run: |
+          set -euo pipefail
+          tool_dir="$(mktemp -d)"
+          cd "$tool_dir"
+          curl -fsSLO https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          curl -fsSLO https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_checksums.txt
+          sha256sum --check --ignore-missing actionlint_1.7.12_checksums.txt
+          tar -xzf actionlint_1.7.12_linux_amd64.tar.gz actionlint
+          ./actionlint -shellcheck= -pyflakes= "$GITHUB_WORKSPACE/.github/workflows/ci.yml" "$GITHUB_WORKSPACE/.github/workflows/deploy.yml"

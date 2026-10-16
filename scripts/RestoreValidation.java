@@ -5,15 +5,18 @@ import org.flywaydb.core.Flyway;
 /** Invoked only by validate-restore.py against its newly initialized loopback cluster. */
 public class RestoreValidation {
     public static void main(String[] args) throws Exception {
-        String url = args[0], migrations = args[1];
+        String url = args[0], migrations = args[1], target = args[2];
+        String source;
         if (!url.matches("jdbc:postgresql://127\\.0\\.0\\.1:[0-9]+/restore_validation"))
             throw new IllegalArgumentException("Isolated restore database required");
         String password = System.getenv("PGPASSWORD");
         try (var connection = DriverManager.getConnection(url, "restore_validator", password);
              var sql = connection.createStatement()) {
             try (var row = sql.executeQuery("SELECT version FROM flyway_schema_history WHERE success AND version IS NOT NULL ORDER BY installed_rank DESC LIMIT 1")) {
-                if (!row.next() || !row.getString(1).equals("74"))
-                    throw new IllegalStateException("Expected a production backup at V74");
+                if (!row.next()) throw new IllegalStateException("Missing production migration baseline");
+                source = row.getString(1);
+                if (org.flywaydb.core.api.MigrationVersion.fromVersion(source).compareTo(org.flywaydb.core.api.MigrationVersion.fromVersion("74")) < 0)
+                    throw new IllegalStateException("Pre-V74 backup requires separate compatibility review");
             }
             List<String> tables = new ArrayList<>();
             try (var rows = sql.executeQuery("SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename <> 'flyway_schema_history' ORDER BY tablename")) {
@@ -29,8 +32,8 @@ public class RestoreValidation {
                 }
                 String projection = "to_jsonb(t)";
                 // Only the explicitly authorized V75/V76 changes may alter old rows.
-                if (table.equals("users")) projection = "CASE WHEN lower(btrim(t.email))='s.mngaza07@gmail.com' AND t.email_verified AND NOT t.email_verification_required AND t.status='ACTIVE' AND t.deleted_at IS NULL THEN to_jsonb(t) - 'plan_type' - 'updated_at' ELSE to_jsonb(t) END";
-                if (table.equals("pricing_plans")) projection = "CASE WHEN t.code='PLAN_BASIC' THEN to_jsonb(t) - 'name' - 'description' - 'billing_interval' ELSE to_jsonb(t) END";
+                if (table.equals("users") && org.flywaydb.core.api.MigrationVersion.fromVersion(source).compareTo(org.flywaydb.core.api.MigrationVersion.fromVersion("76")) < 0) projection = "CASE WHEN lower(btrim(t.email))='s.mngaza07@gmail.com' AND t.email_verified AND NOT t.email_verification_required AND t.status='ACTIVE' AND t.deleted_at IS NULL THEN to_jsonb(t) - 'plan_type' - 'updated_at' ELSE to_jsonb(t) END";
+                if (table.equals("pricing_plans") && org.flywaydb.core.api.MigrationVersion.fromVersion(source).compareTo(org.flywaydb.core.api.MigrationVersion.fromVersion("75")) < 0) projection = "CASE WHEN t.code='PLAN_BASIC' THEN to_jsonb(t) - 'name' - 'description' - 'billing_interval' ELSE to_jsonb(t) END";
                 String query = "SELECT " + projection + " AS row FROM (SELECT " + String.join(",", columns) + " FROM public." + quote(table) + ") t";
                 projections.put(table, query);
                 sql.execute("CREATE TEMP TABLE restore_snapshot_" + index++ + " AS " + query);
@@ -39,7 +42,7 @@ public class RestoreValidation {
                     .locations("filesystem:" + migrations).validateOnMigrate(true).cleanDisabled(true).load();
             flyway.migrate();
             flyway.validate();
-            if (!flyway.info().current().getVersion().getVersion().equals("79"))
+            if (!flyway.info().current().getVersion().getVersion().equals(target))
                 throw new IllegalStateException("Unexpected target migration version");
             if (flyway.migrate().migrationsExecuted != 0)
                 throw new IllegalStateException("Migrations were not a no-op on the second run");
@@ -51,6 +54,7 @@ public class RestoreValidation {
                 }
             }
             System.out.println("RESTORE_DATA_PRESERVED tables=" + tables.size());
+            System.out.println("RESTORE_VERSIONS source=" + source + " target=" + target);
         }
     }
     private static String quote(String name) { return "\"" + name.replace("\"", "\"\"") + "\""; }
