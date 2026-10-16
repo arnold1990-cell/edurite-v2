@@ -318,7 +318,7 @@ def execute(args, project, release, state_dir):
     dependencies_healthy()
     history = json.loads(run(*compose, 'exec', '-T', 'postgres', 'sh', '-c',
         'psql -X -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -Atc ' +
-        "'SELECT coalesce(json_agg(row_to_json(h)), $[]$::json) FROM (SELECT version,script,checksum,success,type FROM flyway_schema_history ORDER BY installed_rank) h'"))
+        "'SELECT coalesce(json_agg(row_to_json(h)), json_build_array()) FROM (SELECT version,script,checksum,success,type FROM flyway_schema_history ORDER BY installed_rank) h'"))
     source_version = validate_history(history, manifest['migrations'], allow_pending=kind == 'DATABASE_MIGRATION')
     if args.action == 'deploy' and kind == 'DATABASE_MIGRATION':
         evidence = json.loads(args.evidence.read_text())
