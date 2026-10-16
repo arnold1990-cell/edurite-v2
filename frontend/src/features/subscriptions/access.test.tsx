@@ -18,6 +18,12 @@ function render(location: string, entitlements: string[], error = false, accessA
   return renderToStaticMarkup(<StaticRouter location={location}><StudentRouteAccess><p>Protected feature content</p></StudentRouteAccess></StaticRouter>);
 }
 describe('direct student URLs use server entitlements', () => {
+  it('keeps admin-granted access available while a separate checkout remains pending', () => {
+    query.pending.data = [{ paymentReference: 'pending' }];
+    query.value = { data: { source: 'ADMIN_OVERRIDE', accessAllowed: true, entitlements: [], routeRules: [] } };
+    expect(renderToStaticMarkup(<StaticRouter location="/student/dashboard"><StudentRouteAccess><p>Granted dashboard</p></StudentRouteAccess></StaticRouter>)).toContain('Granted dashboard');
+    query.pending.data = [];
+  });
   it('blocks dashboard content while redirecting pending purchases and keeps payment page reachable', () => {
     query.pending.data = [{ paymentReference: 'pending' }];
     expect(render('/student/dashboard', [])).not.toContain('Protected feature content');

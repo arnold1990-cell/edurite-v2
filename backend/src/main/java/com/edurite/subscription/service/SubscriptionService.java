@@ -835,7 +835,7 @@ public class SubscriptionService {
     ) {
         userRepository.lockForSubscription(subscription.getUserId());
         for (SubscriptionRecord previous : subscriptionRepository.findByUserIdOrderByCreatedAtDesc(subscription.getUserId())) {
-            if (StudentPlanAccessService.isTestingGrant(previous)) continue;
+            if (StudentPlanAccessService.isTestingGrant(previous) || StudentPlanAccessService.isAdminOverride(previous)) continue;
             if (!previous.getId().equals(subscription.getId()) && STATUS_ACTIVE.equals(previous.getStatus())) {
                 previous.setStatus(STATUS_CANCELLED);
                 previous.setCancelAtPeriodEnd(false);

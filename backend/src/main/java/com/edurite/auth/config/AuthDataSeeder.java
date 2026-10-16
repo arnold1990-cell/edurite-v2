@@ -118,6 +118,7 @@ public class AuthDataSeeder {
         }
 
         Role adminRole = roleRepository.findByName("ROLE_ADMIN").orElseThrow();
+        if (!isBlank(adminPassword)) {
         userRepository.findByEmail(normalizedAdminEmail).ifPresentOrElse(existingUser -> {
             boolean changed = false;
             changed |= assignSeedPhoneNumberIfAvailable(userRepository, existingUser, normalizedAdminPhone, normalizedAdminEmail);
@@ -129,10 +130,7 @@ public class AuthDataSeeder {
                 existingUser.setStatus(UserStatus.ACTIVE);
                 changed = true;
             }
-            if (isMissingOrInvalidPasswordHash(existingUser.getPasswordHash())) {
-                existingUser.setPasswordHash(passwordEncoder.encode(adminPassword));
-                changed = true;
-            }
+            // Existing credentials require explicit recovery, never an automatic seed reset.
             if (isBlank(existingUser.getFirstName())) {
                 existingUser.setFirstName(firstName);
                 changed = true;
@@ -175,6 +173,7 @@ public class AuthDataSeeder {
                     savedUser.getStatus()
             );
         });
+        }
         seedCompany(
                 roleRepository,
                 userRepository,

@@ -82,7 +82,8 @@ public class AdminSeedDataSeeder {
             String adminLastName
     ) {
         String normalizedEmail = normalizeEmail(requireValue(adminEmail, "EDURITE_ADMIN_EMAIL"));
-        String rawPassword = requireValue(adminPassword, "EDURITE_ADMIN_PASSWORD");
+        requireValue(adminPassword, "EDURITE_ADMIN_PASSWORD");
+        String rawPassword = adminPassword; // Whitespace is part of a password, unlike names and email.
         String firstName = requireValue(adminFirstName, "EDURITE_ADMIN_FIRST_NAME");
         String lastName = requireValue(adminLastName, "EDURITE_ADMIN_LAST_NAME");
 
@@ -120,11 +121,7 @@ public class AdminSeedDataSeeder {
                 changed = true;
             }
 
-            if (existing.getPasswordHash() == null || existing.getPasswordHash().isBlank()
-                    || !passwordEncoder.matches(rawPassword, existing.getPasswordHash())) {
-                existing.setPasswordHash(passwordEncoder.encode(rawPassword));
-                changed = true;
-            }
+            // Provisioning is not password recovery. Never replace an existing credential on restart.
 
             if (existing.getRoles().stream().noneMatch(role -> "ROLE_ADMIN".equalsIgnoreCase(role.getName()))) {
                 existing.getRoles().add(adminRole);

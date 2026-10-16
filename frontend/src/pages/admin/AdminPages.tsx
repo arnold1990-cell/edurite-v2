@@ -412,21 +412,7 @@ export const AdminBursaryModerationPage = () => {
   );
 };
 
-export const AdminSubscriptionsPage = () => {
-  const analytics = useAdminAnalytics();
-  if (analytics.isLoading) return <LoadingState />;
-  if (analytics.error || !analytics.data) return <ErrorState message="Unable to load company overview." />;
-  return (
-    <section className="space-y-6">
-      <Header title="Company Oversight" subtitle="Company moderation and approval metrics." />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <MetricCard title="Total companies" value={analytics.data.totalCompanies} />
-        <MetricCard title="Pending approvals" value={analytics.data.pendingCompanyApprovals} />
-        <MetricCard title="Suspended companies" value={analytics.data.suspendedCompanies} />
-      </div>
-    </section>
-  );
-};
+export { ManageSubscriptionsPage as AdminSubscriptionsPage } from './ManageSubscriptionsPage';
 
 export const AdminPaymentsPage = () => {
   const analytics = useAdminAnalytics();

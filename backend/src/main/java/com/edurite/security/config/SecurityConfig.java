@@ -123,6 +123,8 @@ public class SecurityConfig {
                                 "ROLE_ADMIN", "ADMIN"
                         )
                         .requestMatchers("/api/v1/companies/**", "/api/companies/**").hasAnyAuthority("ROLE_COMPANY", "COMPANY")
+                        .requestMatchers("/api/v1/admin/subscriptions/**", "/api/admin/subscriptions/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ADMIN", "ROLE_SUPER_ADMIN", "SUPER_ADMIN")
                         .requestMatchers("/api/v1/admin/**", "/api/admin/**").hasAnyAuthority("ROLE_ADMIN", "ADMIN")
                         .requestMatchers("/api/v1/district/**", "/api/district/**").hasAnyAuthority(
                                 "ROLE_DISTRICT_ADMIN", "DISTRICT_ADMIN",

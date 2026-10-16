@@ -24,6 +24,9 @@ public class EntitlementController {
         Map<String,Object> result=new LinkedHashMap<>();
         result.put("plan", entitlements.plan(id));
         result.put("status", plan.status());
+        result.put("source", StudentPlanAccessService.isAdminOverride(subscription) ? "ADMIN_OVERRIDE"
+                : subscription != null && Set.of("paypal", "payfast", "stripe").contains(String.valueOf(subscription.getProvider()))
+                ? "PAYMENT" : "PROMOTION");
         boolean trialActive = "TRIAL_ACTIVE".equals(plan.status());
         var trial = access.trialRecord(id);
         var trialEnd = trial == null ? null : access.trialExpiry(trial);

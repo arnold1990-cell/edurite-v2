@@ -51,6 +51,38 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 class SubscriptionServiceTest {
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(PlanType.class)
+    void verifiedPaymentNeverCancelsOrHidesAdministratorOverride(PlanType overridePlan) {
+        SubscriptionRecord override = existingSubscription(user.getId());
+        override.setPlanCode("PLAN_" + overridePlan.name());
+        override.setProvider("ADMIN_OVERRIDE");
+        override.setStatus("ACTIVE");
+        SubscriptionRecord purchase = existingSubscription(user.getId());
+        purchase.setPlanCode("PLAN_PREMIUM");
+        purchase.setStatus("PENDING");
+        PaymentRecord payment = new PaymentRecord();
+        payment.setId(UUID.randomUUID());
+        payment.setSubscriptionId(purchase.getId());
+        payment.setReference("verified-admin-override-regression");
+        payment.setProvider("payfast");
+        payment.setStatus("PENDING");
+        payment.setAmount(new BigDecimal("59.00"));
+        payment.setCurrency("ZAR");
+        var event = new com.edurite.subscription.entity.PaymentEventRecord();
+        event.setEventId("verified-admin-override-event"); event.setProvider("payfast"); event.setStatus("COMPLETED"); event.setVerified(true);
+        when(paymentRepository.findTopByReferenceOrderByCreatedAtDesc(payment.getReference())).thenReturn(Optional.of(payment));
+        when(subscriptionRepository.findById(purchase.getId())).thenReturn(Optional.of(purchase));
+        when(subscriptionRepository.findByUserIdOrderByCreatedAtDesc(user.getId())).thenReturn(List.of(override, purchase));
+        when(paymentEventRepository.findTopByPaymentIdAndProviderAndVerifiedTrueOrderByProcessedAtDesc(payment.getId(), "payfast"))
+                .thenReturn(Optional.of(event));
+        when(pricingPlanRepository.findByCodeAndActiveTrue("PLAN_PREMIUM")).thenReturn(Optional.of(premiumPlan()));
+        subscriptionService.verifyPayment(principal, payment.getReference());
+        assertThat(purchase.getStatus()).isEqualTo("ACTIVE");
+        assertThat(override.getStatus()).isEqualTo("ACTIVE");
+        var realAccess = new StudentPlanAccessService(subscriptionRepository, userRepository);
+        assertThat(realAccess.getCurrentPlan(user.getId())).isEqualTo(overridePlan);
+    }
 
     private final SubscriptionRepository subscriptionRepository =
             mock(SubscriptionRepository.class);

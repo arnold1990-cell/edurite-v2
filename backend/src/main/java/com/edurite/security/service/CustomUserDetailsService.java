@@ -59,6 +59,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         LinkedHashSet<String> authorities = user.getRoles().stream()
                 .map(Role::getName)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        if (authorities.contains("ROLE_SUPER_ADMIN") || authorities.contains("SUPER_ADMIN")) authorities.add("ROLE_ADMIN");
         boolean hasAdminAuthority = authorities.stream()
                 .anyMatch(authority -> "ROLE_ADMIN".equalsIgnoreCase(authority));
         if (companyProfileRepository.findByUserId(user.getId()).isPresent() && !hasAdminAuthority) {

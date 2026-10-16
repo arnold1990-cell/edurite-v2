@@ -37,6 +37,10 @@ public class StudentPlanAccessService {
         SubscriptionRecord subscription = currentRecordAt(userId, now.toLocalDate());
         String code = normalizePlanCode(subscription == null ? null : subscription.getPlanCode());
         String status = normalizeStatus(subscription == null ? null : subscription.getStatus());
+        if (isAdminOverride(subscription)) {
+            return new StudentPlanAccess(code, STATUS_ACTIVE, !PLAN_BASIC.equals(code),
+                    PLAN_BASIC.equals(code) ? BASIC_CAREER_GUIDANCE_LIMIT : null, null);
+        }
         if (isActivePaid(subscription, now.toLocalDate())) {
             return new StudentPlanAccess(code, STATUS_ACTIVE, true, null, null);
         }
@@ -67,11 +71,18 @@ public class StudentPlanAccessService {
                 && "PLAN_PRO".equals(record.getPlanCode()) && STATUS_ACTIVE.equals(record.getStatus());
     }
 
+    public static boolean isAdminOverride(SubscriptionRecord record) {
+        return record != null && "ADMIN_OVERRIDE".equals(record.getProvider()) && STATUS_ACTIVE.equals(record.getStatus());
+    }
+
     public SubscriptionRecord currentRecord(UUID userId) {
         return currentRecordAt(userId, java.time.LocalDate.now(clock));
     }
 
     private SubscriptionRecord currentRecordAt(UUID userId, java.time.LocalDate today) {
+        var override = subscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
+                .filter(StudentPlanAccessService::isAdminOverride).findFirst();
+        if (override.isPresent()) return override.get();
         // A later pending purchase or stale ACTIVE record must not hide valid paid access.
         return subscriptionRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .filter(s -> isActivePaid(s, today))

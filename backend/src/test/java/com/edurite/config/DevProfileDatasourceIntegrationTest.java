@@ -215,6 +215,110 @@ class DevProfileDatasourceIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Test
+    void adminLoginOverridesHistoryAndEntitlementsPersistAcrossSessions() throws Exception {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        String password = "Synthetic-Admin-Login-2026!";
+        UUID adminId = UUID.randomUUID();
+        UUID learnerId = UUID.randomUUID();
+        String adminEmail = "admin-subscriptions-" + adminId + "@example.test";
+        String learnerEmail = "managed-" + learnerId + "@example.test";
+        insertUser(adminId, adminEmail, "Subscription", "Administrator", OffsetDateTime.now());
+        insertUser(learnerId, learnerEmail, "Managed", "Learner", OffsetDateTime.now().minusDays(60));
+        String hash = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode(password);
+        jdbcTemplate.update("UPDATE users SET password_hash=? WHERE id IN (?,?)", hash, adminId, learnerId);
+        jdbcTemplate.update("UPDATE users SET username=? WHERE id=?", "managed-username-" + learnerId, learnerId);
+        UUID adminRole = jdbcTemplate.queryForObject("SELECT id FROM roles WHERE name='ROLE_ADMIN'", UUID.class);
+        UUID studentRole = jdbcTemplate.queryForObject("SELECT id FROM roles WHERE name='ROLE_STUDENT'", UUID.class);
+        assignRole(adminId, adminRole);
+        assignRole(learnerId, studentRole);
+        insertStudent(UUID.randomUUID(), learnerId, "Managed", "Learner", "Grade 12");
+
+        String loginRequest = mapper.writeValueAsString(java.util.Map.of("email", adminEmail, "password", password));
+        mockMvc.perform(post("/api/auth/login").contentType("application/json")
+                .content(mapper.writeValueAsString(java.util.Map.of("email", adminEmail, "password", "Incorrect-password!"))))
+                .andExpect(status().isUnauthorized());
+        String session = mockMvc.perform(post("/api/auth/login").contentType("application/json").content(loginRequest))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String bearer = "Bearer " + mapper.readTree(session).path("accessToken").asText();
+        mockMvc.perform(get("/api/admin/subscriptions")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/admin/subscriptions").with(user(learnerEmail).roles("STUDENT"))).andExpect(status().isForbidden());
+        // Even a forged/stale ADMIN authority cannot bypass the database role check.
+        mockMvc.perform(post("/api/admin/subscriptions/" + learnerId + "/override").with(user(learnerEmail).roles("ADMIN"))
+                .contentType("application/json").content("{\"plan\":\"PRO\",\"reason\":\"Forged role\"}"))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/admin/subscriptions").header("Authorization", bearer)
+                .param("search", "managed-username-" + learnerId))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].userId").value(learnerId.toString()));
+        for (String invalid : new String[]{"{\"plan\":\"ENTERPRISE\",\"reason\":\"Invalid\"}",
+                "{\"plan\":\"PRO\",\"reason\":\"   \"}"}) {
+            mockMvc.perform(post("/api/admin/subscriptions/" + learnerId + "/override").header("Authorization", bearer)
+                    .contentType("application/json").content(invalid)).andExpect(status().isBadRequest());
+        }
+        // Every supported upgrade and downgrade, including BASIC -> PRO and PRO -> BASIC.
+        String[] plans = {"PREMIUM", "PRO", "BASIC", "PRO", "PREMIUM", "BASIC"};
+        long payments = jdbcTemplate.queryForObject("SELECT count(*) FROM payments", Long.class);
+        for (String plan : plans) {
+            mockMvc.perform(post("/api/v1/admin/subscriptions/" + learnerId + "/override").header("Authorization", bearer)
+                    .contentType("application/json").content(mapper.writeValueAsString(java.util.Map.of("plan", plan, "reason", "Synthetic " + plan + " access review"))))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.currentPlan").value(plan))
+                    .andExpect(jsonPath("$.source").value("ADMIN_OVERRIDE"));
+            mockMvc.perform(get("/api/subscriptions/entitlements").with(user(learnerEmail).roles("STUDENT")))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.plan").value(plan))
+                    .andExpect(jsonPath("$.source").value("ADMIN_OVERRIDE"))
+                    .andExpect(jsonPath("$.aiUsage.allowance").value(plan.equals("PRO") ? 100 : plan.equals("PREMIUM") ? 30 : 5));
+            mockMvc.perform(get("/api/student/career-roadmaps/saved").with(user(learnerEmail).roles("STUDENT")))
+                    .andExpect(plan.equals("BASIC") ? status().isForbidden() : status().isOk());
+            assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM subscriptions WHERE user_id=? AND provider='ADMIN_OVERRIDE' AND status='ACTIVE'", Long.class, learnerId)).isEqualTo(1);
+        }
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM payments", Long.class)).isEqualTo(payments);
+        assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM audit_logs WHERE action='ADMIN_SUBSCRIPTION_OVERRIDE' AND entity_id=?", Long.class, learnerId)).isEqualTo(plans.length);
+        // Paid access and its billing agreement survive an administrator downgrade unchanged.
+        UUID paid = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO subscriptions(id,user_id,plan_code,status,provider,provider_subscription_id,start_date,end_date,created_at,updated_at) VALUES (?,?,'PLAN_PRO','ACTIVE','payfast','synthetic-existing-billing-agreement',current_date,current_date+30,now(),now())", paid, learnerId);
+        mockMvc.perform(get("/api/admin/subscriptions/" + learnerId).header("Authorization", bearer))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.currentPlan").value("BASIC"));
+        // A failed audit write must roll back the replacement override and cached user plan together.
+        jdbcTemplate.execute("ALTER TABLE admin_subscription_changes ADD CONSTRAINT admin_fixture_reject CHECK (reason <> 'Synthetic rollback fixture') NOT VALID");
+        try {
+            mockMvc.perform(post("/api/admin/subscriptions/" + learnerId + "/override").header("Authorization", bearer)
+                    .contentType("application/json").content("{\"plan\":\"PRO\",\"reason\":\"Synthetic rollback fixture\"}"))
+                    .andExpect(status().isInternalServerError());
+            mockMvc.perform(get("/api/admin/subscriptions/" + learnerId).header("Authorization", bearer))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.currentPlan").value("BASIC"));
+            assertThat(jdbcTemplate.queryForObject("SELECT plan_type FROM users WHERE id=?", String.class, learnerId)).isEqualTo("BASIC");
+            assertThat(jdbcTemplate.queryForObject("SELECT count(*) FROM admin_subscription_changes WHERE user_id=?", Long.class, learnerId)).isEqualTo(plans.length);
+        } finally {
+            jdbcTemplate.execute("ALTER TABLE admin_subscription_changes DROP CONSTRAINT admin_fixture_reject");
+        }
+        assertThat(jdbcTemplate.queryForObject("SELECT status || ':' || provider_subscription_id FROM subscriptions WHERE id=?", String.class, paid))
+                .isEqualTo("ACTIVE:synthetic-existing-billing-agreement");
+        mockMvc.perform(get("/api/admin/subscriptions/" + learnerId + "/history").header("Authorization", bearer))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(plans.length))
+                .andExpect(jsonPath("$.content[0].administratorId").value(adminId.toString()))
+                .andExpect(jsonPath("$.content[0].previousPlan").value("PREMIUM"))
+                .andExpect(jsonPath("$.content[0].newPlan").value("BASIC"));
+        String learnerLogin = mapper.writeValueAsString(java.util.Map.of("email", learnerEmail, "password", password));
+        String learnerSession = mockMvc.perform(post("/api/auth/login").contentType("application/json").content(learnerLogin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.user.planType").value("BASIC"))
+                .andReturn().getResponse().getContentAsString();
+        mockMvc.perform(get("/api/subscriptions/me").header("Authorization", "Bearer " + mapper.readTree(learnerSession).path("accessToken").asText()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.provider").value("ADMIN_OVERRIDE"));
+        // SUPER_ADMIN uses the existing admin portal and the same service permissions.
+        UUID superRole = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO roles(id,name,created_at,updated_at) VALUES (?,'ROLE_SUPER_ADMIN',now(),now()) ON CONFLICT (name) DO NOTHING", superRole);
+        superRole = jdbcTemplate.queryForObject("SELECT id FROM roles WHERE name='ROLE_SUPER_ADMIN'", UUID.class);
+        jdbcTemplate.update("DELETE FROM user_roles WHERE user_id=? AND role_id=?", adminId, adminRole);
+        assignRole(adminId, superRole);
+        mockMvc.perform(get("/api/admin/subscriptions/" + learnerId).with(user(adminEmail).roles("SUPER_ADMIN")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.currentPlan").value("BASIC"));
+        String superSession = mockMvc.perform(post("/api/auth/login").contentType("application/json").content(loginRequest))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.user.role").value("ADMIN"))
+                .andReturn().getResponse().getContentAsString();
+        mockMvc.perform(get("/api/admin/subscriptions").header("Authorization", "Bearer " + mapper.readTree(superSession).path("accessToken").asText()))
+                .andExpect(status().isOk());
+    }
+
     @Autowired
     private UserRepository userRepository;
 

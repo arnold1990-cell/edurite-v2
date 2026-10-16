@@ -641,6 +641,10 @@ public class AuthService {
         User user = findUserByEmail(normalizedEmail)
                 .orElseThrow(() -> new InvalidCredentialsException("User not found"));
 
+        if (hasRole(user, "ROLE_ADMIN") || hasRole(user, "ROLE_SUPER_ADMIN")) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN,
+                    "Use the secure administrator password recovery procedure");
+        }
         user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
 
@@ -1292,6 +1296,7 @@ public class AuthService {
                 .map(this::normalizeRoleName)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
 
+        if (roles.contains("ROLE_SUPER_ADMIN")) roles.add("ROLE_ADMIN");
         boolean hasAdminRole = roles.contains("ROLE_ADMIN");
 
         if (companyProfileRepository.findByUserId(user.getId()).isPresent() && !hasAdminRole) {

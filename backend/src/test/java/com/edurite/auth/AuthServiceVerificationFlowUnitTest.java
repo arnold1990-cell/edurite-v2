@@ -655,6 +655,19 @@ class AuthServiceVerificationFlowUnitTest {
     }
 
     @Test
+    void devPasswordRepairCannotResetAdministratorCredentials() {
+        User user = activeStudent("admin-recovery@example.test", "+26770000029");
+        var role = new com.edurite.user.entity.Role(); role.setName("ROLE_ADMIN"); user.getRoles().add(role);
+        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(Optional.of(user));
+        String original = user.getPasswordHash();
+        assertThatThrownBy(() -> authService.resetPasswordForDev(new DevPasswordResetRequest(user.getEmail(), "Attempted-reset!")))
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
+                .hasMessageContaining("secure administrator password recovery");
+        assertThat(user.getPasswordHash()).isEqualTo(original);
+        org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never()).save(any(User.class));
+    }
+
+    @Test
     void resetPasswordFailsWhenOtpIsInvalid() {
         User user = activeStudent("reset-invalid@example.com", "+26770000022");
 

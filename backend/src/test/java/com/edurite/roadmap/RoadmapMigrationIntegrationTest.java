@@ -19,7 +19,7 @@ class RoadmapMigrationIntegrationTest {
             try {
                 var flyway=Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).locations("classpath:db/migration").load();
                 flyway.migrate(); flyway.validate();
-                assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("79");
+                assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("80");
                 try(var rows=statement.executeQuery("SELECT count(*) FROM information_schema.columns WHERE table_schema='"+schema+"' AND table_name='saved_career_roadmaps' AND column_name IN ('request_key','study_plan','completed_steps_json')")) {
                     rows.next(); assertThat(rows.getInt(1)).isEqualTo(3);
                 }

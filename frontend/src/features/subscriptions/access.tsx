@@ -5,6 +5,7 @@ import { apiClient } from '@/services/apiClient';
 import { useAuth } from '@/hooks/useAuth';
 
 export interface SubscriptionAccess {
+  source?: 'ADMIN_OVERRIDE' | 'PAYMENT' | 'PROMOTION';
   plan: 'BASIC' | 'PREMIUM' | 'PRO'; status: string; trialActive: boolean; accessAllowed: boolean; trialDaysRemaining: number;
   entitlements: string[];
   features: { id: string; label: string; minimumPlan: string }[];
@@ -83,9 +84,9 @@ export function StudentRouteAccess({ children }: { children: ReactNode }) {
   // Account management must remain reachable if the entitlement request fails.
   if ((['/student/subscription','/student/settings','/student/notifications'].includes(location.pathname) || location.pathname.startsWith('/student/settings/'))) return <>{children}</>;
   if (access.isPending || pending.isPending) return <p role="status">Checking access...</p>;
-  if (pending.isError) return <p role="alert">Payment status could not be checked. <button onClick={() => pending.refetch()}>Retry</button></p>;
+  if (pending.isError && access.data?.source !== 'ADMIN_OVERRIDE') return <p role="alert">Payment status could not be checked. <button onClick={() => pending.refetch()}>Retry</button></p>;
   if (access.isError) return <p role="alert">Access could not be checked. <button onClick={() => access.refetch()}>Retry</button></p>;
-  if (pending.data?.length) return <Navigate to="/student/subscription" replace />;
+  if (pending.data?.length && access.data?.source !== 'ADMIN_OVERRIDE') return <Navigate to="/student/subscription" replace />;
   if (location.pathname === "/student/documents" || (location.pathname === "/student/profile" && new URLSearchParams(location.search).get("section") !== "cv")) return <>{children}</>;
   if (!access.data.accessAllowed) return <TrialExpired />;
   const feature=featureForUrl(access.data, location.pathname+location.search);

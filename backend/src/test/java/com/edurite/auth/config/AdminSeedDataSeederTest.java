@@ -187,7 +187,22 @@ class AdminSeedDataSeederTest {
     }
 
     @Test
-    void existingAdminNotDuplicated() {
+    void configuredPasswordIsEncodedWithoutTrimming() {
+        var bcrypt = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+        when(roleRepository.findByName("ROLE_ADMIN")).thenReturn(Optional.of(role("ROLE_ADMIN")));
+        when(userRepository.findByEmailIgnoreCase("whitespace-admin@example.test")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0); user.setId(UUID.randomUUID()); return user;
+        });
+        seeder.seed(roleRepository, userRepository, bcrypt, "whitespace-admin@example.test", " Strong fixture password! ", "Fixture", "Administrator");
+        var capture = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(capture.capture());
+        assertThat(bcrypt.matches(" Strong fixture password! ", capture.getValue().getPasswordHash())).isTrue();
+        assertThat(bcrypt.matches("Strong fixture password!", capture.getValue().getPasswordHash())).isFalse();
+    }
+
+    @Test
+    void existingAdminNotDuplicatedAndPasswordNeverResetByStartup() {
         Role adminRole = role("ROLE_ADMIN");
         User existing = new User();
         existing.setId(UUID.randomUUID());
@@ -201,8 +216,6 @@ class AdminSeedDataSeederTest {
 
         when(roleRepository.findByName("ROLE_ADMIN")).thenReturn(Optional.of(adminRole));
         when(userRepository.findByEmailIgnoreCase("admin@example.com")).thenReturn(Optional.of(existing));
-        when(passwordEncoder.matches("Admin@123", "encoded-admin-password")).thenReturn(true);
-
         seeder.seed(
                 roleRepository,
                 userRepository,
@@ -215,6 +228,7 @@ class AdminSeedDataSeederTest {
 
         verify(userRepository, never()).save(any(User.class));
         verify(passwordEncoder, never()).encode("Admin@123");
+        assertThat(existing.getPasswordHash()).isEqualTo("encoded-admin-password");
     }
 
     @Test

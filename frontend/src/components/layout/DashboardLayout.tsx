@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSubscriptionAccess } from '@/features/subscriptions/access';
 import { resolvePrimaryRole } from '@/features/auth/roleUtils';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppQuery } from '@/hooks/useAppQuery';
@@ -33,7 +34,7 @@ const navByRole: Record<Role, NavItem[]> = {
     { to: '/company/dashboard', label: 'Dashboard' }, { to: '/company/profile', label: 'Company Profile' }, { to: '/company/bursaries/new', label: 'Post Bursary' }, { to: '/company/bursaries', label: 'Manage Bursaries' }, { to: '/company/applicants', label: 'Applications' }, { to: '/company/verification-docs', label: 'Documents' }, { to: '/company/notifications', label: 'Notifications' }, { to: '/company/settings', label: 'Settings' }, { to: '/account/change-password', label: 'Change Password' },
   ],
   ADMIN: [
-    { to: '/admin/dashboard', label: 'Dashboard' }, { to: '/admin/users', label: 'User Management' }, { to: '/admin/district-management', label: 'District Management' }, { to: '/admin/pending-approvals', label: 'Company Approvals' }, { to: '/admin/bursaries', label: 'Bursary Management' }, { to: '/admin/notifications', label: 'Notifications' }, { to: '/admin/analytics', label: 'Analytics' }, { to: '/admin/schools', label: 'School Management' }, { to: '/admin/settings', label: 'System Settings' }, { to: '/account/change-password', label: 'Change Password' },
+    { to: '/admin/dashboard', label: 'Dashboard' }, { to: '/admin/users', label: 'User Management' }, { to: '/admin/subscriptions', label: 'Subscription Management' }, { to: '/admin/district-management', label: 'District Management' }, { to: '/admin/pending-approvals', label: 'Company Approvals' }, { to: '/admin/bursaries', label: 'Bursary Management' }, { to: '/admin/notifications', label: 'Notifications' }, { to: '/admin/analytics', label: 'Analytics' }, { to: '/admin/schools', label: 'School Management' }, { to: '/admin/settings', label: 'System Settings' }, { to: '/account/change-password', label: 'Change Password' },
   ],
   DISTRICT_ADMIN: [
     { to: '/district/dashboard', label: 'District Dashboard', icon: Home },
@@ -119,6 +120,7 @@ const getInitials = (name?: string, email?: string) => {
 
 export const DashboardLayout = () => {
   const { user, logout } = useAuth();
+  const subscriptionAccess = useSubscriptionAccess();
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -138,8 +140,9 @@ export const DashboardLayout = () => {
     : navByRole[effectiveRole];
   const isSchoolStudent = effectiveRole === 'SCHOOL_STUDENT';
   const displayName = user.fullName || user.companyName || user.email;
-  const subscriptionLabel = user.planType ? `${user.planType.toLowerCase()} plan` : '';
-  const premiumLabel = user.planType?.toUpperCase() === 'PREMIUM' ? 'Premium' : 'Basic';
+  const effectivePlan = subscriptionAccess.data?.plan ?? user.planType;
+  const subscriptionLabel = effectivePlan ? `${effectivePlan.toLowerCase()} plan` : '';
+  const premiumLabel = effectivePlan === 'PRO' ? 'Pro' : effectivePlan === 'PREMIUM' ? 'Premium' : 'Basic';
   const notificationsPath = effectiveRole === 'STUDENT'
     ? '/student/notifications'
     : effectiveRole === 'COMPANY'

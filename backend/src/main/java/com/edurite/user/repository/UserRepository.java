@@ -158,7 +158,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                     WHERE (:includeDeleted = TRUE OR (u.deleted_at IS NULL AND u.status <> 'DELETED'))
                       AND (:search = '' OR LOWER(COALESCE(u.email, '')) LIKE CONCAT('%', LOWER(:search), '%')
                         OR LOWER(COALESCE(u.first_name, '')) LIKE CONCAT('%', LOWER(:search), '%')
-                        OR LOWER(COALESCE(u.last_name, '')) LIKE CONCAT('%', LOWER(:search), '%'))
+                        OR LOWER(COALESCE(u.last_name, '')) LIKE CONCAT('%', LOWER(:search), '%')
+                        OR LOWER(COALESCE(u.username, '')) LIKE CONCAT('%', LOWER(:search), '%')
+                        OR LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE CONCAT('%', LOWER(:search), '%'))
                       AND (:status = '' OR UPPER(u.status) = UPPER(:status))
                       AND (:roleName = '' OR EXISTS (
                             SELECT 1
@@ -182,7 +184,9 @@ public interface UserRepository extends JpaRepository<User, UUID> {
                     WHERE (:includeDeleted = TRUE OR (u.deleted_at IS NULL AND u.status <> 'DELETED'))
                       AND (:search = '' OR LOWER(COALESCE(u.email, '')) LIKE CONCAT('%', LOWER(:search), '%')
                         OR LOWER(COALESCE(u.first_name, '')) LIKE CONCAT('%', LOWER(:search), '%')
-                        OR LOWER(COALESCE(u.last_name, '')) LIKE CONCAT('%', LOWER(:search), '%'))
+                        OR LOWER(COALESCE(u.last_name, '')) LIKE CONCAT('%', LOWER(:search), '%')
+                        OR LOWER(COALESCE(u.username, '')) LIKE CONCAT('%', LOWER(:search), '%')
+                        OR LOWER(CONCAT(u.first_name, ' ', u.last_name)) LIKE CONCAT('%', LOWER(:search), '%'))
                       AND (:status = '' OR UPPER(u.status) = UPPER(:status))
                       AND (:roleName = '' OR EXISTS (
                             SELECT 1

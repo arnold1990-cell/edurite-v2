@@ -251,7 +251,7 @@ edurite:
     seed:
       admin:
         email: ${EDURITE_AUTH_SEED_ADMIN_EMAIL:admin@edurite.com}
-        password: ${EDURITE_AUTH_SEED_ADMIN_PASSWORD:Admin@123}
+        password: ${EDURITE_AUTH_SEED_ADMIN_PASSWORD:${EDURITE_ADMIN_PASSWORD:}}
       student:
         email: ${EDURITE_AUTH_SEED_STUDENT_EMAIL:arnoldmadaz@gmail.com}
         password: ${EDURITE_AUTH_SEED_STUDENT_PASSWORD:Student@123}

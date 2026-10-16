@@ -31,6 +31,7 @@ export const normalizeBackendRole = (role?: string | null): BackendRole | null =
   if (!role) return null;
   const normalized = role.trim().toUpperCase();
   const prefixed = normalized.startsWith('ROLE_') ? normalized : `ROLE_${normalized}`;
+  if (prefixed === 'ROLE_SUPER_ADMIN') return 'ROLE_ADMIN';
   return ['ROLE_STUDENT', 'ROLE_COMPANY', 'ROLE_ADMIN', 'ROLE_DISTRICT_ADMIN', 'ROLE_DISTRICT_DIRECTOR', 'ROLE_CIRCUIT_MANAGER', 'ROLE_SUBJECT_ADVISOR', 'ROLE_SCHOOL_ADMIN', 'ROLE_TEACHER', 'ROLE_SCHOOL_STUDENT'].includes(prefixed) ? (prefixed as BackendRole) : null;
 };
 
