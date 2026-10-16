@@ -71,7 +71,7 @@ jobs:
           validate_manifest(m, os.environ['MAIN_SHA'])
           assert str(m['ci_run_id']) == os.environ['CI_RUN_ID']
           PY
-          git archive "$release_sha" docker-compose.yml docker-compose.production.yml scripts/release.py scripts/classify_release.py | tar -x -C release
+          git archive "$release_sha" docker-compose.yml docker-compose.production.yml scripts/release.py scripts/classify_release.py scripts/stage-restore-evidence.py | tar -x -C release
           echo "commit=$release_sha" >> "$GITHUB_OUTPUT"
           echo "stage=/opt/edurite-releases/$release_sha-$GITHUB_RUN_ID" >> "$GITHUB_OUTPUT"
           tar -czf release.tgz -C release .
@@ -168,6 +168,8 @@ jobs:
           scp -o StrictHostKeyChecking=yes release.tgz "$target:$STAGE/release.tgz"
           extra=""
           if [ "$CLASSIFICATION" = DATABASE_MIGRATION ]; then
+            # This only verifies operator-staged evidence; it never restores on EC2.
+            ssh -o StrictHostKeyChecking=yes "$target" "set -eu; tar -xzf '$STAGE/release.tgz' -C '$STAGE'; python3 '$STAGE/scripts/stage-restore-evidence.py' --check-only --release-dir '$STAGE' --commit '$RELEASE_SHA' --backup /opt/edurite-backups/release.dump --evidence /opt/edurite-backups/restore-evidence.json"
             extra="--migration-approved --backup /opt/edurite-backups/release.dump --evidence /opt/edurite-backups/restore-evidence.json"
           fi
           ssh -o StrictHostKeyChecking=yes "$target" "set -eu; tar -xzf '$STAGE/release.tgz' -C '$STAGE'; python3 '$STAGE/scripts/release.py' deploy --release-dir '$STAGE' --project-dir /opt/edurite-v2 --commit '$RELEASE_SHA' $extra"

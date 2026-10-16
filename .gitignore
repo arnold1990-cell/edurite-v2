@@ -14,6 +14,9 @@ backend/.m2/
 __pycache__/
 *.pyc
 
+# Production backups and operator restore evidence contain private deployment data.
+deployment-backups/
+
 # Persistent local document storage is deployment data, never source.
 backend/data/uploads/
 data/uploads/

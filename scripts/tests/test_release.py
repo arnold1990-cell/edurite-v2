@@ -39,7 +39,7 @@ class ReleaseSafetyTests(unittest.TestCase):
             release.validate_backup(evidence, backup, SHA, now=100001)
             for change in (dict(validated_at=0), dict(backup_created_at=0), dict(restored=False),
                            dict(migrated=False), dict(data_preserved=False), dict(commit='wrong'),
-                           dict(backup_sha256='wrong'), dict(validated_at=float('nan')), dict(backup_created_at=float('inf')), dict(validated_at=100002)):
+                           dict(backup_sha256='wrong'), dict(validated_at=float('nan')), dict(backup_created_at=float('inf')), dict(validated_at=100002), dict(validated_at=99999)):
                 with self.subTest(change=change), self.assertRaises(ValueError):
                     release.validate_backup(dict(evidence, **change), backup, SHA, now=100001)
 
@@ -63,8 +63,9 @@ class ReleaseSafetyTests(unittest.TestCase):
         backup = root / 'backup'
         backup.write_bytes(b'synthetic')
         evidence = root / 'evidence.json'
+        now = time.time()
         release.write_json(evidence, dict(commit=SHA, restored=True, migrated=True, data_preserved=True,
-                                         backup_sha256=release.digest(backup), validated_at=time.time(), backup_created_at=time.time(), source_version='79', target_version='79', migrations=MIGRATIONS))
+                                         backup_sha256=release.digest(backup), validated_at=now, backup_created_at=now, source_version='79', target_version='79', migrations=MIGRATIONS))
         args = SimpleNamespace(action='deploy', commit=SHA, backup=backup, evidence=evidence, state=None, schema_compatibility_reviewed=False, migration_approved=True, public_url='https://edurite.co.za')
         return args, project, staged, state
 

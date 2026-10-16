@@ -165,10 +165,45 @@ contains the exact backup SHA-256, commit, full migration inventory, actual sour
 and target versions and successful data-preservation result. A copied file's
 mtime is not backup evidence.
 
-Place the exact validated backup and evidence privately at:
+Securely upload the newly generated JSON to EC2. It is not a CI artifact and the
+workflow deliberately never restores private production data on the EC2 host.
+Generating JSON on a validation machine does not install it on EC2. Do not reuse
+evidence for another commit, another dump, or an earlier migration target.
+
+After upload, use the tested release's staging command on EC2 (it does not connect
+to PostgreSQL). Keep the timestamped source dump and JSON as originals:
+
+```bash
+python3 "$STAGED_RELEASE/scripts/stage-restore-evidence.py" \
+  --release-dir "$STAGED_RELEASE" --commit "$RELEASE_SHA" \
+  --backup /private/path/to/the-exact-validated.dump \
+  --evidence /private/path/to/the-newly-uploaded-evidence.json
+```
+
+The command verifies freshness, commit, backup bytes, successful restore/migrate/
+preservation flags and the complete tested migration inventory. It checks the
+copied bytes again before replacing the workflow files, with mode 0600, while
+holding the same host lock as deployment. Invalid evidence leaves the existing
+pair untouched. A crash between replacements produces a hash mismatch and blocks
+deployment. Restrict manual writes to these paths to the same trusted operator.
+
+The exact workflow locations remain:
 
     /opt/edurite-backups/release.dump
     /opt/edurite-backups/restore-evidence.json
+
+Verify the installed pair before approval:
+
+```bash
+python3 "$STAGED_RELEASE/scripts/stage-restore-evidence.py" --check-only \
+  --release-dir "$STAGED_RELEASE" --commit "$RELEASE_SHA" \
+  --backup /opt/edurite-backups/release.dump \
+  --evidence /opt/edurite-backups/restore-evidence.json
+```
+
+The deploy job now performs this same preflight, then release.py repeats the gate
+under its deployment lock and compares the recorded source version to live
+Flyway history. Frontend-only and no-schema releases keep their existing gates.
 
 Keep timestamped originals. Restrict evidence write access; it remains trusted
 operator-owned evidence, not a cryptographic external attestation. Approve the

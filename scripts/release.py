@@ -72,6 +72,25 @@ def validate_backup(evidence, backup, commit, now=None):
         raise ValueError('Backup differs from the successfully restored backup')
     if evidence.get('data_preserved') is not True:
         raise ValueError('Restored data preservation was not verified')
+    if float(evidence['validated_at']) < float(evidence['backup_created_at']):
+        raise ValueError('Restore validation predates the backup')
+
+
+def load_restore_evidence(backup, evidence_path, manifest):
+    """Validate the pair once; retain that same record for the live-schema check."""
+    if not backup or not evidence_path:
+        raise ValueError('Backup and separate restore evidence are required: supply --backup DUMP --evidence JSON after isolated validation')
+    if backup.resolve() == evidence_path.resolve():
+        raise ValueError('Backup and evidence must be separate files')
+    if not backup.is_file() or not evidence_path.is_file():
+        raise ValueError('Backup/evidence file missing; run validate-restore.py on an isolated machine and stage the verified pair')
+    evidence = json.loads(evidence_path.read_text())
+    validate_backup(evidence, backup, manifest['commit'])
+    if (evidence.get('target_version') != manifest['migrations'][-1]['version']
+            or evidence.get('migrations') != manifest['migrations']
+            or evidence.get('source_version') not in {row['version'] for row in manifest['migrations']}):
+        raise ValueError('Restore evidence does not match the tested migration inventory')
+    return evidence
 
 
 def write_json(path, data):
@@ -254,9 +273,7 @@ def execute(args, project, release, state_dir):
     if args.action == 'deploy' and kind == 'DATABASE_MIGRATION':
         if not getattr(args, 'migration_approved', False):
             raise ValueError('Migration release requires protected production approval')
-        if not args.backup or not args.evidence:
-            raise ValueError('Backup and separate restore evidence are required')
-        validate_backup(json.loads(args.evidence.read_text()), args.backup, args.commit)
+        evidence = load_restore_evidence(args.backup, args.evidence, manifest)
     elif args.action == 'rollback':
         if not args.state or (kind == 'DATABASE_MIGRATION' and not args.schema_compatibility_reviewed):
             raise ValueError('Rollback requires recorded state and explicit schema compatibility review')
@@ -321,7 +338,6 @@ def execute(args, project, release, state_dir):
         "'SELECT coalesce(json_agg(row_to_json(h)), json_build_array()) FROM (SELECT version,script,checksum,success,type FROM flyway_schema_history ORDER BY installed_rank) h'"))
     source_version = validate_history(history, manifest['migrations'], allow_pending=kind == 'DATABASE_MIGRATION')
     if args.action == 'deploy' and kind == 'DATABASE_MIGRATION':
-        evidence = json.loads(args.evidence.read_text())
         if evidence.get('source_version') != source_version or evidence.get('target_version') != manifest['migrations'][-1]['version'] or evidence.get('migrations') != manifest['migrations']:
             raise ValueError('Restore evidence does not match live schema and tested migrations')
     if args.action == 'deploy':
