@@ -50,8 +50,8 @@ export function StudentProfileSectionsPage() {
 export function StudentCareerGuidancePage() {
   return <section className="ex-workspace student-page-section"><h1 className="student-page-title">Career Guidance</h1>
     <p>Use your interests, skills and academic results to plan your next step.</p>
-    <div className="ec-controls"><Link className="ep-primary" to="/student/career-explorer">Open Career Explorer</Link><Link to="/student/profile?section=career">My career aspirations</Link></div>
-    <Link className="ep-primary" to="/student/career-match">Open Career Match</Link>
+    <div className="ec-controls"><Link className="ep-primary !bg-primary-500 !text-white hover:!bg-primary-600" to="/student/career-explorer">Open Career Explorer</Link><Link to="/student/profile?section=career">My career aspirations</Link></div>
+    <Link className="ep-primary !bg-primary-500 !text-white hover:!bg-primary-600" to="/student/career-match">Open Career Match</Link>
   </section>;
 }
 export function StudentCareerExplorerPage() {
