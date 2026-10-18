@@ -1,0 +1,185 @@
+name: Deploy EduRite V2
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  deployments: read
+
+concurrency:
+  group: edurite-production
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      commit: ${{ steps.release.outputs.commit }}
+      classification: ${{ steps.classify.outputs.classification }}
+      environment: ${{ steps.classify.outputs.environment }}
+      stage: ${{ steps.release.outputs.stage }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve successful CI and verify artifact provenance
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          if [ -n "$EVENT_RUN_ID" ]; then
+            ci_run_id="$EVENT_RUN_ID"
+          else
+            ci_run_id="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?branch=main&event=push&status=success&per_page=1" --jq '.workflow_runs[0].id')"
+          fi
+          [[ "$ci_run_id" =~ ^[0-9]+$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$ci_run_id" > ci-run.json
+          export CI_RUN_ID="$ci_run_id"
+          export MAIN_SHA="$(git rev-parse origin/main)"
+          python3 - <<'PY'
+          import json, os
+          run = json.load(open('ci-run.json'))
+          assert run['head_sha'] == os.environ['MAIN_SHA'], 'Only current main may deploy; stale runs are rejected'
+          assert run['conclusion'] == 'success' and run['status'] == 'completed'
+          assert run['event'] == 'push' and run['head_branch'] == 'main'
+          assert run['path'] == '.github/workflows/ci.yml'
+          assert run['repository']['full_name'] == os.environ['GITHUB_REPOSITORY']
+          PY
+          release_sha="$MAIN_SHA"
+          mkdir release
+          gh run download "$ci_run_id" --name "release-$release_sha" --dir release
+          python3 - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, 'scripts')
+          from release import validate_manifest
+          m = json.load(open('release/release.json'))
+          validate_manifest(m, os.environ['MAIN_SHA'])
+          assert str(m['ci_run_id']) == os.environ['CI_RUN_ID']
+          PY
+          git archive "$release_sha" docker-compose.yml docker-compose.production.yml scripts/release.py scripts/classify_release.py scripts/stage-restore-evidence.py | tar -x -C release
+          echo "commit=$release_sha" >> "$GITHUB_OUTPUT"
+          echo "stage=/opt/edurite-releases/$release_sha-$GITHUB_RUN_ID" >> "$GITHUB_OUTPUT"
+          tar -czf release.tgz -C release .
+      - name: Inspect deployed image revisions without changing services
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+          STAGE: ${{ steps.release.outputs.stage }}
+        run: |
+          set -euo pipefail
+          test -n "$KNOWN_HOSTS"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          target="$EC2_USERNAME@$EC2_HOST"
+          ssh -o StrictHostKeyChecking=yes "$target" "umask 077; mkdir -p '$STAGE'"
+          scp -o StrictHostKeyChecking=yes release.tgz "$target:$STAGE/release.tgz"
+          ssh -o StrictHostKeyChecking=yes "$target" "set -eu; tar -xzf '$STAGE/release.tgz' -C '$STAGE'; python3 '$STAGE/scripts/release.py' inspect --project-dir /opt/edurite-v2" > inventory.json
+      - name: Classify against actual deployed revisions
+        id: classify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ steps.release.outputs.commit }}
+        run: |
+          set -euo pipefail
+          export BACKEND_BASE="$(python3 -c 'import json; print(json.load(open("inventory.json"))["revisions"]["backend"])')"
+          export FRONTEND_BASE="$(python3 -c 'import json; print(json.load(open("inventory.json"))["revisions"]["frontend"])')"
+          python3 scripts/classify_release.py --commit "$RELEASE_SHA" --backend-base "$BACKEND_BASE" --frontend-base "$FRONTEND_BASE" --output release/deployment-plan.json
+          python3 - <<'PY'
+          import json, os
+          path = 'release/deployment-plan.json'
+          plan = json.load(open(path))
+          manifest = json.load(open('release/release.json'))
+          assert plan['migrations'] == manifest['migrations']
+          assert plan['protected_files'] == manifest['protected_files']
+          plan['expected_inventory'] = json.load(open('inventory.json'))
+          open(path, 'w').write(json.dumps(plan, indent=2))
+          kind = plan['classification']
+          environment = 'production-migrations' if kind == 'DATABASE_MIGRATION' else 'production'
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'classification={kind}\nenvironment={environment}\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+              summary.write(f'Release {plan["commit"]}: **{kind}**. Compared with running application revisions.\n')
+          PY
+          if [ "$(python3 -c 'import json; print(json.load(open("release/deployment-plan.json"))["classification"])')" = DATABASE_MIGRATION ]; then
+            gh api "repos/$GITHUB_REPOSITORY/environments/production-migrations" > migration-environment.json
+            python3 - <<'PY'
+          import json
+          env = json.load(open('migration-environment.json'))
+          assert any(rule['type'] == 'required_reviewers' and rule.get('reviewers') for rule in env['protection_rules']), 'Configure required reviewers for production-migrations'
+          assert env.get('can_admins_bypass') is False, 'Disable administrator protection bypass'
+          PY
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prepared-release
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Remove runner SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
+
+  deploy:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment: ${{ needs.prepare.outputs.environment }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: prepared-release
+          path: release
+      - name: Deploy selected tested images
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.EC2_KNOWN_HOSTS }}
+          STAGE: ${{ needs.prepare.outputs.stage }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.commit }}
+          CLASSIFICATION: ${{ needs.prepare.outputs.classification }}
+        run: |
+          set -euo pipefail
+          test -n "$KNOWN_HOSTS"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          tar -czf release.tgz -C release .
+          target="$EC2_USERNAME@$EC2_HOST"
+          scp -o StrictHostKeyChecking=yes release.tgz "$target:$STAGE/release.tgz"
+          extra=""
+          if [ "$CLASSIFICATION" = DATABASE_MIGRATION ]; then
+            # This only verifies operator-staged evidence; it never restores on EC2.
+            ssh -o StrictHostKeyChecking=yes "$target" "set -eu; tar -xzf '$STAGE/release.tgz' -C '$STAGE'; python3 '$STAGE/scripts/stage-restore-evidence.py' --check-only --release-dir '$STAGE' --commit '$RELEASE_SHA' --backup /opt/edurite-backups/release.dump --evidence /opt/edurite-backups/restore-evidence.json"
+            extra="--migration-approved --backup /opt/edurite-backups/release.dump --evidence /opt/edurite-backups/restore-evidence.json"
+          fi
+          ssh -o StrictHostKeyChecking=yes "$target" "set -eu; tar -xzf '$STAGE/release.tgz' -C '$STAGE'; python3 '$STAGE/scripts/release.py' deploy --release-dir '$STAGE' --project-dir /opt/edurite-v2 --commit '$RELEASE_SHA' $extra"
+      - name: Record workflow outcome
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+          RELEASE_SHA: ${{ needs.prepare.outputs.commit }}
+          CLASSIFICATION: ${{ needs.prepare.outputs.classification }}
+        run: printf 'Release %s (%s) result %s. Consult host state records.\n' "$RELEASE_SHA" "$CLASSIFICATION" "$RESULT" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove runner SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519
