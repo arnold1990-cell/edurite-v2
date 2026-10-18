@@ -46,13 +46,14 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .map(GrantedAuthority.class::cast)
                 .toList();
 
-        return org.springframework.security.core.userdetails.User
+        UserDetails principal = org.springframework.security.core.userdetails.User
                 // JWT subjects are issued with the canonical email, so use the same principal value here.
                 .withUsername(user.getEmail())
                 .password(user.getPasswordHash())
                 .disabled(user.getStatus() != UserStatus.ACTIVE || user.getDeletedAt() != null || user.isEmailVerificationRequired())
                 .authorities(authorities)
                 .build();
+        return new VersionedUserDetails(principal, user.getTokenVersion());
     }
 
     private List<String> resolveEffectiveAuthorities(User user) {

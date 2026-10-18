@@ -49,7 +49,7 @@ public class JwtService {
      */
     public String generateAccessToken(UserDetails userDetails) {
         List<String> roles = userDetails.getAuthorities().stream().map(Object::toString).sorted().toList();
-        return generateToken(userDetails.getUsername(), accessTokenExpiration, buildAccessClaims(roles));
+        return generateToken(userDetails.getUsername(), accessTokenExpiration, versionedClaims(buildAccessClaims(roles), tokenVersion(userDetails)));
     }
 
     /**
@@ -57,7 +57,7 @@ public class JwtService {
      * It exists to keep this class focused and reusable.
      */
     public String generateRefreshToken(UserDetails userDetails) {
-        return generateToken(userDetails.getUsername(), refreshTokenExpiration, Map.of("type", "refresh"));
+        return generateToken(userDetails.getUsername(), refreshTokenExpiration, versionedClaims(Map.of("type", "refresh"), tokenVersion(userDetails)));
     }
 
     /**
@@ -67,7 +67,7 @@ public class JwtService {
     public String generateAccessToken(User user) {
         List<String> roles = user.getRoles().stream().map(role -> role.getName().trim().toUpperCase()).sorted().toList();
         log.info("[auth] jwt issued username={} jwtRoles={}", user.getEmail(), roles);
-        return generateToken(user.getEmail(), accessTokenExpiration, buildAccessClaims(roles));
+        return generateToken(user.getEmail(), accessTokenExpiration, versionedClaims(buildAccessClaims(roles), user.getTokenVersion()));
     }
 
     public String generateAccessToken(User user, Collection<String> roles, String approvalStatus) {
@@ -77,7 +77,7 @@ public class JwtService {
     public String generateAccessToken(User user, Collection<String> roles, String approvalStatus, String planType) {
         List<String> normalizedRoles = roles.stream().map(role -> role.trim().toUpperCase()).sorted().toList();
         log.info("[auth] jwt issued username={} jwtRoles={} approvalStatus={} planType={}", user.getEmail(), normalizedRoles, approvalStatus, planType);
-        return generateToken(user.getEmail(), accessTokenExpiration, buildAccessClaims(normalizedRoles, approvalStatus, planType));
+        return generateToken(user.getEmail(), accessTokenExpiration, versionedClaims(buildAccessClaims(normalizedRoles, approvalStatus, planType), user.getTokenVersion()));
     }
 
     /**
@@ -85,7 +85,17 @@ public class JwtService {
      * It exists to keep this class focused and reusable.
      */
     public String generateRefreshToken(User user) {
-        return generateToken(user.getEmail(), refreshTokenExpiration, Map.of("type", "refresh"));
+        return generateToken(user.getEmail(), refreshTokenExpiration, versionedClaims(Map.of("type", "refresh"), user.getTokenVersion()));
+    }
+
+    private long tokenVersion(UserDetails userDetails) {
+        return userDetails instanceof VersionedUserDetails versioned ? versioned.getTokenVersion() : 0;
+    }
+
+    private Map<String, Object> versionedClaims(Map<String, Object> claims, long version) {
+        LinkedHashMap<String, Object> result = new LinkedHashMap<>(claims);
+        result.put("tokenVersion", version);
+        return result;
     }
 
     private Map<String, Object> buildAccessClaims(List<String> roles) {
@@ -170,8 +180,13 @@ public class JwtService {
      * It exists to keep this class focused and reusable.
      */
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        String username = extractUsername(token);
-        return username.equals(userDetails.getUsername()) && !isTokenExpired(token);
+        Claims claims = extractAllClaims(token);
+        Object version = claims.get("tokenVersion");
+        // Legacy tokens had no version claim. They remain compatible only at version zero.
+        long issuedVersion = version == null ? 0 : version instanceof Number number ? number.longValue() : -1;
+        return claims.getSubject().equals(userDetails.getUsername())
+                && claims.getExpiration().after(new Date())
+                && issuedVersion == tokenVersion(userDetails);
     }
 
     /**

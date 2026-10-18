@@ -87,10 +87,10 @@ public class TwilioOtpService implements OtpService {
             Object status = body == null ? null : body.get("status");
             log.info("[otp] twilio response status={} phone={}", status, phoneNumber);
         } catch (RestClientResponseException ex) {
-            log.error("[otp] twilio verify otp dispatch failed phone={} status={} response={}", phoneNumber, ex.getStatusCode(), ex.getResponseBodyAsString(), ex);
+            log.error("[otp] twilio verify otp dispatch failed status={}", ex.getStatusCode());
             throw new OtpDispatchException("Unable to send OTP at the moment. Please try again.");
         } catch (RuntimeException ex) {
-            log.error("[otp] failed to send OTP phone={} reason={}", phoneNumber, ex.getMessage(), ex);
+            log.error("[otp] failed to send OTP type={}", ex.getClass().getSimpleName());
             throw new OtpDispatchException("Unable to send OTP at the moment. Please try again.");
         }
     }
@@ -110,13 +110,13 @@ public class TwilioOtpService implements OtpService {
                     .body(MAP_RESPONSE);
             return isApproved(body);
         } catch (HttpClientErrorException ex) {
-            log.warn("[otp] twilio verify otp check rejected phone={} status={} response={}", phoneNumber, ex.getStatusCode(), ex.getResponseBodyAsString());
+            log.warn("[otp] twilio verify otp check rejected status={}", ex.getStatusCode());
             return false;
         } catch (RestClientResponseException ex) {
-            log.error("[otp] twilio verify otp check failed phone={} status={} response={}", phoneNumber, ex.getStatusCode(), ex.getResponseBodyAsString(), ex);
+            log.error("[otp] twilio verify otp check failed status={}", ex.getStatusCode());
             throw new OtpDispatchException("Unable to validate OTP right now. Please try again.");
         } catch (RuntimeException ex) {
-            log.error("[otp] twilio verify otp check failed phone={} reason={}", phoneNumber, ex.getMessage(), ex);
+            log.error("[otp] twilio verify otp check failed type={}", ex.getClass().getSimpleName());
             throw new OtpDispatchException("Unable to validate OTP right now. Please try again.");
         }
     }

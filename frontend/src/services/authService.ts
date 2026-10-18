@@ -120,6 +120,9 @@ const normalizeRegistrationResponse = (payload: RegistrationResponse): Registrat
 };
 
 export const authService = {
+  requestEmailPasswordCode: (email: string) => apiClient.post<VerificationStatusResponse>('/auth/forgot-password/request-otp', { email }).then(r => r.data),
+  verifyEmailPasswordCode: (email: string, code: string) => apiClient.post<{ message: string; resetToken: string }>('/auth/forgot-password/email/verify-otp', { email, code }).then(r => r.data),
+  resetEmailPassword: (email: string, resetToken: string, newPassword: string, confirmPassword: string) => apiClient.post<VerificationStatusResponse>('/auth/forgot-password/email/reset', { email, resetToken, newPassword, confirmPassword }).then(r => { authStore.clear(); return r.data; }),
   verifyEmail: (email: string, token: string) => apiClient.post<VerificationStatusResponse>('/auth/email-verification/verify', { email, token }).then(r => r.data),
   resendEmail: (email: string) => apiClient.post<VerificationStatusResponse>('/auth/email-verification/resend', { email }).then(r => r.data),
   me: () => apiClient.get<AuthResponseRaw>('/auth/me').then((response) => normalizeAuthResponse(response.data)),
@@ -141,8 +144,8 @@ export const authService = {
   registerSchool: (payload: SchoolRegisterPayload) => apiClient.post<RegistrationResponse>('/auth/register/school', payload).then((r) => normalizeRegistrationResponse(r.data)),
   verifyOtp: (payload: { phoneNumber: string; code: string }) => apiClient.post<VerificationStatusResponse>('/auth/verify-otp', payload).then((r) => r.data),
   resendVerificationOtp: (payload: { phoneNumber: string }) => apiClient.post<VerificationStatusResponse>('/auth/resend-verification-otp', payload).then((r) => r.data),
-  requestForgotPasswordOtp: (payload: { accountIdentifier?: string; phoneNumber?: string }) => apiClient.post<VerificationStatusResponse>('/auth/forgot-password/request-otp', payload).then((r) => r.data),
-  resetPasswordWithOtp: (payload: { phoneNumber: string; code: string; newPassword: string }) => apiClient.post<VerificationStatusResponse>('/auth/forgot-password/reset', payload).then((r) => r.data),
+  requestForgotPasswordOtp: (payload: { email: string }) => apiClient.post<VerificationStatusResponse>('/auth/forgot-password/request-otp', payload).then((r) => r.data),
+  resetPasswordWithOtp: (payload: { email: string; code: string; newPassword: string }) => apiClient.post<VerificationStatusResponse>('/auth/forgot-password/reset', payload).then((r) => { authStore.clear(); return r.data; }),
   logout: () => apiClient.post('/auth/logout'),
   keepAlive: () => apiClient.post<{ status: string; serverTime: string; message: string }>('/auth/keep-alive').then((r) => r.data),
 };

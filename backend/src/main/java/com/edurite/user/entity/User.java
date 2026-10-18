@@ -16,6 +16,10 @@ import lombok.Setter;
 @Setter
 public class User extends BaseEntity {
 
+    // Incremented after password recovery to revoke previously issued JWTs.
+    @Column(name = "token_version", nullable = false)
+    private long tokenVersion;
+
     // Primary login identifier.
     @Column(name = "email", nullable = false, unique = true)
     private String email;

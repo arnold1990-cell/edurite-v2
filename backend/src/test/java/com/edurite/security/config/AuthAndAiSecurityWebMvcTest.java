@@ -40,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
-        controllers = {AuthController.class, AccountController.class, AiController.class, GoogleOAuthCompatibilityController.class, com.edurite.auth.controller.EmailVerificationController.class},
+        controllers = {com.edurite.auth.controller.EmailPasswordRecoveryController.class, AuthController.class, AccountController.class, AiController.class, GoogleOAuthCompatibilityController.class, com.edurite.auth.controller.EmailVerificationController.class},
         properties = {
                 "spring.flyway.enabled=false",
                 "spring.jpa.hibernate.ddl-auto=none",
@@ -66,6 +66,60 @@ class AuthAndAiSecurityWebMvcTest {
 
     @MockitoBean
     private AuthService authService;
+    @MockitoBean
+    private com.edurite.auth.service.EmailPasswordRecoveryService emailPasswordRecoveryService;
+
+    @Test
+    void originalRecoveryEndpointsAcceptEmailAndRejectPhoneOnlyPayloads() throws Exception {
+        when(authService.requestPasswordResetOtp(any())).thenReturn(new com.edurite.auth.dto.VerificationStatusResponse(
+                com.edurite.auth.service.EmailPasswordRecoveryService.REQUEST_MESSAGE));
+        when(authService.resetPasswordWithOtp(any())).thenReturn(new com.edurite.auth.dto.VerificationStatusResponse("Password reset complete."));
+        for (String prefix : new String[]{"/api/v1/auth/forgot-password", "/api/auth/forgot-password"}) {
+            mockMvc.perform(post(prefix + "/request-otp").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"email\":\"account@example.com\"}"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.otp").doesNotExist());
+            mockMvc.perform(post(prefix + "/request-otp").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"phoneNumber\":\"+26770000021\"}"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post(prefix + "/reset").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"email\":\"account@example.com\",\"code\":\"123456\",\"newPassword\":\"NewStrong@123\"}"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.otp").doesNotExist());
+            mockMvc.perform(post(prefix + "/reset").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"phoneNumber\":\"+26770000021\",\"code\":\"123456\",\"newPassword\":\"NewStrong@123\"}"))
+                    .andExpect(status().isBadRequest());
+        }
+    }
+
+    @Test
+    void emailRecoveryEndpointsArePublicAndNeverReturnOtp() throws Exception {
+        org.mockito.Mockito.when(emailPasswordRecoveryService.requestOtp(org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        org.mockito.Mockito.when(emailPasswordRecoveryService.verify("student@example.com", "123456")).thenReturn("opaque-reset-token");
+        for (String prefix : new String[]{"/api/v1/auth/forgot-password/email", "/api/auth/forgot-password/email"}) {
+            for (String email : new String[]{"student@example.com", "unknown@example.com"}) {
+                mockMvc.perform(post(prefix + "/request-otp").contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"email\":\"" + email + "\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.message").value(com.edurite.auth.service.EmailPasswordRecoveryService.REQUEST_MESSAGE))
+                    .andExpect(jsonPath("$.code").doesNotExist()).andExpect(jsonPath("$.otp").doesNotExist());
+            }
+            mockMvc.perform(post(prefix + "/verify-otp").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"student@example.com\",\"code\":\"123456\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.resetToken").value("opaque-reset-token"))
+                .andExpect(jsonPath("$.code").doesNotExist());
+            mockMvc.perform(post(prefix + "/verify-otp").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"student@example.com\",\"code\":\"12345\"}"))
+                .andExpect(status().isBadRequest());
+            mockMvc.perform(post(prefix + "/request-otp").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"invalid\"}"))
+                .andExpect(status().isBadRequest());
+            mockMvc.perform(post(prefix + "/reset").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"student@example.com\",\"resetToken\":\"" + "a".repeat(43)
+                    + "\",\"newPassword\":\"Changed@123\",\"confirmPassword\":\"Mismatch@123\"}"))
+                .andExpect(status().isBadRequest());
+        }
+    }
+
     @MockitoBean
     private com.edurite.auth.service.EmailVerificationService emailVerificationService;
 

@@ -40,6 +40,7 @@ import com.edurite.school.portal.entity.SchoolStatus;
 import com.edurite.school.portal.repository.SchoolRegistrationRequestRepository;
 import com.edurite.school.portal.repository.SchoolRepository;
 import com.edurite.security.service.JwtService;
+import com.edurite.security.service.VersionedUserDetails;
 import com.edurite.student.entity.StudentProfile;
 import com.edurite.student.repository.StudentProfileRepository;
 import com.edurite.student.service.StudentProfileCompletionService;
@@ -85,7 +86,6 @@ public class AuthService {
             "ROLE_SCHOOL_STUDENT",
             "ROLE_STUDENT"
     );
-    private static final String GENERIC_FORGOT_PASSWORD_OTP_MESSAGE = "If the account exists, an OTP has been sent.";
 
     private enum LoginAuditReason {
         USER_NOT_FOUND,
@@ -123,6 +123,8 @@ public class AuthService {
     private final TransactionTemplate transactionTemplate;
     @org.springframework.beans.factory.annotation.Autowired
     private EmailVerificationService emailVerificationService;
+    @org.springframework.beans.factory.annotation.Autowired
+    private EmailPasswordRecoveryService emailPasswordRecoveryService;
 
     public AuthService(
             UserRepository userRepository,
@@ -337,6 +339,7 @@ public class AuthService {
             userRepository.save(user);
         }
 
+        requireEmailVerification(user);
         consentService.recordPopiaConsent(user, request.consentVersion());
         return buildRegistrationResponse(user);
     }
@@ -412,10 +415,8 @@ public class AuthService {
                 "Your registration was submitted to " + district.getDistrictName() + " and is awaiting district approval."
         );
 
-        return buildAuthenticatedRegistrationResponse(
-                user,
-                "School registration submitted successfully. You are signed in and can track district approval."
-        );
+        requireEmailVerification(user);
+        return buildRegistrationResponse(user);
     }
 
     @Transactional
@@ -448,7 +449,7 @@ public class AuthService {
                 .authorities(effectiveRoles.toArray(String[]::new))
                 .build();
 
-        if (!jwtService.isTokenValid(refreshToken, userDetails)) {
+        if (!jwtService.isTokenValid(refreshToken, new VersionedUserDetails(userDetails, user.getTokenVersion()))) {
             throw new InvalidCredentialsException();
         }
 
@@ -562,52 +563,14 @@ public class AuthService {
         return new VerificationStatusResponse("Phone verification complete. You can sign in.");
     }
 
-    @Transactional
     public VerificationStatusResponse requestPasswordResetOtp(ForgotPasswordOtpRequest request) {
-        if (!isOtpRequired()) {
-            return new VerificationStatusResponse("OTP verification is currently disabled. You can sign in.");
-        }
-
-        String identifier = request.resolvedIdentifier();
-        Optional<User> user = findUserByAccountIdentifier(identifier);
-
-        log.info("[auth] forgot-password OTP requested identifier={} userFound={}", identifier, user.isPresent());
-
-        if (user.isPresent()) {
-            String normalizedPhone = normalizePhoneNumber(user.get().getPhoneNumber());
-
-            if (normalizedPhone == null) {
-                return new VerificationStatusResponse("Account exists, but no phone number is registered.");
-            }
-
-            try {
-                otpService.sendPasswordResetOtp(normalizedPhone);
-            } catch (RuntimeException ex) {
-                log.warn("[auth] forgot-password otp dispatch failed phone={} reason={}", normalizedPhone, ex.getMessage());
-                return new VerificationStatusResponse("Account exists, but we could not send OTP right now. Please try again.");
-            }
-        }
-
-        return new VerificationStatusResponse(GENERIC_FORGOT_PASSWORD_OTP_MESSAGE);
+        emailPasswordRecoveryService.requestOtp(request.email()).exceptionally(EmailPasswordRecoveryService::deliveryFailed);
+        return new VerificationStatusResponse(EmailPasswordRecoveryService.REQUEST_MESSAGE);
     }
 
-    @Transactional
+    // Recovery owns the transaction so failed OTP attempts are committed, not rolled back here.
     public VerificationStatusResponse resetPasswordWithOtp(ResetPasswordWithOtpRequest request) {
-        String normalizedPhone = normalizePhoneNumber(request.phoneNumber());
-
-        User user = userRepository.findByPhoneNumber(normalizedPhone)
-                .orElseThrow(() -> new InvalidOtpException("Invalid phone number or OTP code"));
-
-        boolean approved = otpService.verifyPasswordResetOtp(normalizedPhone, request.code().trim());
-
-        if (!approved) {
-            throw new InvalidOtpException("Invalid or expired OTP code");
-        }
-
-        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        userRepository.save(user);
-
-        return new VerificationStatusResponse("Password reset complete");
+        return emailPasswordRecoveryService.resetWithOtp(request.email(), request.code(), request.newPassword());
     }
 
     @Transactional(readOnly = true)
@@ -1179,41 +1142,6 @@ public class AuthService {
         if (schoolRegistration != null && !hasAdminRole && schoolRegistration.getStatus() == SchoolStatus.SUSPENDED) {
             throw new InvalidCredentialsException("School account is suspended.");
         }
-    }
-
-    private Optional<User> findUserByAccountIdentifier(String identifier) {
-        String normalized = trimToNull(identifier);
-
-        if (normalized == null) {
-            return Optional.empty();
-        }
-
-        return Optional.ofNullable(resolveOptionalUserIdentifier(normalized));
-    }
-
-    private User resolveOptionalUserIdentifier(String identifier) {
-        if (identifier.contains("@")) {
-            return findUserByEmail(identifier).orElse(null);
-        }
-
-        User byUsername = userRepository.findByUsernameIgnoreCase(identifier).orElse(null);
-        if (byUsername != null) {
-            return byUsername;
-        }
-
-        String normalizedPhone = tryNormalizePhoneNumber(identifier);
-
-        if (normalizedPhone != null) {
-            return userRepository.findByPhoneNumber(normalizedPhone).orElse(null);
-        }
-
-        List<User> localPartMatches = userRepository.findAllByEmailLocalPart(identifier.toLowerCase(Locale.ROOT));
-
-        if (localPartMatches.size() == 1) {
-            return localPartMatches.getFirst();
-        }
-
-        return null;
     }
 
     private Optional<User> findUserByEmail(String email) {

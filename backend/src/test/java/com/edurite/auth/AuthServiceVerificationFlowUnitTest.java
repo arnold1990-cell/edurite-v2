@@ -162,6 +162,9 @@ class AuthServiceVerificationFlowUnitTest {
 
     @Test
     void registrationRequiresEmailVerificationWithoutIssuingSession() {
+        var emails = org.mockito.Mockito.mock(com.edurite.auth.service.EmailVerificationService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "emailVerificationService", emails);
+        when(emails.send(any(User.class))).thenReturn(true);
         String email = "student@example.com";
         String phone = "+26770000000";
         Role studentRole = new Role();
@@ -183,7 +186,7 @@ class AuthServiceVerificationFlowUnitTest {
         RegistrationResponse response = authService.registerStudent(studentRequest(email, phone));
 
         assertThat(response.verificationRequired()).isTrue();
-        assertThat(response.message()).contains("verification email");
+        assertThat(response.message()).contains("Check your email");
         assertThat(response.accessToken()).isNull();
 
         ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
@@ -194,7 +197,30 @@ class AuthServiceVerificationFlowUnitTest {
         assertThat(createdUser.getPhoneNumber()).isEqualTo(phone);
         verify(otpService, never()).sendVerificationOtp(phone);
         assertThat(createdUser.isEmailVerificationRequired()).isTrue();
+        verify(emails).send(createdUser);
         verify(subscriptionService, times(1)).initializeStudentTrialIfAbsent(any(UUID.class));
+    }
+
+    @Test
+    void companyRegistrationSendsEmailAndPreservesPendingApprovalAndRole() {
+        var emails = org.mockito.Mockito.mock(com.edurite.auth.service.EmailVerificationService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "emailVerificationService", emails);
+        when(emails.send(any(User.class))).thenReturn(true);
+        Role role = new Role(); role.setName("ROLE_COMPANY");
+        when(roleRepository.findByName("ROLE_COMPANY")).thenReturn(Optional.of(role));
+        when(passwordEncoder.encode(anyString())).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(i -> {
+            User value = i.getArgument(0); if (value.getId() == null) value.setId(UUID.randomUUID()); return value;
+        });
+        var response = authService.registerCompany(new com.edurite.auth.dto.CompanyRegisterRequest(
+            "Example Company", "REG-001", null, "company@example.com", null, "+26770000088", "Contact", null, null, null, true, null, "Company@123"));
+        var sent = ArgumentCaptor.forClass(User.class); verify(emails).send(sent.capture());
+        assertThat(sent.getValue().getRoles()).extracting(Role::getName).containsExactly("ROLE_COMPANY");
+        assertThat(sent.getValue().isEmailVerificationRequired()).isTrue();
+        assertThat(response.verificationRequired()).isTrue(); assertThat(response.accessToken()).isNull();
+        var profile = ArgumentCaptor.forClass(CompanyProfile.class); verify(companyProfileRepository).save(profile.capture());
+        assertThat(profile.getValue().getStatus()).isEqualTo(CompanyApprovalStatus.PENDING);
+        verify(otpService, never()).sendVerificationOtp(anyString());
     }
 
     @Test
@@ -579,65 +605,83 @@ class AuthServiceVerificationFlowUnitTest {
     }
 
     @Test
-    void forgotPasswordRequestSendsOtpForExistingAccountIdentifier() {
-        User user = activeStudent("forgot@example.com", "+26770000020");
-
-        when(userRepository.findByEmailIgnoreCase("forgot@example.com")).thenReturn(Optional.of(user));
-
-        VerificationStatusResponse response = authService.requestPasswordResetOtp(new ForgotPasswordOtpRequest("forgot@example.com", null));
-
-        assertThat(response.message()).contains("If the account exists");
-        verify(otpService, times(1)).sendPasswordResetOtp("+26770000020");
+    void forgotPasswordEmailIdentifierUsesEmailRecoveryWithoutPhoneLookup() {
+        var recovery = org.mockito.Mockito.mock(com.edurite.auth.service.EmailPasswordRecoveryService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "emailPasswordRecoveryService", recovery);
+        when(recovery.requestOtp("forgot@example.com")).thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null));
+        VerificationStatusResponse response = authService.requestPasswordResetOtp(new ForgotPasswordOtpRequest("forgot@example.com"));
+        assertThat(response.message()).isEqualTo(com.edurite.auth.service.EmailPasswordRecoveryService.REQUEST_MESSAGE);
+        verify(recovery).requestOtp("forgot@example.com");
+        verify(otpService, never()).sendPasswordResetOtp(anyString());
+        verify(userRepository, never()).findByPhoneNumber(anyString());
     }
 
     @Test
-    void resetPasswordSucceedsWhenOtpIsValid() {
-        User user = activeStudent("reset@example.com", "+26770000021");
-
-        when(userRepository.findByPhoneNumber("+26770000021")).thenReturn(Optional.of(user));
-        when(otpService.verifyPasswordResetOtp("+26770000021", "654321")).thenReturn(true);
-        when(passwordEncoder.encode("NewStrong@123")).thenReturn("encoded-password");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        VerificationStatusResponse response = authService.resetPasswordWithOtp(
-                new ResetPasswordWithOtpRequest("+26770000021", "654321", "NewStrong@123")
-        );
-
-        assertThat(response.message()).contains("Password reset complete");
-        assertThat(user.getPasswordHash()).isEqualTo("encoded-password");
-    }
-
-    @Test
-    void passwordResetChangesPasswordAndLoginUsesNewPasswordOnly() {
-        String email = "reset-login@example.com";
-        User user = activeStudent(email, "+26770000023");
-
-        when(userRepository.findByPhoneNumber("+26770000023")).thenReturn(Optional.of(user));
-        when(otpService.verifyPasswordResetOtp("+26770000023", "654321")).thenReturn(true);
-        when(passwordEncoder.encode("NewStrong@123")).thenReturn("new-encoded-password");
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        VerificationStatusResponse response = authService.resetPasswordWithOtp(
-                new ResetPasswordWithOtpRequest("+26770000023", "654321", "NewStrong@123")
-        );
-
-        assertThat(response.message()).contains("Password reset complete");
-        assertThat(user.getPasswordHash()).isEqualTo("new-encoded-password");
-
+    void emailPasswordResetSupportsLoginUsingNewPasswordOnly() {
+        String email = "email-reset-login@example.com";
+        User user = activeStudent(email, null);
+        var encoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4);
+        user.setPasswordHash(encoder.encode("OldStrong@123"));
+        var records = org.mockito.Mockito.mock(com.edurite.auth.repository.EmailPasswordResetRepository.class);
+        var ses = org.mockito.Mockito.mock(software.amazon.awssdk.services.sesv2.SesV2Client.class);
+        var record = new com.edurite.auth.entity.EmailPasswordReset(); record.setUserId(user.getId());
+        when(userRepository.lockForEmailVerification(email)).thenReturn(Optional.of(user));
+        when(records.findByUserId(user.getId())).thenReturn(Optional.of(record));
+        var recovery = new com.edurite.auth.service.EmailPasswordRecoveryService(userRepository, records, encoder, ses, "info@edurite.co.za");
+        recovery.requestOtp(email);
+        var sent = ArgumentCaptor.forClass(software.amazon.awssdk.services.sesv2.model.SendEmailRequest.class);
+        verify(ses).sendEmail(sent.capture());
+        String code = sent.getValue().content().simple().body().text().data().split("code is: ")[1].substring(0, 6);
+        String token = recovery.verify(email, code);
+        recovery.reset(email, token, "NewStrong@123");
         when(userRepository.findByEmailIgnoreCase(email)).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("OldStrong@123", "new-encoded-password")).thenReturn(false);
-        when(passwordEncoder.matches("NewStrong@123", "new-encoded-password")).thenReturn(true);
+        when(passwordEncoder.matches(anyString(), anyString())).thenAnswer(i -> encoder.matches(i.getArgument(0), i.getArgument(1)));
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArgument(0));
         when(companyProfileRepository.findByUserId(user.getId())).thenReturn(Optional.empty());
         when(studentProfileRepository.findByUserId(user.getId())).thenReturn(Optional.empty());
         when(jwtService.generateAccessToken(eq(user), any(), eq(null), eq("BASIC"))).thenReturn("access-token");
         when(jwtService.generateRefreshToken(user)).thenReturn("refresh-token");
         when(jwtService.accessTokenExpirationSeconds()).thenReturn(3600L);
+        assertThatThrownBy(() -> authService.login(new com.edurite.auth.dto.LoginRequest(email, "OldStrong@123"))).isInstanceOf(InvalidCredentialsException.class);
+        assertThat(authService.login(new com.edurite.auth.dto.LoginRequest(email, "NewStrong@123")).accessToken()).isEqualTo("access-token");
+    }
 
-        assertThatThrownBy(() -> authService.login(new com.edurite.auth.dto.LoginRequest(email, "OldStrong@123")))
-                .isInstanceOf(InvalidCredentialsException.class);
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"ROLE_STUDENT", "ROLE_COMPANY", "ROLE_SCHOOL_ADMIN", "ROLE_TEACHER", "ROLE_SCHOOL_STUDENT", "ROLE_ADMIN", "ROLE_DISTRICT_ADMIN", "ROLE_DISTRICT_DIRECTOR", "ROLE_CIRCUIT_MANAGER", "ROLE_SUBJECT_ADVISOR", "ROLE_SUPER_ADMIN"})
+    void emailResetSupportsExistingRolesWithoutPhone(String role) {
+        User user = activeUser("reset-role@example.com", null, role);
+        String code = prepareEmailRecovery(user);
+        var response = authService.resetPasswordWithOtp(new ResetPasswordWithOtpRequest(user.getEmail(), code, "NewStrong@123"));
+        assertThat(response.message()).contains("Password reset complete");
+        assertThat(new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().matches("NewStrong@123", user.getPasswordHash())).isTrue();
+        assertThat(user.getTokenVersion()).isEqualTo(1);
+        assertThat(user.getRoles()).extracting(Role::getName).containsExactly(role);
+        verify(otpService, never()).verifyPasswordResetOtp(anyString(), anyString());
+        assertThatThrownBy(() -> authService.resetPasswordWithOtp(new ResetPasswordWithOtpRequest(user.getEmail(), code, "Another@123")))
+                .isInstanceOf(InvalidOtpException.class);
+    }
 
-        AuthResponse loginResponse = authService.login(new com.edurite.auth.dto.LoginRequest(email, "NewStrong@123"));
-        assertThat(loginResponse.accessToken()).isEqualTo("access-token");
+    @Test
+    void emailResetAlsoWorksWhenAccountHasPhoneNumber() {
+        User user = activeStudent("with-phone@example.com", "+26770000023");
+        String code = prepareEmailRecovery(user);
+        authService.resetPasswordWithOtp(new ResetPasswordWithOtpRequest(user.getEmail(), code, "NewStrong@123"));
+        assertThat(user.getPhoneNumber()).isEqualTo("+26770000023");
+        verify(otpService, never()).sendPasswordResetOtp(anyString());
+    }
+
+    @Test
+    void emailResetRejectsOldRefreshTokenAndAllowsNewlyIssuedToken() {
+        User user = activeStudent("revoke-refresh@example.com", null);
+        String code = prepareEmailRecovery(user);
+        var realJwt = new com.edurite.security.service.JwtService("test-only-secret-that-is-at-least-32-bytes-long", 3600, 604800);
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "jwtService", realJwt);
+        String previous = realJwt.generateRefreshToken(user);
+        authService.resetPasswordWithOtp(new ResetPasswordWithOtpRequest(user.getEmail(), code, "NewStrong@123"));
+        when(userRepository.findByEmailIgnoreCase(user.getEmail())).thenReturn(Optional.of(user));
+        assertThatThrownBy(() -> authService.refresh(previous)).isInstanceOf(InvalidCredentialsException.class);
+        String fresh = realJwt.generateRefreshToken(user);
+        assertThat(authService.refresh(fresh).accessToken()).isNotBlank();
     }
 
     @Test
@@ -668,17 +712,33 @@ class AuthServiceVerificationFlowUnitTest {
     }
 
     @Test
-    void resetPasswordFailsWhenOtpIsInvalid() {
-        User user = activeStudent("reset-invalid@example.com", "+26770000022");
-
-        when(userRepository.findByPhoneNumber("+26770000022")).thenReturn(Optional.of(user));
-        when(otpService.verifyPasswordResetOtp("+26770000022", "111111")).thenReturn(false);
-
+    void resetPasswordFailsWhenEmailOtpIsInvalid() {
+        User user = activeStudent("reset-invalid@example.com", null);
+        String code = prepareEmailRecovery(user);
+        String wrong = code.equals("000000") ? "111111" : "000000";
+        String originalHash = user.getPasswordHash();
         assertThatThrownBy(() -> authService.resetPasswordWithOtp(
-                new ResetPasswordWithOtpRequest("+26770000022", "111111", "NewStrong@123")
-        ))
-                .isInstanceOf(InvalidOtpException.class)
-                .hasMessageContaining("Invalid or expired OTP code");
+                new ResetPasswordWithOtpRequest(user.getEmail(), wrong, "NewStrong@123")))
+                .isInstanceOf(InvalidOtpException.class).hasMessageContaining("Invalid or expired");
+        assertThat(user.getPasswordHash()).isEqualTo(originalHash);
+        assertThat(user.getTokenVersion()).isZero();
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    private String prepareEmailRecovery(User user) {
+        var encoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(4);
+        user.setPasswordHash(encoder.encode("OldStrong@123"));
+        var records = org.mockito.Mockito.mock(com.edurite.auth.repository.EmailPasswordResetRepository.class);
+        var ses = org.mockito.Mockito.mock(software.amazon.awssdk.services.sesv2.SesV2Client.class);
+        var record = new com.edurite.auth.entity.EmailPasswordReset(); record.setUserId(user.getId());
+        when(userRepository.lockForEmailVerification(user.getEmail())).thenReturn(Optional.of(user));
+        when(records.findByUserId(user.getId())).thenReturn(Optional.of(record));
+        var recovery = new com.edurite.auth.service.EmailPasswordRecoveryService(userRepository, records, encoder, ses, "info@edurite.co.za");
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "emailPasswordRecoveryService", recovery);
+        recovery.requestOtp(user.getEmail());
+        var sent = ArgumentCaptor.forClass(software.amazon.awssdk.services.sesv2.model.SendEmailRequest.class);
+        verify(ses).sendEmail(sent.capture());
+        return sent.getValue().content().simple().body().text().data().split("code is: ")[1].substring(0, 6);
     }
 
     private StudentRegisterRequest studentRequest(String email, String phone) {

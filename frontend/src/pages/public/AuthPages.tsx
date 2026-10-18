@@ -1812,6 +1812,10 @@ export const RegisterSchoolPage = () => {
                 return;
               }
               const response = await registerSchool(data);
+              if (response.verificationRequired) {
+                navigate(verificationNoticePath(response.email || data.schoolEmail, '/school/dashboard'), { replace: true });
+                return;
+              }
               navigate(getDashboardPathForUser(response.user) ?? '/school/dashboard', { replace: true });
             } catch (error) {
               setServerError(error instanceof Error ? error.message : 'Unable to create school registration request.');
@@ -1904,7 +1908,7 @@ export const RegisterCompanyPage = () => {
             setServerError(null);
             const response = await registerCompany({ ...data, consentVersion: data.consentVersion || POPIA_CONSENT_VERSION });
             if (response.verificationRequired) {
-              navigate(`/auth/verify-otp/notice?phone=${encodeURIComponent(data.mobileNumber)}&role=COMPANY`, {
+              navigate(verificationNoticePath(response.email || data.officialEmail, '/company/dashboard'), {
                 replace: true,
                 state: { message: response.message },
               });
@@ -2094,145 +2098,100 @@ const LegacyVerificationPage = () => {
 
 export const ForgotPasswordPage = () => {
   const navigate = useNavigate();
-  const { register, handleSubmit } = useForm<{ accountIdentifier: string }>();
-  const [message, setMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [requestedPhoneNumber, setRequestedPhoneNumber] = useState('');
   const location = useLocation();
   const role = useMemo(() => resolveRoleFromPath(location.pathname), [location.pathname]);
-  const looksLikePhoneNumber = (value: string) => /^[+\d()\s-]{8,}$/.test(value.trim());
-
-  return (
-    <AuthShell role={role} mode={resolveModeFromPath(location.pathname)}>
-      <AuthHeader role={role} mode="login" />
-      <form className="mt-8 space-y-4" onSubmit={handleSubmit(async ({ accountIdentifier }) => {
-        const safeIdentifier = accountIdentifier.trim();
-        setMessage('');
-        setErrorMessage('');
-        if (!safeIdentifier) {
-          setErrorMessage('Enter your email, username, or registered phone number.');
-          return;
-        }
-
-        try {
-          const response = await authService.requestForgotPasswordOtp({
-            accountIdentifier: safeIdentifier,
-            phoneNumber: looksLikePhoneNumber(safeIdentifier) ? safeIdentifier : undefined,
-          });
-          const responseMessage = response.message || 'If the account exists, a reset OTP has been sent.';
-          const dispatchFailed = responseMessage.toLowerCase().includes('could not send');
-          if (dispatchFailed) {
-            setErrorMessage(responseMessage);
-            return;
-          }
-          setRequestedPhoneNumber(looksLikePhoneNumber(safeIdentifier) ? safeIdentifier : '');
-          setMessage(responseMessage);
-        } catch (error) {
-          setErrorMessage(error instanceof Error ? error.message : 'Unable to send reset OTP right now.');
-        }
-      })}>
-        <label className="text-sm font-medium text-slate-700">
-          Email, username, or phone number
-          <Input
-            className="mt-2 rounded-2xl border-slate-200 bg-slate-50 px-4 py-3.5"
-            placeholder="Enter your email, username, or +26770000000"
-            {...register('accountIdentifier', { required: true })}
-          />
-        </label>
-        <Button type="submit" className="w-full rounded-2xl px-6 py-3.5 text-sm shadow-lg shadow-primary-600/20">Send reset OTP</Button>
-        {errorMessage ? <ErrorState message={errorMessage} /> : null}
-        {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-        <p className="text-xs text-slate-500">
-          If the OTP is sent successfully, use your registered phone number on the next step to complete the reset.
-        </p>
-        {requestedPhoneNumber ? (
-          <Button
-            type="button"
-            onClick={() => navigate(`${getResetPasswordPath(role)}?phone=${encodeURIComponent(requestedPhoneNumber)}`, { replace: true })}
-            className="w-full rounded-2xl px-6 py-3.5 text-sm"
-          >
-            I received OTP, continue
-          </Button>
-        ) : message ? (
-          <Button
-            type="button"
-            onClick={() => navigate(getResetPasswordPath(role), { replace: true })}
-            className="w-full rounded-2xl px-6 py-3.5 text-sm"
-          >
-            I received OTP, continue
-          </Button>
-        ) : null}
-      </form>
-    </AuthShell>
-  );
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  return <AuthShell role={role} mode="login"><AuthHeader role={role} mode="login" />
+    <form className="mt-8 space-y-4" onSubmit={async event => {
+      event.preventDefault(); setError(''); setBusy(true);
+      try {
+        await authService.requestEmailPasswordCode(email.trim());
+        navigate(getResetPasswordPath(role), { state: { email: email.trim() } });
+      } catch (e) { setError(e instanceof Error ? e.message : 'Unable to request a code. Please try again.'); }
+      finally { setBusy(false); }
+    }}>
+      <h2 className="text-xl font-semibold text-slate-900">Forgot password?</h2>
+      <p className="text-sm text-slate-600">Enter your registered email address.<br />We will send you a verification code.</p>
+      <label className="block text-sm font-medium text-slate-700">Email address
+        <Input type="email" autoComplete="email" required maxLength={255} value={email} onChange={e => setEmail(e.target.value)} className="mt-2 rounded-2xl bg-slate-50 px-4 py-3.5" />
+      </label>
+      <Button type="submit" disabled={busy} className="w-full rounded-2xl px-6 py-3.5">{busy ? 'Sending...' : 'Send verification code'}</Button>
+      {error && <ErrorState message={error} />}
+      <Link className="block text-sm font-semibold text-primary-600" to={getResetPasswordLoginPath(role)}>Back to sign in</Link>
+    </form>
+  </AuthShell>;
 };
 
 export const ResetPasswordPage = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const role = useMemo(() => resolveRoleFromPath(location.pathname), [location.pathname]);
-  const phoneFromQuery = searchParams.get('phone') ?? '';
-  const { register, handleSubmit } = useForm<{ phoneNumber: string; code: string; newPassword: string; confirmPassword: string }>({
-    defaultValues: {
-      phoneNumber: phoneFromQuery,
-      code: '',
-      newPassword: '',
-      confirmPassword: '',
-    },
-  });
-  const [message, setMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-
-  return (
-    <AuthShell role={role} mode="login">
-      <AuthHeader role={role} mode="login" />
-      <form className="mt-8 space-y-4" onSubmit={handleSubmit(async ({ phoneNumber, code, newPassword, confirmPassword }) => {
-        setMessage('');
-        setErrorMessage('');
-        const safePhoneNumber = phoneNumber.trim();
-        const safeCode = code.trim();
-
-        if (!safePhoneNumber) {
-          setErrorMessage('Phone number is required.');
-          return;
-        }
-        if (!safeCode) {
-          setErrorMessage('OTP code is required.');
-          return;
-        }
-        if (newPassword !== confirmPassword) {
-          setErrorMessage('Passwords do not match.');
-          return;
-        }
-
+  const [email] = useState<string>(() => (location.state as { email?: string } | null)?.email || '');
+  // Reset credentials stay in memory and disappear when this page is closed or refreshed.
+  const [resetToken, setResetToken] = useState('');
+  const [code, setCode] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('If the account is eligible, a code will arrive by email. Check your spam folder. Codes expire after 10 minutes.');
+  const [busy, setBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(60);
+  const [done, setDone] = useState(false);
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown(value => value - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
+  useEffect(() => {
+    if (!done) return;
+    const timer = setTimeout(() => navigate(getResetPasswordLoginPath(role), { replace: true }), 2000);
+    return () => clearTimeout(timer);
+  }, [done, navigate, role]);
+  if (!email) return <Navigate to={getForgotPasswordPath(role)} replace />;
+  const resend = async () => {
+    setBusy(true); setError('');
+    try {
+      const response = await authService.requestEmailPasswordCode(email);
+      setMessage(response.message); setCooldown(60); setCode(''); setResetToken('');
+    } catch (e) { setError(e instanceof Error ? e.message : 'Unable to resend code.'); }
+    finally { setBusy(false); }
+  };
+  return <AuthShell role={role} mode="login"><AuthHeader role={role} mode="login" />
+    <div className="mt-8 space-y-4">
+      <h2 className="text-xl font-semibold text-slate-900">{done ? 'Password reset successful' : resetToken ? 'Choose a new password' : 'Enter verification code'}</h2>
+      <p role="status" className="text-sm text-slate-600">{message}</p>
+      {!done && <form className="space-y-4" onSubmit={async event => {
+        event.preventDefault(); setBusy(true); setError('');
         try {
-          const response = await authService.resetPasswordWithOtp({ phoneNumber: safePhoneNumber, code: safeCode, newPassword });
-          setMessage(response.message || 'Password reset complete. Redirecting to sign in...');
-          setTimeout(() => navigate(getResetPasswordLoginPath(role), { replace: true }), 1500);
-        } catch (error) {
-          setErrorMessage(error instanceof Error ? error.message : 'Unable to reset password.');
-        }
-      })}>
-        <label className="text-sm font-medium text-slate-700">
-          Phone number
-          <Input type="tel" className="mt-2 rounded-2xl border-slate-200 bg-slate-50 px-4 py-3.5" {...register('phoneNumber', { required: true })} />
-        </label>
-        <label className="text-sm font-medium text-slate-700">
-          OTP code
-          <Input className="mt-2 rounded-2xl border-slate-200 bg-slate-50 px-4 py-3.5" {...register('code', { required: true })} />
-        </label>
-        <label className="text-sm font-medium text-slate-700">New password<Input type="password" className="mt-2 rounded-2xl border-slate-200 bg-slate-50 px-4 py-3.5" {...register('newPassword')} /></label>
-        <label className="text-sm font-medium text-slate-700">Confirm password<Input type="password" className="mt-2 rounded-2xl border-slate-200 bg-slate-50 px-4 py-3.5" {...register('confirmPassword')} /></label>
-        <Button type="submit" className="w-full rounded-2xl px-6 py-3.5 text-sm shadow-lg shadow-primary-600/20">Reset password</Button>
-        {errorMessage ? <ErrorState message={errorMessage} /> : null}
-        {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
-      </form>
-    </AuthShell>
-  );
+          if (!resetToken) {
+            const response = await authService.verifyEmailPasswordCode(email, code);
+            setResetToken(response.resetToken); setCode(''); setMessage('Code verified. Enter your new password.');
+          } else {
+            if (password !== confirm) { setError('Passwords do not match.'); return; }
+            if (new TextEncoder().encode(password).length > 72) { setError('Password must be at most 72 bytes.'); return; }
+            const response = await authService.resetEmailPassword(email, resetToken, password, confirm);
+            setResetToken(''); setPassword(''); setConfirm(''); setDone(true); setMessage(response.message + ' Redirecting to sign in...');
+          }
+        } catch (e) { setError(e instanceof Error ? e.message : 'Unable to complete password reset.'); }
+        finally { setBusy(false); }
+      }}>
+        {!resetToken ? <label className="block text-sm font-medium text-slate-700">Six-digit code
+          <Input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" minLength={6} maxLength={6} required value={code} onChange={e => setCode(e.target.value)} className="mt-2 rounded-2xl bg-slate-50 px-4 py-3.5" />
+        </label> : <>
+          <p className="text-xs text-slate-500">Use 8?72 characters. Your reset session expires in 10 minutes.</p>
+          <label className="block text-sm font-medium text-slate-700">New password<Input type="password" autoComplete="new-password" required minLength={8} maxLength={72} value={password} onChange={e => setPassword(e.target.value)} className="mt-2 rounded-2xl bg-slate-50 px-4 py-3.5" /></label>
+          <label className="block text-sm font-medium text-slate-700">Confirm password<Input type="password" autoComplete="new-password" required minLength={8} maxLength={72} value={confirm} onChange={e => setConfirm(e.target.value)} className="mt-2 rounded-2xl bg-slate-50 px-4 py-3.5" /></label>
+        </>}
+        <Button type="submit" disabled={busy} className="w-full rounded-2xl px-6 py-3.5">{busy ? 'Please wait...' : resetToken ? 'Reset password' : 'Verify code'}</Button>
+        <Button type="button" disabled={busy || cooldown > 0} onClick={resend} className="w-full rounded-2xl px-6 py-3.5">{cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend OTP'}</Button>
+      </form>}
+      {error && <ErrorState message={error} />}
+      <Link className="block text-sm font-semibold text-primary-600" to={done ? getResetPasswordLoginPath(role) : getForgotPasswordPath(role)}>{done ? 'Go to sign in' : 'Use another email address'}</Link>
+    </div>
+  </AuthShell>;
 };
-
-
 
 function StudentEmailVerification() {
   const [params] = useSearchParams();
@@ -2249,7 +2208,7 @@ function StudentEmailVerification() {
       setMessage(result.message); if (verify) {
         setVerified(true);
         const next = verificationDestination(email, params.get('next'));
-        navigate('/auth/login', { replace: true, state: { from: { pathname: next }, emailVerified: true } });
+        navigate(getResetPasswordLoginPath(resolveRoleFromPath(next)), { replace: true, state: { from: { pathname: next }, emailVerified: true } });
       }
     } catch (e) { setError(e instanceof Error ? e.message : 'Unable to verify. Request a new link.'); }
     finally { setBusy(false); }

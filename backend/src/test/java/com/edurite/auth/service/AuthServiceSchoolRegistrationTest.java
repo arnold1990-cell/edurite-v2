@@ -123,6 +123,9 @@ class AuthServiceSchoolRegistrationTest {
 
     @Test
     void registerSchoolCreatesPendingDistrictApprovalRequest() {
+        var emails = org.mockito.Mockito.mock(EmailVerificationService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "emailVerificationService", emails);
+        when(emails.send(any(User.class))).thenReturn(true);
         PlatformSetting setting = new PlatformSetting();
         Province province = new Province();
         province.setId(UUID.randomUUID());
@@ -179,7 +182,11 @@ class AuthServiceSchoolRegistrationTest {
         assertThat(captor.getValue().getEmisNumber()).isEqualTo("EMIS-001");
         assertThat(captor.getValue().getDistrictId()).isEqualTo(district.getId());
         assertThat(captor.getValue().getCircuitId()).isEqualTo(circuit.getId());
-        assertThat(response.verificationRequired()).isFalse();
+        assertThat(response.verificationRequired()).isTrue();
+        assertThat(response.accessToken()).isNull();
+        var sent = ArgumentCaptor.forClass(User.class); verify(emails).send(sent.capture());
+        assertThat(sent.getValue().getRoles()).extracting(Role::getName).containsExactly("ROLE_SCHOOL_ADMIN");
+        assertThat(sent.getValue().isEmailVerified()).isFalse();
     }
 
     @Test

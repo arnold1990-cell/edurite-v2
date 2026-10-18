@@ -39,7 +39,7 @@ public class EmailVerificationService {
     }
 
     public boolean send(User user) {
-        if (!user.isEmailVerificationRequired()) return false;
+        if (user.isEmailVerified() && !user.isEmailVerificationRequired()) return false;
         if (user.getEmailVerificationSentAt() != null && user.getEmailVerificationSentAt().isAfter(OffsetDateTime.now().minusMinutes(1))) return true;
         if (from.isBlank()) return false;
         byte[] bytes = new byte[32];
@@ -47,7 +47,7 @@ public class EmailVerificationService {
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
         String link = UriComponentsBuilder.fromUriString(baseUrl).path("/verify-email")
                 .queryParam("email", user.getEmail()).queryParam("token", token).build().encode().toUriString();
-        String body = "Confirm your email to access EduRite and your 14-Day Free Trial.\n\n" + link
+        String body = "Confirm your email address for your EduRite account.\n\n" + link
                 + "\n\nThis single-use link expires in 30 minutes. If you did not register, ignore this email.";
         SendEmailRequest request = SendEmailRequest.builder()
                 .fromEmailAddress(from)
@@ -80,17 +80,15 @@ public class EmailVerificationService {
     public VerificationStatusResponse resend(String email) {
         User user = users.lockForEmailVerification(email.trim().toLowerCase(Locale.ROOT)).orElse(null);
         if (user != null && user.getStatus() == UserStatus.ACTIVE && user.getDeletedAt() == null) {
-            if (user.isEmailVerificationRequired() && !send(user)) {
-                throw new ResourceConflictException("Verification email could not be sent. Please try again later or contact support.");
-            }
+            send(user);
         }
         return new VerificationStatusResponse("If verification is needed, an email has been sent. Check your inbox and spam folder.");
     }
 
     @Transactional
     public VerificationStatusResponse verify(String email, String token) {
-        User user = users.lockForEmailVerification(email.trim()).orElseThrow(() -> new ResourceConflictException("Invalid or expired verification link."));
-        if (!user.isEmailVerificationRequired() || user.getDeletedAt() != null || user.getStatus() != UserStatus.ACTIVE
+        User user = users.lockForEmailVerification(email.trim().toLowerCase(Locale.ROOT)).orElseThrow(() -> new ResourceConflictException("Invalid or expired verification link."));
+        if ((user.isEmailVerified() && !user.isEmailVerificationRequired()) || user.getDeletedAt() != null || user.getStatus() != UserStatus.ACTIVE
                 || user.getEmailVerificationHash() == null || user.getEmailVerificationExpiresAt() == null
                 || !user.getEmailVerificationExpiresAt().isAfter(OffsetDateTime.now())
                 || !MessageDigest.isEqual(user.getEmailVerificationHash().getBytes(StandardCharsets.UTF_8), hash(token).getBytes(StandardCharsets.UTF_8))) {
@@ -99,7 +97,7 @@ public class EmailVerificationService {
         user.setEmailVerified(true); user.setEmailVerificationRequired(false);
         user.setEmailVerificationHash(null); user.setEmailVerificationExpiresAt(null);
         users.save(user);
-        return new VerificationStatusResponse("Email verified. You can now sign in to your Student Portal.");
+        return new VerificationStatusResponse("Email verified. You can now sign in.");
     }
 
     static String hash(String token) {

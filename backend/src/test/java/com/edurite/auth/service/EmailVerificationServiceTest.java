@@ -55,7 +55,7 @@ class EmailVerificationServiceTest {
         user.setEmailVerificationSentAt(previous);
         user.setEmailVerificationExpiresAt(previous.plusMinutes(30));
         when(ses.sendEmail(any(SendEmailRequest.class))).thenThrow(SesV2Exception.builder().statusCode(403).build());
-        assertThatThrownBy(() -> service.resend(user.getEmail())).hasMessageContaining("could not be sent");
+        assertThat(service.resend(user.getEmail()).message()).startsWith("If verification is needed");
         assertThat(user.getEmailVerificationHash()).isEqualTo("previous-hash");
         assertThat(user.getEmailVerificationSentAt()).isEqualTo(previous);
         assertThat(user.getEmailVerificationExpiresAt()).isEqualTo(previous.plusMinutes(30));
@@ -94,6 +94,18 @@ class EmailVerificationServiceTest {
         assertThatThrownBy(() -> service.verify("missing@example.com", "secret")).hasMessageContaining("Invalid");
         assertThat(user.isEmailVerified()).isFalse();
         verify(users, never()).save(any());
+    }
+
+    @Test void legacyUnverifiedAccountsCanResendAndVerifyWithoutChangingRoles() {
+        User user = pending(); user.setEmailVerificationRequired(false);
+        Role role = new Role(); role.setName("ROLE_COMPANY"); user.getRoles().add(role);
+        service.resend(user.getEmail());
+        var captor = ArgumentCaptor.forClass(SendEmailRequest.class);
+        verify(ses).sendEmail(captor.capture());
+        String token = captor.getValue().content().simple().body().text().data().split("token=")[1].split("\\s")[0];
+        service.verify("STUDENT@EXAMPLE.COM", token);
+        assertThat(user.isEmailVerified()).isTrue();
+        assertThat(user.getRoles()).extracting(Role::getName).containsExactly("ROLE_COMPANY");
     }
 
     private User pending() {
