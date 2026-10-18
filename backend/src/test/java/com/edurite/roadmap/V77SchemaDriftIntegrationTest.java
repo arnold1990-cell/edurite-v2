@@ -3,6 +3,7 @@ package com.edurite.roadmap;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import com.edurite.config.LocalV77Reconciliation;
@@ -19,7 +20,7 @@ import static org.assertj.core.api.Assertions.*;
 class V77SchemaDriftIntegrationTest {
     @Test
     void localCallbackPreservesOriginalColumnValuesAndViewDependencies() throws Exception {
-        withV76((connection, schema) -> {
+        withV76((connection, schema, latestVersion) -> {
             UUID id = insertProgramme(connection, schema);
             try (var sql = connection.createStatement()) {
                 sql.execute("ALTER TABLE " + schema + ".career_program_requirements ADD COLUMN qualification_type VARCHAR(120)");
@@ -30,7 +31,7 @@ class V77SchemaDriftIntegrationTest {
             var flyway = localMigrations(schema, new LocalV77Reconciliation());
             flyway.migrate();
             flyway.validate();
-            assertThat(version(connection, schema)).isEqualTo("80");
+            assertThat(version(connection, schema)).isEqualTo(latestVersion);
             try (var sql = connection.createStatement(); var row = sql.executeQuery("SELECT p.qualification_type, "
                     + "p.qualification_type_v77_added, v.qualification_type FROM " + schema
                     + ".career_program_requirements p CROSS JOIN " + schema + ".original_qualification v WHERE p.id='" + id + "'")) {
@@ -50,9 +51,9 @@ class V77SchemaDriftIntegrationTest {
 
     @Test
     void callbackAlsoSupportsFreshDatabase() throws Exception {
-        withV76((connection, schema) -> {
+        withV76((connection, schema, latestVersion) -> {
             localMigrations(schema, new LocalV77Reconciliation()).migrate();
-            assertThat(version(connection, schema)).isEqualTo("80");
+            assertThat(version(connection, schema)).isEqualTo(latestVersion);
             assertThat(columnCount(connection, schema, "qualification_type_v77_added")).isZero();
         });
     }
@@ -62,7 +63,7 @@ class V77SchemaDriftIntegrationTest {
         for (String definition : new String[]{"qualification_type INTEGER", "qualification_type VARCHAR(80)",
                 "qualification_type VARCHAR(120) NOT NULL DEFAULT 'unknown'", "qualification_type_pre_v77 VARCHAR(120)",
                 "qualification_type_v77_added VARCHAR(120)"}) {
-            withV76((connection, schema) -> {
+            withV76((connection, schema, latestVersion) -> {
                 try (var sql = connection.createStatement()) {
                     sql.execute("ALTER TABLE " + schema + ".career_program_requirements ADD COLUMN " + definition);
                 }
@@ -76,7 +77,7 @@ class V77SchemaDriftIntegrationTest {
 
     @Test
     void failureAfterV77RollsBackBothCallbacksAndHistoricalSql() throws Exception {
-        withV76((connection, schema) -> {
+        withV76((connection, schema, latestVersion) -> {
             insertProgramme(connection, schema);
             try (var sql = connection.createStatement()) {
                 sql.execute("ALTER TABLE " + schema + ".career_program_requirements ADD COLUMN qualification_type VARCHAR(120)");
@@ -104,7 +105,7 @@ class V77SchemaDriftIntegrationTest {
             }
             // A retry needs no repair, baseline, history edit or cleanup.
             localMigrations(schema, delegate).migrate();
-            assertThat(version(connection, schema)).isEqualTo("80");
+            assertThat(version(connection, schema)).isEqualTo(latestVersion);
         });
     }
 
@@ -123,11 +124,11 @@ class V77SchemaDriftIntegrationTest {
 
     @Test
     void freshUpgradePreservesProgrammeAndAddsNullableMetadata() throws Exception {
-        withV76((connection, schema) -> {
+        withV76((connection, schema, latestVersion) -> {
             UUID id = insertProgramme(connection, schema);
             migrations(schema, null).migrate();
             migrations(schema, null).validate();
-            assertThat(version(connection, schema)).isEqualTo("80");
+            assertThat(version(connection, schema)).isEqualTo(latestVersion);
             try (var sql = connection.createStatement();
                  var row = sql.executeQuery("SELECT career_name,qualification_name,qualification_type,aps_rule FROM "
                          + schema + ".career_program_requirements WHERE id='" + id + "'")) {
@@ -152,7 +153,7 @@ class V77SchemaDriftIntegrationTest {
     }
 
     private void assertDriftPreserved(String type, String value, String expected) throws Exception {
-        withV76((connection, schema) -> {
+        withV76((connection, schema, latestVersion) -> {
             UUID id = insertProgramme(connection, schema);
             try (var sql = connection.createStatement()) {
                 // Simulated unmanaged DDL and synthetic data in this test's private schema only.
@@ -221,7 +222,11 @@ class V77SchemaDriftIntegrationTest {
             sql.execute("CREATE SCHEMA " + schema);
             try {
                 migrations(schema, "76").migrate();
-                scenario.run(connection, schema);
+                // Resolve the expected destination before the upgrade, independently of its result.
+                String latestVersion = Arrays.stream(migrations(schema, null).info().pending())
+                        .map(migration -> migration.getVersion()).filter(java.util.Objects::nonNull)
+                        .max(java.util.Comparator.naturalOrder()).orElseThrow().getVersion();
+                scenario.run(connection, schema, latestVersion);
             } finally {
                 sql.execute("DROP SCHEMA " + schema + " CASCADE");
             }
@@ -230,6 +235,6 @@ class V77SchemaDriftIntegrationTest {
 
     @FunctionalInterface
     private interface Scenario {
-        void run(Connection connection, String schema) throws Exception;
+        void run(Connection connection, String schema, String latestVersion) throws Exception;
     }
 }

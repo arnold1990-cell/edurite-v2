@@ -1,6 +1,7 @@
 package com.edurite.roadmap;
 
 import java.sql.*;
+import java.util.Arrays;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
@@ -18,8 +19,11 @@ class RoadmapMigrationIntegrationTest {
             statement.execute("CREATE SCHEMA "+schema);
             try {
                 var flyway=Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).locations("classpath:db/migration").load();
+                var latestVersion = Arrays.stream(flyway.info().pending())
+                        .map(migration -> migration.getVersion()).filter(java.util.Objects::nonNull)
+                        .max(java.util.Comparator.naturalOrder()).orElseThrow();
                 flyway.migrate(); flyway.validate();
-                assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("80");
+                assertThat(flyway.info().current().getVersion()).isEqualTo(latestVersion);
                 try(var rows=statement.executeQuery("SELECT count(*) FROM information_schema.columns WHERE table_schema='"+schema+"' AND table_name='saved_career_roadmaps' AND column_name IN ('request_key','study_plan','completed_steps_json')")) {
                     rows.next(); assertThat(rows.getInt(1)).isEqualTo(3);
                 }
