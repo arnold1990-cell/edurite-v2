@@ -50,6 +50,11 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Create isolated email recovery test database
+        env:
+          PGPASSWORD: edurite-ci-only-db-password
+        run: createdb --host=127.0.0.1 --port=5432 --username=postgres recovery_qa
+
       - name: Build backend
         working-directory: backend
         env:
@@ -62,6 +67,9 @@ jobs:
           EDURITE_ACADEMIC_TEST_DB_URL: jdbc:postgresql://127.0.0.1:5432/edurite
           EDURITE_ACADEMIC_TEST_DB_USER: postgres
           EDURITE_ACADEMIC_TEST_DB_PASSWORD: edurite-ci-only-db-password
+          RECOVERY_TEST_JDBC_URL: jdbc:postgresql://127.0.0.1:5432/recovery_qa
+          RECOVERY_TEST_DB_USER: postgres
+          RECOVERY_TEST_DB_PASSWORD: edurite-ci-only-db-password
         run: mvn -B clean verify
 
       - name: Reject missing or unexpectedly skipped tests

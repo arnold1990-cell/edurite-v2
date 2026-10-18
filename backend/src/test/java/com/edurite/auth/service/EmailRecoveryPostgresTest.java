@@ -32,8 +32,8 @@ import software.amazon.awssdk.services.sesv2.model.SendEmailRequest;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
 
-// Opt-in: this test creates fixtures only in the dedicated, disposable local QA database.
-@EnabledIfEnvironmentVariable(named = "RECOVERY_TEST_JDBC_URL", matches = "jdbc:postgresql://127\\.0\\.0\\.1:55439/recovery_qa(_[a-z0-9]+)?")
+// This test creates fixtures only in a dedicated, disposable loopback QA database.
+@EnabledIfEnvironmentVariable(named = "RECOVERY_TEST_JDBC_URL", matches = "jdbc:postgresql://127\\.0\\.0\\.1:[0-9]+/recovery_qa(_[a-z0-9]+)?")
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = EmailRecoveryPostgresTest.Config.class)
 class EmailRecoveryPostgresTest {
@@ -43,7 +43,9 @@ class EmailRecoveryPostgresTest {
         excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = com.edurite.auth.repository.SchoolPasswordResetOtpRepository.class))
     static class Config {
         @Bean DataSource dataSource() {
-            var source = new DriverManagerDataSource(System.getenv("RECOVERY_TEST_JDBC_URL"), "recovery_qa", "");
+            var source = new DriverManagerDataSource(System.getenv("RECOVERY_TEST_JDBC_URL"),
+                System.getenv().getOrDefault("RECOVERY_TEST_DB_USER", "recovery_qa"),
+                System.getenv().getOrDefault("RECOVERY_TEST_DB_PASSWORD", ""));
             var jdbc = new JdbcTemplate(source);
             jdbc.execute("""
                 CREATE TABLE users (
