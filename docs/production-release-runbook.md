@@ -57,6 +57,29 @@ fail closed. New migrations, entity changes, Flyway/configuration/SQL changes an
 schema-related annotations/DDL changes take the migration gate conservatively.
 Other known backend/infrastructure changes take BACKEND_NO_SCHEMA_CHANGE.
 
+### Reviewed CI, test and archived workflow paths
+
+The policy keeps the existing three release classes; it does not introduce a
+no-op release or skip provenance, inventory or schema validation for tooling changes.
+
+| Paths | Policy when no migrations or schema-sensitive edits are pending |
+| --- | --- |
+| `.github/` workflow/configuration files and `scripts/` release/CI tooling and tests | BACKEND_NO_SCHEMA_CHANGE |
+| `backend/src/test/` Java tests | BACKEND_NO_SCHEMA_CHANGE |
+| Tests under `frontend/` | FRONTEND_ONLY when every changed path is under `frontend/` |
+| Exactly `.cicd-backup/ci.yml` and `.cicd-backup/deploy.yml` | BACKEND_NO_SCHEMA_CHANGE, including when mixed with frontend changes |
+
+The two archived workflows were individually reviewed: GitHub Actions does not
+execute them from `.cicd-backup/`, neither application build context includes
+them, and release tooling does not load them. They remain conservatively treated
+as release tooling, rather than ignored. This is an exact-path allowance, not an
+allowance for the `.cicd-backup/` directory or for arbitrary backup files.
+Unreviewed paths still fail closed, with their names included in the error.
+
+Migration inventory changes always take DATABASE_MIGRATION regardless of CI,
+test or backup changes. Existing conservative schema detection (including backend
+SQL, configuration, entity and Flyway paths) also remains in force for tests.
+
 The prepared plan includes the actual container/image inventory. release.py
 rechecks it under the existing host deployment lock immediately before execution.
 A changed host requires a fresh workflow run and classification.

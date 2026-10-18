@@ -59,6 +59,71 @@ class ClassificationTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.classify(['unknown-root-script.sh'])
 
+    def test_reviewed_workflow_backups_use_conservative_backend_policy(self):
+        for path in ['.cicd-backup/ci.yml', '.cicd-backup/deploy.yml']:
+            for changes in ([path], [path, 'frontend/src/app/App.tsx']):
+                with self.subTest(changes=changes):
+                    self.assertEqual(self.classify(changes)['classification'], 'BACKEND_NO_SCHEMA_CHANGE')
+
+    def test_workflow_backups_cannot_hide_pending_migrations(self):
+        changes = ['.cicd-backup/ci.yml', '.cicd-backup/deploy.yml', 'frontend/src/app/App.tsx']
+        self.assertEqual(self.classify(changes, added=True)['classification'], 'DATABASE_MIGRATION')
+
+    def test_ci_and_backend_test_only_changes_use_backend_policy(self):
+        for path in ['.github/workflows/ci.yml', '.github/workflows/deploy.yml',
+                     'scripts/check-test-reports.py', 'scripts/tests/test_classified_release.py',
+                     'backend/src/test/java/com/edurite/auth/service/EmailRecoveryPostgresTest.java',
+                     'backend/src/test/java/com/edurite/roadmap/V77SchemaDriftIntegrationTest.java']:
+            with self.subTest(path=path):
+                self.assertEqual(self.classify([path])['classification'], 'BACKEND_NO_SCHEMA_CHANGE')
+                self.assertEqual(self.classify([path], added=True)['classification'], 'DATABASE_MIGRATION')
+
+    def test_frontend_test_only_changes_follow_frontend_policy(self):
+        changes = ['frontend/src/pages/public/PasswordRecovery.test.tsx',
+                   'frontend/src/services/authService.recovery.test.ts']
+        self.assertEqual(self.classify(changes)['classification'], 'FRONTEND_ONLY')
+        self.assertEqual(self.classify(changes, added=True)['classification'], 'DATABASE_MIGRATION')
+
+    def test_unreviewed_backup_paths_still_fail_closed_and_are_reported(self):
+        unknown = ['.cicd-backup/new-workflow.yml', '.cicd-backup/ci.yml.sh',
+                   '.cicd-backup/nested/ci.yml', '.other-backup/ci.yml', 'unknown-root-script.sh']
+        with self.assertRaises(ValueError) as error:
+            self.classify(['.cicd-backup/ci.yml', 'frontend/src/app/App.tsx'] + unknown, added=True)
+        for path in unknown:
+            self.assertIn(path, str(error.exception))
+
+    def test_v81_v82_upgrade_with_workflow_backups_in_real_git_history(self):
+        source = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            classifier.git(root, 'init', '-q')
+            classifier.git(root, 'config', 'user.name', 'Release test')
+            classifier.git(root, 'config', 'user.email', 'release-test@example.invalid')
+            for path in classifier.PROTECTED:
+                target = root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('protected source')
+            migrations = root / classifier.MIGRATIONS
+            migrations.mkdir(parents=True)
+            (migrations / 'V80__fixture.sql').write_text('SELECT 1;')
+            classifier.git(root, 'add', '.')
+            classifier.git(root, 'commit', '-qm', 'Deployed V80 baseline')
+            base = classifier.git(root, 'rev-parse', 'HEAD').decode().strip()
+            for name in ['V81__email_password_recovery.sql', 'V82__password_recovery_token_revocation.sql']:
+                (migrations / name).write_bytes((source / classifier.MIGRATIONS / name).read_bytes())
+            for path in ['.cicd-backup/ci.yml', '.cicd-backup/deploy.yml']:
+                target = root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((source / path).read_bytes())
+            classifier.git(root, 'add', '.')
+            classifier.git(root, 'commit', '-qm', 'Email recovery with archived workflows')
+            commit = classifier.git(root, 'rev-parse', 'HEAD').decode().strip()
+            plan = classifier.classify(root, commit, base, base)
+            self.assertEqual(plan['classification'], 'DATABASE_MIGRATION')
+            self.assertEqual([row['version'] for row in plan['migrations']], ['80', '81', '82'])
+            self.assertIn('.cicd-backup/ci.yml', plan['changes'])
+            self.assertIn('.cicd-backup/deploy.yml', plan['changes'])
+
     def test_deleted_or_edited_migrations_fail_closed(self):
         with patch.object(classifier, 'revision'), patch.object(classifier.subprocess, 'run'), \
              patch.object(classifier, 'inventory', side_effect=[MIGRATIONS, []]):

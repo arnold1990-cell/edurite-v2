@@ -10,6 +10,10 @@ import zlib
 MIGRATIONS = "backend/src/main/resources/db/migration/"
 CLASSES = {"FRONTEND_ONLY", "BACKEND_NO_SCHEMA_CHANGE", "DATABASE_MIGRATION"}
 PROTECTED = ("backend/pom.xml", "backend/src/main/java/com/edurite/auth/service/EmailVerificationService.java")
+# Inert workflow snapshots reviewed as release tooling. Keep this an exact-path
+# list: other backup files require review. These retain the conservative backend
+# release policy; they never make a release frontend-only or bypass schema gates.
+REVIEWED_WORKFLOW_BACKUPS = {".cicd-backup/ci.yml", ".cicd-backup/deploy.yml"}
 
 
 def git(root, *args):
@@ -74,8 +78,10 @@ def classify(root, commit, backend_base, frontend_base):
     changes = sorted(set([p for p in backend_changes if not p.startswith("frontend/")] + frontend_changes))
     allowed_roots = ("frontend/", "backend/", "scripts/", ".github/", "docs/", "documentation/", "deploy/", "infra/", "database/", "ai-service/", "performance/")
     allowed_files = {"docker-compose.yml", "docker-compose.production.yml", "deploy.sh", "README.md", ".gitignore", ".gitattributes", ".editorconfig", "EDURITE_PRODUCT_ARCHITECTURE_FOR_LOVABLE.md"}
-    if any(not p.startswith(allowed_roots) and p not in allowed_files for p in changes):
-        raise ValueError("Unclassified path; review classification policy before deployment")
+    allowed_files |= REVIEWED_WORKFLOW_BACKUPS
+    unclassified = [p for p in changes if not p.startswith(allowed_roots) and p not in allowed_files]
+    if unclassified:
+        raise ValueError("Unclassified paths; review classification policy before deployment: " + ", ".join(unclassified))
     diff = git(root, 'diff', '-U0', backend_base, commit, '--', 'backend/src/main').decode()
     schema_edits = bool(re.search(r'(?im)^[+-](?![+-]).*(?:\b(?:CREATE|ALTER|DROP|TRUNCATE)\s+(?:TABLE|INDEX|SCHEMA|TYPE|SEQUENCE)|@(?:Entity|Table|Column|JoinColumn)\b|ddl-auto|hibernate\.hbm2ddl)', diff))
     schema_change = schema_sensitive(changes) or schema_edits
