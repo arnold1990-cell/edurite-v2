@@ -22,14 +22,22 @@ class UniversityIntelligenceMigrationTest {
                 statement.execute("INSERT INTO "+schema+".institutions(id,name) VALUES ('"+institution+"','Synthetic migration fixture')");
                 statement.execute("INSERT INTO "+table+"(institution_id,name,source_url) VALUES ('"+institution+"','Synthetic qualification','https://fixture.example/programme')");
                 String beforeHash;try(var rs=statement.executeQuery("SELECT md5(string_agg((to_jsonb(p)-'published_evidence_json')::text,'|' ORDER BY id)) FROM "+table+" p")) {rs.next();beforeHash=rs.getString(1);}
+                String institutionHash;try(var rs=statement.executeQuery("SELECT md5(string_agg(to_jsonb(i)::text,'|' ORDER BY id)) FROM "+schema+".institutions i")) {rs.next();institutionHash=rs.getString(1);}
                 long before;try(var rs=statement.executeQuery("SELECT count(*) FROM "+table)) {rs.next();before=rs.getLong(1);}
                 var upgrade=Flyway.configure().dataSource(url,user,password).schemas(schema).defaultSchema(schema).locations("classpath:db/migration").load();
                 upgrade.migrate();upgrade.validate();assertThat(upgrade.migrate().migrationsExecuted).isZero();
                 try(var rs=statement.executeQuery("SELECT count(*) FROM "+table)) {rs.next();assertThat(rs.getLong(1)).isEqualTo(before);}
                 try(var rs=statement.executeQuery("SELECT md5(string_agg((to_jsonb(p)-'published_evidence_json')::text,'|' ORDER BY id)) FROM "+table+" p")) {rs.next();assertThat(rs.getString(1)).isEqualTo(beforeHash);}
+                try(var rs=statement.executeQuery("SELECT md5(string_agg(to_jsonb(i)::text,'|' ORDER BY id)) FROM "+schema+".institutions i")) {rs.next();assertThat(rs.getString(1)).isEqualTo(institutionHash);}
                 try(var rs=statement.executeQuery("SELECT count(*) FROM "+schema+".flyway_schema_history WHERE success")) {rs.next();assertThat(rs.getInt(1)).isEqualTo(83);}
                 statement.executeQuery("SELECT published_evidence_json FROM "+table+" LIMIT 1").close();
                 statement.executeQuery("SELECT metadata_json FROM "+schema+".university_directory_records").close();
+                try(var rs=statement.executeQuery("SELECT indexdef FROM pg_indexes WHERE schemaname='"+schema+"' AND indexname='idx_university_crawl_attempts_history'")) {
+                    assertThat(rs.next()).isTrue();assertThat(rs.getString(1)).contains("university_name", "created_at DESC");
+                }
+                statement.execute("INSERT INTO "+schema+".university_directory_records VALUES ('"+UUID.randomUUID()+"','Registry fixture','{}',now(),now())");
+                assertThatThrownBy(() -> statement.execute("INSERT INTO "+schema+".university_directory_records VALUES ('"+UUID.randomUUID()+"','Registry fixture','{}',now(),now())"))
+                        .isInstanceOf(SQLException.class).extracting(error -> ((SQLException)error).getSQLState()).isEqualTo("23505");
             } finally {statement.execute("DROP SCHEMA "+schema+" CASCADE");}
         }
     }

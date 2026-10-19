@@ -91,7 +91,7 @@ export function ResearchProgrammeCollection({
     },
   ];
   return (
-    <section className="cg-panel ed-panel" id="research-programmes">
+    <section className="cg-panel ed-panel">
       <div className="cg-section-heading">
         <div>
           <h2>University and Programme Recommendations</h2>
@@ -560,11 +560,13 @@ export function CareerResearchReportView({
           </button>
         </div>
       )}
-      <ResearchProgrammeCollection
-        key={career}
-        programmes={report.programmes}
-        initialCareer={career}
-      />
+      <div id="research-programmes">
+        <ResearchProgrammeCollection
+          key={career}
+          programmes={report.programmes}
+          initialCareer={career}
+        />
+      </div>
       {report.academic.subjects.length > 0 && (
         <section className="cg-panel ed-panel">
           <h2>Your Subject Analysis</h2>

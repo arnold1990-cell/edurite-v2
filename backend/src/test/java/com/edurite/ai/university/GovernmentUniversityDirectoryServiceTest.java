@@ -1,7 +1,5 @@
 package com.edurite.ai.university;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.*;
 import java.util.*;
 import org.jsoup.Jsoup;
@@ -17,7 +15,7 @@ class GovernmentUniversityDirectoryServiceTest {
     private final GovernmentUniversityDirectoryService service=new GovernmentUniversityDirectoryService(registry,access,records,
             mock(com.edurite.background.DistributedJobLockService.class));
 
-    @Test void completeSnapshotHasAll26PublicInstitutionsAndSeparatePrivateStatus() throws Exception {
+    @Test void completeSnapshotHasAll26PublicInstitutionsAndSeparatePrivateStatus() {
         var privateEntry=new UniversityRegistryProperties.UniversityRegistryEntry();
         privateEntry.setUniversityName("Private fixture");privateEntry.setBaseDomain("private.com");
         properties.setRegistry(List.of(privateEntry));registry.logRegistryStatus();

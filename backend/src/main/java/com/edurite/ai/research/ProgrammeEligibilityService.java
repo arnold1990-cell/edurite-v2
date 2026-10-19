@@ -140,8 +140,7 @@ public class ProgrammeEligibilityService {
                     && actual != null
                     && needed != null
                     && needed <= 100
-                    && actual >= 0
-                    && (percent ? actual <= 100 : actual >= 1 && actual <= 7)) {
+                    && (percent ? actual >= 0 && actual <= 100 : actual >= 1 && actual <= 7)) {
                 status = actual >= needed ? "Met" : "Gap";
                 if (status.equals("Gap"))
                     gaps.add(

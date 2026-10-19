@@ -62,8 +62,7 @@ class ResearchCatalogueServiceTest {
     }
 
     @Test
-    void
-            duplicateCuratedAndExtractedProgrammeRecordsAreMergedAndUnofficialSourcesRemainUnverified() {
+    void unofficialCuratedSourcesCannotOverrideTheOfficialExtractedProgrammeEvidence() {
         var curated = new CareerProgramRequirement();
         curated.setId(UUID.randomUUID());
         curated.setInstitutionName("Official Institution");
@@ -75,12 +74,27 @@ class ResearchCatalogueServiceTest {
         when(requirements.findAll()).thenReturn(List.of(curated));
         when(programmes.findByActiveTrue(any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(programme("Bachelor of Accounting"))));
+        when(registry.isAllowedUrlForUniversity(eq("Official Institution"), anyString()))
+                .thenAnswer(invocation -> !invocation.getArgument(1, String.class).contains("untrusted.invalid"));
         var rows = service.match(careers, List.of());
         assertThat(rows).hasSize(1);
         assertThat(rows.getFirst().verificationStatus())
-                .isEqualTo("Admission requirements not yet verified.");
+                .isEqualTo("Programme title verified; admission requirements not yet verified.");
         assertThat(rows.getFirst().eligibility().status())
                 .isEqualTo(ProgrammeEligibilityService.INSUFFICIENT);
+        assertThat(rows.getFirst().sourceUrl()).isEqualTo("https://official.example/programme");
+    }
+
+    @Test
+    void candidatesWithoutApprovedOfficialSourceEvidenceAreNotRecommendations() {
+        var row = curated("Accountant");
+        row.setSource("https://unapproved.invalid/programme");
+        when(requirements.findAll()).thenReturn(List.of(row));
+        when(programmes.findByActiveTrue(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(programme("Bachelor of Accounting"))));
+        assertThat(service.match(careers, List.of())).isEmpty();
+        verify(requirements, never()).delete(any(CareerProgramRequirement.class));
+        verify(programmes, never()).delete(any(UniversityProgramme.class));
     }
 
     @Test
@@ -96,6 +110,7 @@ class ResearchCatalogueServiceTest {
 
     @Test
     void identicalProgrammeRecordsPreserveAllCareerAssociations() {
+        when(registry.isAllowedUrlForUniversity("Official Institution", "https://official.example/programme")).thenReturn(true);
         var first = curated("Accountant");
         var second = curated("Auditor");
         when(requirements.findAll()).thenReturn(List.of(first, second));

@@ -47,17 +47,12 @@ public class ResearchCatalogueService {
             String country = country(row.getSource());
             boolean official =
                     registry.isAllowedUrlForUniversity(row.getInstitutionName(), row.getSource());
+            if (!official || safeUrl(row.getSource()) == null) continue;
             boolean fresh =
-                    official
-                            && row.isVerified()
+                    row.isVerified()
                             && row.getLastVerifiedAt() != null
                             && row.getLastVerifiedAt().isAfter(OffsetDateTime.now().minusDays(90));
-            var assessment =
-                    official
-                            ? eligibility.assess(row, subjects, country)
-                            : unknown(
-                                    "The programme's official source is not verified against the"
-                                            + " institution registry.");
+            var assessment = eligibility.assess(row, subjects, country);
             var finding =
                     new ProgrammeFinding(
                             row.getId().toString(),
@@ -105,9 +100,10 @@ public class ResearchCatalogueService {
                 boolean official =
                         registry.isAllowedUrlForUniversity(
                                 institution.getName(), row.getSourceUrl());
+                if (!official || safeUrl(row.getSourceUrl()) == null) continue;
+                var published = evidence(row);
                 boolean fresh =
-                        official
-                                && row.getLastVerifiedAt() != null
+                        row.getLastVerifiedAt() != null
                                 && row.getLastVerifiedAt()
                                         .isAfter(OffsetDateTime.now().minusDays(90))
                                 && Set.of("VERIFIED", "SOURCE_CONFIRMED")
@@ -123,8 +119,8 @@ public class ResearchCatalogueService {
                                 row.getCampus(),
                                 row.getStudyMode(),
                                 safeUrl(row.getProgrammeUrl()),
-                                evidence(row) == null ? null : evidence(row).applicationUrl(),
-                                evidence(row) == null ? null : evidence(row).publishedRequirements(),
+                                published == null ? null : safeUrl(published.applicationUrl()),
+                                published == null ? null : published.publishedRequirements(),
                                 safeUrl(row.getSourceUrl()),
                                 row.getLastVerifiedAt() == null
                                         ? null
@@ -133,10 +129,10 @@ public class ResearchCatalogueService {
                                         ? "Programme title verified; admission requirements not yet"
                                                 + " verified."
                                         : "Admission requirements not yet verified.",
-                                official && fresh && evidence(row)!=null
+                                fresh && published != null
                                         ? eligibility.assessPublished(row,subjects,institution.getCountry())
                                         : unknown("Information not yet verified."),
-                                related, evidence(row));
+                                related, published);
                 String key = identity(finding);
                 if (!result.containsKey(key)) result.put(key, finding);
                 else

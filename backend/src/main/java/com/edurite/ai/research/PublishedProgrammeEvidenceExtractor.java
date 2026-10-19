@@ -14,9 +14,10 @@ public class PublishedProgrammeEvidenceExtractor {
         if(aps!=null && (aps<6 || aps>56)) aps=null;
         String rule=null;
         if(text.matches("(?is).*best (?:six|6) subjects.{0,80}exclud(?:es?|ing) Life Orientation.*")) rule="NSC_BEST_6_EXCL_LO";
+        String admissionText = admissionSection(text);
         Map<String,String> subjects=new LinkedHashMap<>();
         for(String subject:List.of("Mathematics","Mathematical Literacy","English","Accounting","Physical Sciences","Life Sciences","Life Orientation","Geography","Business Studies","Information Technology","Computer Applications Technology")) {
-            Matcher matcher=Pattern.compile("(?i)\\b"+Pattern.quote(subject)+"\\s*(?::|minimum|at least|achievement)?\\s*(?:level\\s*([1-7])|(\\d{1,3})\\s*%)(?!\\d)").matcher(text);
+            Matcher matcher=Pattern.compile("(?i)\\b"+Pattern.quote(subject)+"\\s*(?::|minimum|at least|achievement)?\\s*(?:level\\s*([1-7])|(\\d{1,3})\\s*%)(?!\\d)").matcher(admissionText);
             Set<String> values=new LinkedHashSet<>();
             while(matcher.find()) {
                 if(matcher.group(1)!=null) values.add("Level "+matcher.group(1));
@@ -25,7 +26,7 @@ public class PublishedProgrammeEvidenceExtractor {
             if(values.size()==1) subjects.put(subject,values.iterator().next());
         }
         // Alternatives/negation cannot be safely turned into compulsory conditions.
-        boolean alternatives=Pattern.compile("(?i)\\b(?:or|either|not required|not compulsory|recommended)\\b").matcher(text).find();
+        boolean alternatives=Pattern.compile("(?i)\\b(?:or|either|not required|not compulsory|recommended)\\b").matcher(admissionText).find();
         if(alternatives) subjects.clear();
         Map<String,String> funding=new LinkedHashMap<>();
         String application=null;
@@ -43,6 +44,13 @@ public class PublishedProgrammeEvidenceExtractor {
                 excerpt(text,"(?i)(?:admission|entry|minimum) requirements?\\s*[:=-]?\\s*(.{1,900})"),
                 labelled(text,"applications? open(?:ing)?(?: date)?"),labelled(text,"applications? clos(?:e|ing)(?: date)?"),
                 labelled(text,"tuition fees?"),labelled(text,"campus"),labelled(text,"faculty"),application,Map.copyOf(funding),page.sourceUrl(),true,List.copyOf(limits));
+    }
+
+    private String admissionSection(String text) {
+        Matcher section = Pattern.compile("(?is)\\b(?:(?:minimum\\s+)?(?:admission|entry)\\s+requirements|minimum\\s+requirements)\\s*:?\\s*(.*?)(?=\\b(?:tuition\\s+fees|curriculum|course\\s+content|career\\s+opportunities|campus|duration|applications?\\s+(?:dates|open|clos))\\b|$)").matcher(text);
+        if (!section.find()) return "";
+        String excerpt = section.group(1);
+        return excerpt.substring(0, Math.min(1200, excerpt.length()));
     }
 
     private Integer uniqueNumber(String text,String pattern) {

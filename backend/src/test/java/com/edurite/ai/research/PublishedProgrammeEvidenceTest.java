@@ -8,6 +8,13 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.*;
 
 class PublishedProgrammeEvidenceTest {
+    @Test void curriculumMentionsAreNotInventedAsCompulsoryAdmissionSubjects() {
+        var extractor = new PublishedProgrammeEvidenceExtractor();
+        var curriculum = extractor.extract(page("Curriculum: Mathematics level 5. English 60% assessment weighting."), true);
+        assertThat(curriculum.subjectRequirements()).isEmpty();
+        var requirements = extractor.extract(page("Entry requirements: Mathematics level 5; English 60%; Curriculum: Mathematics level 7 modules."), true);
+        assertThat(requirements.subjectRequirements()).containsExactlyInAnyOrderEntriesOf(Map.of("Mathematics", "Level 5", "English", "60%"));
+    }
     @Test void eligibilityCategoryRemainsCompatibleWithPersistedReportRoundTrips() throws Exception {
         var value=ResearchCatalogueService.unknown("Information not yet verified.");
         var json=new com.fasterxml.jackson.databind.ObjectMapper();

@@ -94,6 +94,23 @@ const mount = (content: React.ReactNode) =>
   });
 const content = () => JSON.stringify(view.toJSON());
 describe("career research report", () => {
+  it("keeps one stable programme anchor when career navigation remounts the filtered collection", () => {
+    const data = report();
+    data.programmes[1].careerIds = ["career-1"];
+    mount(<CareerResearchReportView report={data} />);
+    const target = view.root.findAllByProps({ id: "research-programmes" });
+    expect(target).toHaveLength(1);
+    const navigation = view.root.findAllByType("a").filter(a => a.props.href === "#research-programmes");
+    expect(navigation.length).toBeGreaterThan(1);
+    act(() => navigation[0].props.onClick());
+    expect(view.root.findAllByProps({ id: "research-programmes" })).toHaveLength(1);
+    expect(target[0].findByType(ResearchProgrammeCollection).props.initialCareer).toBe("career-0");
+    expect(content()).toContain("Accounting one");
+    expect(content()).not.toContain("Accounting two");
+    act(() => navigation[1].props.onClick());
+    expect(target[0].findByType(ResearchProgrammeCollection).props.initialCareer).toBe("career-1");
+    expect(content()).toContain("Accounting two");
+  });
   it("progressively reveals every supported career beyond the first twelve", () => {
     mount(<CareerResearchReportView report={report()} />);
     expect(content()).not.toContain('"Career 15"');

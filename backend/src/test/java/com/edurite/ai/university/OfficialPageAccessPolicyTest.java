@@ -11,6 +11,88 @@ import java.net.*;
 import java.util.*;
 
 class OfficialPageAccessPolicyTest {
+    private OfficialPageAccessPolicy publicPolicy() throws IOException {
+        var registry = mock(UniversitySourceRegistryService.class);
+        when(registry.isAllowedUrl(anyString())).thenReturn(true);
+        var policy = spy(new OfficialPageAccessPolicy(registry));
+        doReturn(new InetAddress[] {InetAddress.getByName("8.8.8.8")}).when(policy).resolve(anyString());
+        var absentRobots = mock(Connection.Response.class);
+        when(absentRobots.statusCode()).thenReturn(404);
+        doReturn(absentRobots).when(policy).request(contains("robots.txt"), anyInt(), anyInt());
+        return policy;
+    }
+
+    @Test
+    void nullRobotsBodyFailsClosedWithoutRequestingTheProgramme() throws IOException {
+        var policy = publicPolicy();
+        var robots = mock(Connection.Response.class);
+        when(robots.statusCode()).thenReturn(200); // No body was available.
+        doReturn(robots).when(policy).request(contains("robots.txt"), anyInt(), anyInt());
+        assertThatThrownBy(() -> policy.fetch("https://official.example/programme", 1000, 10000))
+                .isInstanceOf(IOException.class).hasMessageContaining("access policy could not be verified");
+        verify(policy, never()).request(eq("https://official.example/programme"), anyInt(), anyInt());
+    }
+
+    @Test
+    void a304WithoutCachedEvidenceFailsWithAControlledError() throws IOException {
+        var policy = publicPolicy();
+        var response = mock(Connection.Response.class);
+        when(response.statusCode()).thenReturn(304);
+        doReturn(response).when(policy).request(eq("https://official.example/programme"), anyInt(), anyInt());
+        assertThatThrownBy(() -> policy.fetch("https://official.example/programme", 1000, 10000))
+                .isInstanceOf(IOException.class).hasMessageContaining("without a verified cached page");
+    }
+
+    @Test
+    void cacheEvictionCannotInvalidateTheSnapshotUsedForA304() throws Exception {
+        var policy = publicPolicy();
+        var published = mock(Connection.Response.class);
+        when(published.statusCode()).thenReturn(200);
+        when(published.contentType()).thenReturn("text/html");
+        when(published.parse()).thenReturn(org.jsoup.Jsoup.parse("<main>Verified evidence</main>", "https://official.example/programme"));
+        var unchanged = mock(Connection.Response.class);
+        when(unchanged.statusCode()).thenReturn(304);
+        doReturn(published, unchanged).when(policy).request(eq("https://official.example/programme"), anyInt(), anyInt());
+        policy.fetch("https://official.example/programme", 1000, 10000);
+
+        // Deterministically model another worker evicting entries immediately after a lookup.
+        var field = OfficialPageAccessPolicy.class.getDeclaredField("conditionalCache");
+        field.setAccessible(true);
+        Map<?, ?> original = (Map<?, ?>) field.get(policy);
+        var evicting = new java.util.concurrent.ConcurrentHashMap<Object, Object>() {
+            private static final long serialVersionUID = 1L;
+            @Override public Object get(Object key) {
+                Object snapshot = super.get(key); clear(); return snapshot;
+            }
+            @Override public boolean containsKey(Object key) {
+                boolean present = super.containsKey(key); clear(); return present;
+            }
+        };
+        evicting.putAll(original);
+        field.set(policy, evicting);
+        assertThat(policy.fetch("https://official.example/programme", 1000, 10000).text()).contains("Verified evidence");
+        assertThat(evicting).isEmpty();
+    }
+
+    @Test
+    void pdfExtractionCreatesItsMainElementWithoutANullableLookup() throws IOException {
+        var policy = publicPolicy();
+        byte[] bytes;
+        try (var pdf = new org.apache.pdfbox.pdmodel.PDDocument(); var output = new ByteArrayOutputStream()) {
+            pdf.addPage(new org.apache.pdfbox.pdmodel.PDPage());
+            pdf.getDocumentInformation().setTitle("Official prospectus");
+            pdf.save(output); bytes = output.toByteArray();
+        }
+        var response = mock(Connection.Response.class);
+        when(response.statusCode()).thenReturn(200);
+        when(response.contentType()).thenReturn("application/pdf");
+        when(response.bodyAsBytes()).thenReturn(bytes);
+        doReturn(response).when(policy).request(eq("https://official.example/prospectus.pdf"), anyInt(), anyInt());
+        var document = policy.fetch("https://official.example/prospectus.pdf", 1000, 10000);
+        assertThat(document.title()).isEqualTo("Official prospectus");
+        assertThat(document.select("main")).hasSize(1);
+    }
+
     @Test void conditionalResponsesReuseOnlyPreviouslyCheckedPublicContentAndTermsAreHonoured() throws Exception {
         var registry=mock(UniversitySourceRegistryService.class);when(registry.isAllowedUrl(anyString())).thenReturn(true);
         var client=spy(new OfficialPageAccessPolicy(registry));

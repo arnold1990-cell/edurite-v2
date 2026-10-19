@@ -58,7 +58,8 @@ public class OfficialPageAccessPolicy {
                     if (rules == null || rules.expires().isBefore(Instant.now())) {
                         var response =
                                 request(origin + "/robots.txt", Math.min(timeout, 5000), 512_000);
-                        if (Objects.toString(response.body(), "").length() >= 500_000)
+                        String robotsBody = response.body();
+                        if (robotsBody != null && robotsBody.length() >= 500_000)
                             throw new IOException(
                                     "Official robots file exceeds the safe parsing budget");
                         if (response.statusCode() == 404)
@@ -68,9 +69,9 @@ public class OfficialPageAccessPolicy {
                                             List.of(),
                                             1000,
                                             Instant.now().plusSeconds(21600));
-                        else if (response.statusCode() == 200
-                                && !response.body().stripLeading().startsWith("<"))
-                            rules = parseRobots(response.body());
+                        else if (response.statusCode() == 200 && robotsBody != null
+                                && !robotsBody.stripLeading().startsWith("<"))
+                            rules = parseRobots(robotsBody);
                         else
                             throw new IOException(
                                     "Official site access policy could not be verified");
@@ -105,9 +106,14 @@ public class OfficialPageAccessPolicy {
                             url,
                             Math.min(10_000, Math.max(1000, timeout)),
                             Math.min(bytes, 1_500_000));
+            if (response.statusCode() == 304) {
+                // A concurrent fetch can evict the cache. Keep one stable snapshot.
+                CachedPage cached = conditionalCache.get(url);
+                if (cached == null)
+                    throw new IOException("Official source returned 304 without a verified cached page");
+                return cached.document().clone();
+            }
             if (response.statusCode() >= 300 && response.statusCode() < 400) {
-                if (response.statusCode()==304 && conditionalCache.containsKey(url))
-                    return conditionalCache.get(url).document().clone();
                 String location = response.header("Location");
                 if (location == null)
                     throw new IOException("Official page redirected without a location");
@@ -126,14 +132,12 @@ public class OfficialPageAccessPolicy {
                         throw new IOException("Encrypted official document is not accessible");
                     var stripper = new org.apache.pdfbox.text.PDFTextStripper();
                     stripper.setEndPage(Math.min(30, pdf.getNumberOfPages()));
-                    document =
-                            org.jsoup.Jsoup.parse(
-                                    "<html><head></head><body><main></main></body></html>", url);
+                    document = Document.createShell(url);
                     document.title(
                             Objects.toString(
                                     pdf.getDocumentInformation().getTitle(),
                                     "Official prospectus"));
-                    document.selectFirst("main").text(stripper.getText(pdf));
+                    document.body().appendElement("main").text(stripper.getText(pdf));
                 }
             } else {
                 String type = Objects.toString(response.contentType(), "").toLowerCase(Locale.ROOT);

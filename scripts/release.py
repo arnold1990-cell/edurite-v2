@@ -9,7 +9,8 @@ from pathlib import Path
 import re
 import subprocess
 import time
-from classify_release import CLASSES, PROTECTED, validate_history, schema_sensitive
+from classify_release import (CLASSES, PROTECTED, validate_history, schema_sensitive,
+                              reviewed_registry_config_only, git as read_git, revision)
 
 
 def run(*args, input=None):
@@ -121,7 +122,7 @@ def inspect_running():
     return dict(project=project, containers=containers, images=images, revisions=revisions)
 
 
-def validate_plan(plan, manifest, commit):
+def validate_plan(plan, manifest, commit, source_repository=None):
     if plan.get('commit') != commit or plan.get('classification') not in CLASSES:
         raise ValueError('Missing verified release classification')
     if plan.get('migrations') != manifest.get('migrations') or plan.get('protected_files') != manifest.get('protected_files'):
@@ -138,7 +139,22 @@ def validate_plan(plan, manifest, commit):
         raise ValueError('Missing Git change evidence')
     if type(plan.get('schema_edits', False)) is not bool:
         raise ValueError('Invalid schema classification evidence')
-    schema = old != new or schema_sensitive(changes) or plan.get('schema_edits', False)
+    sensitive_changes = list(changes)
+    config = 'backend/src/main/resources/application.yml'
+    if config in changes and plan['classification'] != 'DATABASE_MIGRATION' and source_repository is not None:
+        # Recompute the narrow exception from actual Git objects, never a plan's
+        # self-declared "safe" flag. Missing revisions fail closed; no fetch,
+        # checkout, production configuration write or migration happens here.
+        try:
+            revision(source_repository, plan['backend_base'])
+            revision(source_repository, commit)
+            before = read_git(source_repository, 'show', plan['backend_base'] + ':' + config).decode()
+            after = read_git(source_repository, 'show', commit + ':' + config).decode()
+        except (subprocess.CalledProcessError, UnicodeError) as error:
+            raise ValueError('Crawler configuration exception requires available verified Git source revisions') from error
+        if reviewed_registry_config_only(before, after):
+            sensitive_changes.remove(config)
+    schema = old != new or schema_sensitive(sensitive_changes) or plan.get('schema_edits', False)
     kind = 'DATABASE_MIGRATION' if schema else (
         'FRONTEND_ONLY' if changes and all(p.startswith('frontend/') for p in changes) else 'BACKEND_NO_SCHEMA_CHANGE')
     if plan['classification'] != kind:
@@ -253,7 +269,7 @@ def execute(args, project, release, state_dir):
         raise ValueError('Existing production .env is required')
     env_hash = digest(project / '.env')
     plan = json.loads((release / 'deployment-plan.json').read_text())
-    validate_plan(plan, manifest, args.commit)
+    validate_plan(plan, manifest, args.commit, source_repository=project)
     kind = plan['classification']
     if args.action == 'rollback' and (not args.state or (kind == 'DATABASE_MIGRATION' and not args.schema_compatibility_reviewed)):
         raise ValueError('Rollback requires recorded state and migration schema review where applicable')

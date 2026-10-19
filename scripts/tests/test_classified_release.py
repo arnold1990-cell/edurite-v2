@@ -16,6 +16,52 @@ from test_release import MANIFEST, MIGRATIONS, SHA, SNAPSHOT
 
 
 class ClassificationTests(unittest.TestCase):
+    def test_crawler_config_exception_is_revalidated_from_real_git_objects(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            classifier.git(root, 'init', '-q')
+            classifier.git(root, 'config', 'user.name', 'Release validation fixture')
+            classifier.git(root, 'config', 'user.email', 'fixture@example.invalid')
+            for path in classifier.PROTECTED:
+                target = root / path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text('protected fixture')
+            migration = root / classifier.MIGRATIONS / 'V79__fixture.sql'
+            migration.parent.mkdir(parents=True)
+            migration.write_text('SELECT 1;')
+            config = root / 'backend/src/main/resources/application.yml'
+            original = 'spring:\n  flyway:\n    enabled: true\nedurite:\n  university:\n    crawl:\n      max-fetch-retries: 2\n'
+            config.write_text(original)
+            classifier.git(root, 'add', '.')
+            classifier.git(root, 'commit', '-qm', 'Isolated baseline fixture')
+            base = classifier.git(root, 'rev-parse', 'HEAD').decode().strip()
+            config.write_text(original.replace('max-fetch-retries: 2', 'max-fetch-retries: 3'))
+            classifier.git(root, 'add', '.')
+            classifier.git(root, 'commit', '-qm', 'Isolated crawler fixture')
+            commit = classifier.git(root, 'rev-parse', 'HEAD').decode().strip()
+            plan = classifier.classify(root, commit, base, base)
+            plan['expected_inventory'] = {'revisions': {'backend': base, 'frontend': base}}
+            manifest = {'migrations': plan['migrations'], 'protected_files': plan['protected_files']}
+            self.assertEqual(plan['classification'], 'BACKEND_NO_SCHEMA_CHANGE')
+            release.validate_plan(plan, manifest, commit, source_repository=root)
+            # A self-declared exception without the underlying Git evidence is insufficient.
+            with self.assertRaises(ValueError):
+                release.validate_plan(plan, manifest, commit)
+            with tempfile.TemporaryDirectory() as missing, self.assertRaises(ValueError):
+                release.validate_plan(plan, manifest, commit, source_repository=Path(missing))
+
+            # Changing schema/runtime settings cannot use the crawler-only exception.
+            config.write_text(original.replace('enabled: true', 'enabled: false'))
+            classifier.git(root, 'add', '.')
+            classifier.git(root, 'commit', '-qm', 'Isolated unsafe configuration fixture')
+            unsafe = classifier.git(root, 'rev-parse', 'HEAD').decode().strip()
+            unsafe_plan = classifier.classify(root, unsafe, base, base)
+            self.assertEqual(unsafe_plan['classification'], 'DATABASE_MIGRATION')
+            unsafe_plan['classification'] = 'BACKEND_NO_SCHEMA_CHANGE'
+            unsafe_plan['expected_inventory'] = plan['expected_inventory']
+            with self.assertRaises(ValueError):
+                release.validate_plan(unsafe_plan, manifest, unsafe, source_repository=root)
+
     def classify(self, changes, added=False, frontend=None, diff_text=''):
         old = MIGRATIONS
         new = old + [dict(version='80', script='V80__new.sql', checksum=456, sha256='a' * 64)] if added else old

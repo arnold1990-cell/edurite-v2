@@ -21,9 +21,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SSLException;
-import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
-import org.jsoup.Jsoup;
 import org.jsoup.UnsupportedMimeTypeException;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -36,10 +34,6 @@ public class MultiUniversityPageFetcherService {
 
     private static final Logger log = LoggerFactory.getLogger(MultiUniversityPageFetcherService.class);
 
-    private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36";
-    private static final String ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
-    private static final String ACCEPT_LANGUAGE = "en-ZA,en;q=0.9,en-US;q=0.8";
-    private static final String ACCEPT_ENCODING = "gzip, deflate";
     private static final int MAX_CHARS_PER_PAGE = 8_000;
     private static final int MAX_LINKS_PER_SEED = 30;
     private static final int MAX_HEADINGS = 8;
