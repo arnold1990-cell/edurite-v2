@@ -1,32 +1,38 @@
-import { apiClient } from '@/services/apiClient';
+import { apiClient } from "@/services/apiClient";
+import type { CareerResearchJob } from "@/types/careerResearch";
 import type {
   CareerAdviceRequest,
   CareerAdviceResponse,
   Recommendation,
   UniversitySourcesAnalysisRequest,
   UniversitySourcesAnalysisResponse,
-} from '@/types';
+} from "@/types";
 
 const demoModeEnabled = false;
-export const AI_ERROR_MESSAGE = 'Our AI could not process your request at this time. Please try again.';
-const FRIENDLY_AI_UNAVAILABLE_MESSAGE = 'AI guidance is temporarily unavailable. Please try again later.';
-const FRIENDLY_SOURCE_UNAVAILABLE_MESSAGE = 'Some official university sources were temporarily unavailable during analysis.';
+export const AI_ERROR_MESSAGE =
+  "Our AI could not process your request at this time. Please try again.";
+const FRIENDLY_AI_UNAVAILABLE_MESSAGE =
+  "AI guidance is temporarily unavailable. Please try again later.";
+const FRIENDLY_SOURCE_UNAVAILABLE_MESSAGE =
+  "Some official university sources were temporarily unavailable during analysis.";
 
-const normalizeWarningMessage = (warning?: string | null): string | null | undefined => {
+const normalizeWarningMessage = (
+  warning?: string | null,
+): string | null | undefined => {
   if (!warning) return warning;
   const normalized = warning.toLowerCase();
   if (
-    normalized.includes('invalid provider response')
-    || normalized.includes('gemini_model')
-    || normalized.includes('gemini_api_key')
-    || normalized.includes('live ai guidance')
-    || normalized.includes('provider rejected')
-    || normalized.includes('provider configuration')
-    || normalized.includes('http')
-    || normalized.includes('fetch')
-    || normalized.includes('timeout')
-    || normalized.includes('cache')
-    || normalized.includes('connection')
+    normalized.includes("invalid provider response") ||
+    normalized.includes("gemini_model") ||
+    normalized.includes("gemini_api_key") ||
+    normalized.includes("live ai guidance") ||
+    normalized.includes("provider rejected") ||
+    normalized.includes("provider configuration") ||
+    normalized.includes("http") ||
+    normalized.includes("fetch") ||
+    normalized.includes("timeout") ||
+    normalized.includes("cache") ||
+    normalized.includes("connection")
   ) {
     return FRIENDLY_AI_UNAVAILABLE_MESSAGE;
   }
@@ -34,12 +40,18 @@ const normalizeWarningMessage = (warning?: string | null): string | null | undef
 };
 
 const normalizeDiagnosticStatus = (status?: string | null) => {
-  const normalized = (status ?? '').toLowerCase();
-  if (!normalized) return 'Status unavailable';
-  if (normalized.includes('success') || normalized.includes('ok')) return 'Available';
-  if (normalized.includes('partial')) return 'Partially available';
-  if (normalized.includes('fail') || normalized.includes('error') || normalized.includes('timeout')) return 'Unavailable';
-  return 'Unavailable';
+  const normalized = (status ?? "").toLowerCase();
+  if (!normalized) return "Status unavailable";
+  if (normalized.includes("success") || normalized.includes("ok"))
+    return "Available";
+  if (normalized.includes("partial")) return "Partially available";
+  if (
+    normalized.includes("fail") ||
+    normalized.includes("error") ||
+    normalized.includes("timeout")
+  )
+    return "Unavailable";
+  return "Unavailable";
 };
 
 const normalizeDiagnosticReason = (reason?: string | null) => {
@@ -47,19 +59,41 @@ const normalizeDiagnosticReason = (reason?: string | null) => {
   return FRIENDLY_SOURCE_UNAVAILABLE_MESSAGE;
 };
 
-const normalizeUniversityResponse = (payload: UniversitySourcesAnalysisResponse): UniversitySourcesAnalysisResponse => {
+const normalizeUniversityResponse = (
+  payload: UniversitySourcesAnalysisResponse,
+): UniversitySourcesAnalysisResponse => {
   const requestedSources = payload.requestedSources ?? payload.sourceUrls ?? [];
   const sourceUrls = payload.sourceUrls ?? requestedSources;
   const sourceCoverage = payload.sourceCoverage ?? null;
   const warningMessage = normalizeWarningMessage(payload.warningMessage);
-  const warnings = Array.from(new Set((payload.warnings ?? []).map((warning) => normalizeWarningMessage(warning) ?? '').filter(Boolean)));
+  const warnings = Array.from(
+    new Set(
+      (payload.warnings ?? [])
+        .map((warning) => normalizeWarningMessage(warning) ?? "")
+        .filter(Boolean),
+    ),
+  );
 
   return {
     ...payload,
     available: payload.available ?? payload.aiLive ?? false,
     message: payload.message ?? warningMessage ?? null,
-    status: payload.status ?? (payload.mode === 'PARTIAL' ? 'PARTIAL' : payload.mode === 'UNAVAILABLE' ? 'ERROR' : payload.fallbackUsed ? 'PARTIAL' : 'SUCCESS'),
-    mode: payload.mode ?? (payload.fallbackUsed ? 'FALLBACK' : payload.aiLive ? 'LIVE' : 'UNAVAILABLE'),
+    status:
+      payload.status ??
+      (payload.mode === "PARTIAL"
+        ? "PARTIAL"
+        : payload.mode === "UNAVAILABLE"
+          ? "ERROR"
+          : payload.fallbackUsed
+            ? "PARTIAL"
+            : "SUCCESS"),
+    mode:
+      payload.mode ??
+      (payload.fallbackUsed
+        ? "FALLBACK"
+        : payload.aiLive
+          ? "LIVE"
+          : "UNAVAILABLE"),
     requestedSources,
     sourceUrls,
     successfullyAnalysedUrls: payload.successfullyAnalysedUrls ?? [],
@@ -81,8 +115,12 @@ const normalizeUniversityResponse = (payload: UniversitySourcesAnalysisResponse)
       failureReason: normalizeDiagnosticReason(item.failureReason),
     })),
     sourceCoverage,
-    totalSourcesUsed: payload.totalSourcesUsed ?? payload.successfullyAnalysedUrls?.length ?? sourceCoverage?.successfulSourcesCount ?? 0,
-    planCode: payload.planCode ?? 'PLAN_BASIC',
+    totalSourcesUsed:
+      payload.totalSourcesUsed ??
+      payload.successfullyAnalysedUrls?.length ??
+      sourceCoverage?.successfulSourcesCount ??
+      0,
+    planCode: payload.planCode ?? "PLAN_BASIC",
     premiumUnlocked: payload.premiumUnlocked ?? false,
     careerSuggestionLimit: payload.careerSuggestionLimit ?? null,
     careerSuggestionsLimited: payload.careerSuggestionsLimited ?? false,
@@ -91,14 +129,35 @@ const normalizeUniversityResponse = (payload: UniversitySourcesAnalysisResponse)
 };
 
 export const aiGuidanceService = {
+  startCareerResearch: (requestKey?: string) =>
+    apiClient
+      .post<CareerResearchJob>(
+        "/ai/career-research",
+        requestKey ? { requestKey } : undefined,
+      )
+      .then((r) => r.data),
+  careerResearchStatus: () =>
+    apiClient.get<CareerResearchJob>("/ai/career-research").then((r) => r.data),
   demoModeEnabled,
   getPersonalisedCareerAdvice: () =>
-    apiClient.get<CareerAdviceResponse>('/ai/career-advice/me').then((r) => r.data),
+    apiClient
+      .get<CareerAdviceResponse>("/ai/career-advice/me")
+      .then((r) => r.data),
   getCareerAdvice: (payload: CareerAdviceRequest) =>
-    apiClient.post<CareerAdviceResponse>('/ai/career-advice', payload).then((r) => r.data),
+    apiClient
+      .post<CareerAdviceResponse>("/ai/career-advice", payload)
+      .then((r) => r.data),
   analyseUniversitySources: (payload: UniversitySourcesAnalysisRequest) =>
-    apiClient.post<UniversitySourcesAnalysisResponse>('/ai/analyse-university-sources', payload).then((r) => normalizeUniversityResponse(r.data)),
+    apiClient
+      .post<UniversitySourcesAnalysisResponse>(
+        "/ai/analyse-university-sources",
+        payload,
+      )
+      .then((r) => normalizeUniversityResponse(r.data)),
   getDefaultUniversitySources: () =>
-    apiClient.get<string[]>('/ai/default-university-sources').then((r) => r.data),
-  getDemoGuidance: () => apiClient.get<Recommendation>('/recommendations/me').then((r) => r.data),
+    apiClient
+      .get<string[]>("/ai/default-university-sources")
+      .then((r) => r.data),
+  getDemoGuidance: () =>
+    apiClient.get<Recommendation>("/recommendations/me").then((r) => r.data),
 };

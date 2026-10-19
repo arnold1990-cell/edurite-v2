@@ -30,7 +30,7 @@ class UniversityCrawlOrchestratorTest {
     private UniversityCrawlOrchestrator orchestrator;
 
     @Test
-    void crawlProcessesLargeUniversitySetWithoutStoppingOnFailures() {
+    void crawlBoundsLargeUniversitySetAndContinuesAfterFailures() {
         List<UniversityRegistryProperties.UniversityRegistryEntry> universities = new ArrayList<>();
         for (int index = 1; index <= 50; index++) {
             UniversityRegistryProperties.UniversityRegistryEntry entry = new UniversityRegistryProperties.UniversityRegistryEntry();
@@ -50,9 +50,9 @@ class UniversityCrawlOrchestratorTest {
 
         UniversityCrawlSummary summary = orchestrator.crawlAllActiveUniversities();
 
-        assertThat(summary.universitiesProcessed()).isEqualTo(50);
-        assertThat(summary.pagesSaved()).isEqualTo(100);
-        assertThat(summary.failures()).isEqualTo(50);
+        assertThat(summary.universitiesProcessed()).isEqualTo(2);
+        assertThat(summary.pagesSaved()).isEqualTo(4);
+        assertThat(summary.failures()).isEqualTo(2);
     }
 }
 

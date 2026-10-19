@@ -33,9 +33,13 @@ public class UniversityCrawlOrchestrator {
         int failures = 0;
 
         for (UniversityRegistryProperties.UniversityRegistryEntry university : registryService.getActiveUniversities()) {
+            if (universitiesProcessed >= 2) break;
+            var prior = repository.findTop10ByUniversityNameIgnoreCaseAndActiveTrueOrderByLastSuccessfulCrawledAtDesc(university.getUniversityName());
+            if (prior.stream().anyMatch(p -> p.getLastSuccessfulCrawledAt()!=null && p.getLastSuccessfulCrawledAt().isAfter(OffsetDateTime.now().minusDays(14)))) continue;
+            if (prior.stream().anyMatch(p -> p.getLastFailureAt()!=null && p.getLastFailureAt().isAfter(OffsetDateTime.now().minusHours(12)))) continue;
             universitiesProcessed++;
             try {
-                List<String> discovered = pageFetcherService.discoverCandidateUrls(university, 40);
+                List<String> discovered = pageFetcherService.discoverCandidateUrls(university, Math.min(4,pageFetcherService.maxFetchBudgetPerUniversity()));
                 seedUrlsProcessed += university.getSeedUrls().size();
                 pagesDiscovered += discovered.size();
 
@@ -60,11 +64,13 @@ public class UniversityCrawlOrchestrator {
         CrawledUniversityPage page = repository.findBySourceUrl(pageResult.sourceUrl()).orElseGet(CrawledUniversityPage::new);
         page.setUniversityName(universityName);
         page.setSourceUrl(pageResult.sourceUrl());
-        page.setPageTitle(pageResult.pageTitle());
-        page.setPageType(pageResult.pageType().name());
-        page.setExtractedKeywords(pageResult.extractedKeywords());
-        page.setCleanedContent(pageResult.cleanedText());
-        page.setSummaryExcerpt(buildSummary(pageResult.cleanedText()));
+        if (pageResult.success() || page.getLastSuccessfulCrawledAt() == null) {
+            page.setPageTitle(pageResult.pageTitle());
+            page.setPageType(pageResult.pageType().name());
+            page.setExtractedKeywords(pageResult.extractedKeywords());
+            page.setCleanedContent(pageResult.cleanedText());
+            page.setSummaryExcerpt(buildSummary(pageResult.cleanedText()));
+        }
         page.setLastCrawledAt(OffsetDateTime.now());
         if (pageResult.success()) {
             page.setCrawlStatus(CrawlStatus.SUCCESS);

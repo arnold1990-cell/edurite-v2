@@ -7,6 +7,8 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UniversityProgrammeRepository extends JpaRepository<UniversityProgramme, UUID> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = "institution")
+    org.springframework.data.domain.Page<UniversityProgramme> findByActiveTrue(org.springframework.data.domain.Pageable pageable);
 
     List<UniversityProgramme> findByInstitutionIdAndActiveTrueOrderByFacultyAscNameAsc(UUID institutionId);
 

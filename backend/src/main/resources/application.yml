@@ -877,3 +877,41 @@ edurite:
         qualification-levels-supported: ["Undergraduate", "Postgraduate"]
         active: true
         crawl-priority: 55
+
+      - university-name: "University of Botswana"
+        base-domain: "ub.bw"
+        allowed-domains: ["ub.bw"]
+        seed-urls:
+          - "https://www.ub.bw/"
+          - "https://www.ub.bw/study"
+          - "https://www.ub.bw/study/undergraduate/how-apply-admission"
+        active: true
+        crawl-priority: 60
+
+      - university-name: "Botswana International University of Science and Technology"
+        base-domain: "biust.ac.bw"
+        allowed-domains: ["biust.ac.bw"]
+        seed-urls:
+          - "https://www.biust.ac.bw/"
+          - "https://www.biust.ac.bw/undergraduate-programmes/"
+          - "https://www.biust.ac.bw/undergraduate-how-to-apply/"
+        active: true
+        crawl-priority: 60
+
+      - university-name: "University of Zimbabwe"
+        base-domain: "uz.ac.zw"
+        allowed-domains: ["uz.ac.zw"]
+        seed-urls:
+          - "https://www.uz.ac.zw/"
+          - "https://www.uz.ac.zw/index.php/admissions/university-programmes"
+        active: true
+        crawl-priority: 60
+
+      - university-name: "National University of Science and Technology"
+        base-domain: "nust.ac.zw"
+        allowed-domains: ["nust.ac.zw"]
+        seed-urls:
+          - "https://www.nust.ac.zw/"
+          - "https://www.nust.ac.zw/index.php/prospective-students.html"
+        active: true
+        crawl-priority: 60

@@ -39,7 +39,7 @@ class MultiUniversityPageFetcherServiceTest {
                 registryService,
                 new UniversityPageClassifier(),
                 new UniversityUrlNormalizer(),
-                properties
+                properties, mockTransport(registryService)
         );
 
         var university = properties.getRegistry().get(0);
@@ -67,7 +67,7 @@ class MultiUniversityPageFetcherServiceTest {
                 registryService,
                 new UniversityPageClassifier(),
                 new UniversityUrlNormalizer(),
-                properties
+                properties, mockTransport(registryService)
         );
 
         var results = service.fetchPages(List.of(
@@ -104,7 +104,7 @@ class MultiUniversityPageFetcherServiceTest {
                 registryService,
                 new UniversityPageClassifier(),
                 new UniversityUrlNormalizer(),
-                properties
+                properties, mockTransport(registryService)
         );
 
         var results = service.fetchPages(List.of("http://localhost:" + port + "/flaky"));
@@ -115,14 +115,14 @@ class MultiUniversityPageFetcherServiceTest {
     }
 
     @Test
-    void keepsProcessingAllUrlsWhenSomeAreBlockedAndClassifiesFailures() {
+    void keepsProcessingAllUrlsWhenSomeAreBlockedAndClassifiesFailures() throws Exception {
         UniversityRegistryProperties properties = buildProperties(8080);
         UniversitySourceRegistryService registryService = new UniversitySourceRegistryService(properties, new UniversityUrlNormalizer());
         MultiUniversityPageFetcherService service = new MultiUniversityPageFetcherService(
                 registryService,
                 new UniversityPageClassifier(),
                 new UniversityUrlNormalizer(),
-                properties
+                properties, mockTransport(registryService)
         );
 
         var results = service.fetchPages(List.of(
@@ -167,5 +167,14 @@ class MultiUniversityPageFetcherServiceTest {
         properties.getRegistry().add(entry);
         return properties;
     }
+    // Retrieval/classification tests use fixture HTTP pages; transport security
+    // and robots/redirect behavior are independently tested with mocked responses.
+    private OfficialPageAccessPolicy mockTransport(UniversitySourceRegistryService registry) throws Exception {
+        var transport = org.mockito.Mockito.mock(OfficialPageAccessPolicy.class);
+        org.mockito.Mockito.when(transport.fetch(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyInt(),org.mockito.ArgumentMatchers.anyInt()))
+            .thenAnswer(call -> org.jsoup.Jsoup.connect(call.getArgument(0,String.class)).timeout(call.getArgument(1,Integer.class)).get());
+        return transport;
+    }
+
 }
 

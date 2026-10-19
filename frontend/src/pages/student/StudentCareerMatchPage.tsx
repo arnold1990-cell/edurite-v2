@@ -1,76 +1,426 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { useAppQuery } from '@/hooks/useAppQuery';
-import { useAuth } from '@/hooks/useAuth';
-import { recommendationService } from '@/services/recommendationService';
-import { aiGuidanceService } from '@/services/aiGuidanceService';
-import { RequireEntitlement, AiUsageDisplay } from '@/features/subscriptions/access';
-import { ProfileAssociationButton } from '@/components/student/profile/ProfileAssociations';
-import { StudentPsychometricPage } from './StudentPages';
+import { Link, useSearchParams } from "react-router-dom";
+import {
+  ArrowRight,
+  BarChart3,
+  GraduationCap,
+  FileText,
+  RefreshCw,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
+import { useAppQuery } from "@/hooks/useAppQuery";
+import { useAuth } from "@/hooks/useAuth";
+import { recommendationService } from "@/services/recommendationService";
+import { studentService } from "@/services/studentService";
+import { featureModulesService } from "@/services/featureModulesService";
+import {
+  RequireEntitlement,
+  AiUsageDisplay,
+  useSubscriptionAccess,
+} from "@/features/subscriptions/access";
+import { StudentPsychometricPage } from "./StudentPages";
+import { SummaryCardIllustration } from "@/components/student/guidance/SummaryCardIllustration";
+import { transcriptName } from "@/components/student/guidance/careerGuidanceModel";
+import { CareerResearchReportView } from "@/components/student/guidance/CareerResearchReportView";
+import {
+  hasGuidanceEvidence,
+  useCareerGuidance,
+} from "@/components/student/guidance/useCareerGuidance";
+import "@/components/student/guidance/career-guidance.css";
 
 export function StudentCareerMatchPage() {
   const [params] = useSearchParams();
-  return <section className="ex-workspace student-page-section">
-    <h1 className="student-page-title">Career Match</h1>
-    <p>Explore careers using your saved academic results, interests, preferences and optional assessment responses. These suggestions are not a diagnosis, an admission decision or a guaranteed career outcome.</p>
-    {params.get('step') === 'assessment' ? <>
-      <Link className="ep-primary" to="/student/career-match">Back to Career Match</Link>
-      <RequireEntitlement feature="CAREER_ASSESSMENT"><StudentPsychometricPage /></RequireEntitlement>
-    </> : <RequireEntitlement feature="PERSONALISED_CAREER_RECOMMENDATIONS"><CareerMatches /></RequireEntitlement>}
-  </section>;
+  const { user } = useAuth();
+  return (
+    <section className="cg-page student-page-section">
+      {params.get("step") === "assessment" ? (
+        <>
+          <h1 className="student-page-title">
+            <Sparkles aria-hidden="true" />
+            AI Career Guidance
+          </h1>
+          <Link className="cg-text-link" to="/student/career-match">
+            Back to Career Match
+          </Link>
+          <RequireEntitlement feature="CAREER_ASSESSMENT">
+            <StudentPsychometricPage />
+          </RequireEntitlement>
+        </>
+      ) : (
+        <RequireEntitlement feature="PERSONALISED_CAREER_RECOMMENDATIONS">
+          <CareerMatches key={user?.id} />
+        </RequireEntitlement>
+      )}
+    </section>
+  );
 }
 
 function CareerMatches() {
   const { user } = useAuth();
-  const client = useQueryClient();
-  const recs = useAppQuery({ queryKey: ['recs', user?.id], queryFn: recommendationService.mine, enabled: Boolean(user?.id), staleTime: 0 });
-  const ai = useMutation({ mutationFn: aiGuidanceService.getPersonalisedCareerAdvice,
-    onSettled: () => client.invalidateQueries({ queryKey: ['subscription-access'] }) });
-  const resetAi = ai.reset;
-  useEffect(() => { resetAi(); }, [user?.id, recs.dataUpdatedAt, resetAi]);
-  const refresh = () => { ai.reset(); void recs.refetch(); };
-  const data = recs.data;
-  return <>
-    <div className="ec-controls">
-      <Link to="/student/profile?section=academic">Update academic subjects and marks</Link>
-      <Link to="/student/profile?section=interests">Update interests and skills</Link>
-      <Link to="/student/profile?section=career">Update career goals and preferences</Link>
-      <Link to="/student/career-match?step=assessment">Assessment and saved results</Link>
-      <button className="ep-primary" disabled={recs.isFetching || ai.isPending} onClick={refresh}>{recs.isFetching ? 'Refreshing...' : 'Refresh recommendations'}</button>
-    </div>
-    {recs.isPending && <p role="status">Loading your saved evidence...</p>}
-    {recs.isError && <p role="alert">Could not load your career matches. <button onClick={refresh}>Retry</button></p>}
-    {data && <>
-      <section className="ed-panel"><h2>Inputs used</h2>
-        {data.inputsUsed?.length ? <ul>{data.inputsUsed.map(input => <li key={input}>{input}</li>)}</ul> : <p>No usable matching evidence is available yet. Add academic results, interests or an assessment to get started.</p>}
-        <h2>Missing information</h2><ul>{data.missingInformation?.map(input => <li key={input}>{input}</li>)}</ul>
-        {!data.missingInformation?.length && <p>All input categories are available. Keep your saved information up to date.</p>}
-        {data.limitations?.map(text => <p key={text}>{text}</p>)}
+  const enabled = Boolean(user?.id);
+  const access = useSubscriptionAccess();
+  const profile = useAppQuery({
+    queryKey: ["me", user?.id],
+    queryFn: studentService.getMe,
+    enabled,
+  });
+  const transcripts = useAppQuery({
+    queryKey: ["student-transcripts", user?.id],
+    queryFn: studentService.transcripts,
+    enabled,
+  });
+  const aps = useAppQuery({
+    queryKey: ["student-aps-profile", user?.id],
+    queryFn: featureModulesService.apsProfile,
+    enabled,
+  });
+  // Catalogue evidence can validate an assessment-only profile, but is never
+  // rendered as an AI generation result.
+  const evidence = useAppQuery({
+    queryKey: ["recs", user?.id],
+    queryFn: recommendationService.mine,
+    enabled,
+  });
+  const p = profile.data;
+  const scope = JSON.stringify([
+    user?.id,
+    p?.selectedGrade,
+    p?.qualificationLevel,
+    p?.subjectAchievements,
+    p?.interests,
+    p?.skills,
+    p?.careerGoals,
+    p?.preferredCareer,
+    p?.transcriptFileUrl,
+  ]);
+  const blockReason = !enabled
+    ? "Sign in to generate AI guidance."
+    : profile.isPending
+      ? "Loading your student profile..."
+      : profile.isError || !p
+        ? "Your profile could not load. Retry before generating guidance."
+        : access.isPending
+          ? "Checking AI access and usage..."
+          : access.isError
+            ? "AI access could not be checked. Retry before generating guidance."
+            : !access.data?.accessAllowed ||
+                !access.data.entitlements.includes(
+                  "PERSONALISED_CAREER_RECOMMENDATIONS",
+                )
+              ? "Your subscription does not currently allow AI guidance."
+              : access.data.aiUsage.remaining <= 0
+                ? "No AI interactions remain. Review your plan and usage before generating again."
+                : !hasGuidanceEvidence(p, evidence.data?.inputsUsed)
+                  ? evidence.isPending
+                    ? "Loading your saved academic and assessment evidence..."
+                    : "Add academic results, interests, skills or an assessment before generating personalised guidance."
+                  : undefined;
+  const ai = useCareerGuidance(scope, blockReason);
+  const latest = [...(transcripts.data ?? [])]
+    .reverse()
+    .find((item) => item.documentId === p?.transcriptFileUrl);
+  const subjects = p?.subjectAchievements ?? [];
+  const marks = subjects.flatMap((item) =>
+    item.markPercentage != null &&
+    Number.isFinite(item.markPercentage) &&
+    item.markPercentage >= 0 &&
+    item.markPercentage <= 100
+      ? [item.markPercentage]
+      : [],
+  );
+  const transcriptStatus =
+    profile.isPending || transcripts.isPending
+      ? "Checking transcript..."
+      : profile.isError || transcripts.isError
+        ? "Transcript status unavailable"
+        : !p?.transcriptFileUrl
+          ? "Transcript not uploaded"
+          : latest?.verifiedAt
+            ? "Transcript reviewed"
+            : latest?.extraction.subjects.length
+              ? "Results extracted - awaiting review"
+              : "Transcript uploaded - review academic results";
+  return (
+    <>
+      <header className="cg-header">
+        <div>
+          <h1 className="student-page-title">
+            <Sparkles aria-hidden="true" />
+            AI Career Guidance
+          </h1>
+          <p className="student-page-subtitle">
+            Discover career opportunities based on your academic performance,
+            interests, strengths, and future goals.
+          </p>
+        </div>
+        <span className="cg-ai-badge">
+          <Sparkles size={14} /> Gemini AI
+        </span>
+      </header>
+      <div className="cg-summary">
+        <article className="cg-panel ed-panel">
+          <div className="cg-card-heading">
+            <span className="cg-summary-icon">
+              <UserRound size={20} aria-hidden="true" />
+            </span>
+            <h2>My Academic Profile</h2>
+          </div>
+          <div className="cg-summary-main">
+            <div className="cg-summary-copy">
+              {profile.isPending ? (
+                <p role="status">Loading your academic profile...</p>
+              ) : profile.isError || !p ? (
+                <p role="alert">
+                  Your profile could not load.{" "}
+                  <button
+                    className="cg-text-button"
+                    onClick={() => profile.refetch()}
+                  >
+                    Retry profile
+                  </button>
+                </p>
+              ) : (
+                <>
+                  <strong className="cg-summary-value">
+                    {[p?.firstName, p?.lastName].filter(Boolean).join(" ") ||
+                      user?.fullName ||
+                      "Student profile"}
+                  </strong>
+                  <p className="cg-profile-fact">
+                    <GraduationCap size={16} aria-hidden="true" />
+                    <span>
+                      {p?.selectedGrade ||
+                        p?.qualificationLevel ||
+                        "Grade not recorded"}
+                    </span>
+                  </p>
+                  <p className="cg-profile-fact">
+                    <FileText size={16} aria-hidden="true" />
+                    <span>{subjects.length} recorded subjects</span>
+                  </p>
+                  <p className="cg-profile-fact">
+                    <BarChart3 size={16} aria-hidden="true" />
+                    <span>
+                      {marks.length
+                        ? `${Math.round(marks.reduce((sum, mark) => sum + mark, 0) / marks.length)}% average across ${marks.length} recorded percentage results`
+                        : "Academic average not available"}
+                    </span>
+                  </p>
+                </>
+              )}
+            </div>
+            <SummaryCardIllustration kind="academic" />
+          </div>
+          {!profile.isPending &&
+            !profile.isError &&
+            p?.profileCompleteness != null && (
+              <div className="cg-completion">
+                <span>
+                  Profile completion <strong>{p.profileCompleteness}%</strong>
+                </span>
+                <progress
+                  value={p.profileCompleteness}
+                  max={100}
+                  aria-label="Profile completion"
+                />
+              </div>
+            )}
+          <Link className="cg-text-link" to="/student/profile?section=academic">
+            Update Student Profile <ArrowRight size={14} />
+          </Link>
+        </article>
+        <article className="cg-panel ed-panel">
+          <div className="cg-card-heading">
+            <span className="cg-summary-icon">
+              <FileText size={20} aria-hidden="true" />
+            </span>
+            <h2>Transcript Analysis</h2>
+          </div>
+          <div className="cg-summary-main">
+            <div className="cg-summary-copy">
+              <strong className="cg-summary-value">{transcriptStatus}</strong>
+              {!p?.transcriptFileUrl &&
+                !profile.isPending &&
+                !profile.isError && (
+                  <p className="cg-summary-explanation">
+                    Upload your academic transcript to help EduRite understand
+                    your results and recommend suitable career pathways.
+                  </p>
+                )}
+              {p?.transcriptFileUrl && (
+                <>
+                  <p className="cg-filename">
+                    {transcriptName(p.transcriptFileUrl)}
+                  </p>
+                  {latest && (
+                    <>
+                      <p>{latest.extraction.message}</p>
+                      {latest.extraction.subjects.length > 0 && (
+                        <p>
+                          {latest.extraction.subjects
+                            .map((item) => item.subjectName)
+                            .join(", ")}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  {p.curriculum && <p>{p.curriculum}</p>}
+                  {aps.data?.status !== "UNAVAILABLE" &&
+                    aps.data?.totalAps != null && (
+                      <p>
+                        General APS: {aps.data.totalAps}
+                        {aps.data.status === "PROVISIONAL"
+                          ? " (provisional)"
+                          : ""}
+                      </p>
+                    )}
+                </>
+              )}
+              {transcripts.isError && (
+                <button
+                  className="cg-text-button"
+                  onClick={() => transcripts.refetch()}
+                >
+                  Retry transcript status
+                </button>
+              )}
+            </div>
+            <SummaryCardIllustration kind="transcript" />
+          </div>
+          <Link
+            className="cg-text-link"
+            to={
+              p?.transcriptFileUrl
+                ? "/student/profile?section=academic"
+                : "/student/documents"
+            }
+          >
+            {p?.transcriptFileUrl
+              ? "View Academic Results"
+              : "Upload Academic Transcript"}{" "}
+            <ArrowRight size={14} />
+          </Link>
+        </article>
+        <article className="cg-panel ed-panel">
+          <div className="cg-card-heading">
+            <span className="cg-summary-icon">
+              <Sparkles size={20} aria-hidden="true" />
+            </span>
+            <h2>AI Analysis Status</h2>
+          </div>
+          <div className="cg-summary-main">
+            <div className="cg-summary-copy">
+              <strong className="cg-summary-value">
+                {ai.isPending
+                  ? "Generating your personalised career guidance..."
+                  : ai.result
+                    ? `${ai.result.response.recommendedCareers.length} AI career recommendations`
+                    : "AI guidance not generated yet"}
+              </strong>
+              {!ai.result && !ai.isPending && (
+                <p className="cg-summary-explanation">
+                  Generate personalised career recommendations based on your
+                  academic profile, interests, and goals.
+                </p>
+              )}
+              {ai.result && (
+                <p>
+                  {ai.result.saved
+                    ? "Saved report generated on "
+                    : "Generated in this session on "}
+                  {new Date(ai.result.generatedAt).toLocaleString()}.
+                </p>
+              )}
+            </div>
+            <SummaryCardIllustration kind="ai" />
+          </div>
+          {ai.result && (
+            <button
+              className="cg-text-link"
+              disabled={Boolean(blockReason)}
+              onClick={() => void ai.generate()}
+            >
+              <RefreshCw size={14} />
+              Refresh Recommendations
+            </button>
+          )}
+        </article>
+      </div>
+      <section
+        className="cg-panel ed-panel cg-ai-action"
+        aria-label="Generate AI guidance"
+      >
+        <div className="cg-generation-copy">
+          <span className="cg-generation-icon" aria-hidden="true">
+            <Sparkles size={24} />
+          </span>
+          <div>
+            <h2>Generate AI Guidance</h2>
+            <p>
+              Use your saved profile and academic evidence to explore suitable
+              careers.
+            </p>
+            <AiUsageDisplay />
+          </div>
+        </div>
+        <button
+          className="cg-button ep-primary"
+          disabled={ai.isPending || Boolean(blockReason)}
+          onClick={() => void ai.generate()}
+        >
+          <Sparkles size={16} />
+          {ai.isPending ? "Generating..." : "Generate AI Guidance"}
+        </button>
+        {ai.isPending && (
+          <p className="cg-feedback" role="status">
+            <RefreshCw size={16} className="cg-spin" />
+            Generating your personalised career guidance... {ai.stage}
+          </p>
+        )}
+        {blockReason && !ai.isPending && (
+          <p className="cg-generation-notice" role="status">
+            {blockReason}
+            {access.isError && (
+              <button
+                className="cg-text-button"
+                onClick={() => access.refetch()}
+              >
+                Retry access
+              </button>
+            )}
+          </p>
+        )}
+        {ai.error && (
+          <div className="cg-feedback" role="alert">
+            <p>{ai.error}</p>
+            <div className="cg-inline-links">
+              <button
+                className="cg-text-button"
+                disabled={
+                  ai.isSubmitting ||
+                  (Boolean(blockReason) && !ai.canRetryStatus)
+                }
+                onClick={() => void ai.retry()}
+              >
+                Retry AI Guidance
+              </button>
+              <Link
+                className="cg-text-link"
+                to="/student/profile?section=academic"
+              >
+                Review profile
+              </Link>
+              <Link className="cg-text-link" to="/student/subscription">
+                View plan and usage
+              </Link>
+              <Link className="cg-text-link" to="/auth/login">
+                Sign in again
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
-      <RequireEntitlement feature="PERSONALISED_CAREER_RECOMMENDATIONS"><section className="ed-panel">
-        <h2>EduRite AI Guidance</h2><p>Request an AI explanation using your current saved profile and available assessment evidence. It is optional; catalogue recommendations remain available if AI fails.</p>
-        <AiUsageDisplay /><button className="ep-primary" disabled={ai.isPending || recs.isFetching || !data.inputsUsed?.length} onClick={() => ai.mutate()}>{ai.isPending ? 'Reviewing your evidence...' : 'Explore with EduRite AI Guidance'}</button>
-        {ai.isError && <p role="alert">AI guidance is unavailable. Your catalogue recommendations remain below. You can retry.</p>}
-      </section></RequireEntitlement>
-      <h2>{ai.data ? 'AI career suggestions' : 'Career recommendations'}</h2>
-      {ai.data ? <>
-        <p>AI suggestions use your saved inputs and may need verification. No matching percentages or admission eligibility have been calculated.</p>
-        <button onClick={() => ai.reset()}>Show catalogue recommendations</button>
-        <div className="ed-feature-grid">{ai.data.recommendedCareers.map((item, index) => <article className="card p-5" key={`${item.name}-${index}`}>
-          <h3>{item.name}</h3><h4>Why explore this career</h4><p>{item.reason}</p>
-          <ul>{item.improvements.map(text => <li key={text}>{text}</li>)}</ul>
-          <Link to={`/student/career-explorer?section=career-path&career=${encodeURIComponent(item.name)}`}>Explore career pathway</Link>
-        </article>)}</div>
-      </> : <>
-        {!data.suggestedCareers.length && <p>No supported catalogue matches yet. Add more information above or <Link to="/student/career-explorer">browse Career Explorer</Link>. An assessment is optional.</p>}
-        <div className="ed-feature-grid">{data.suggestedCareers.map(item => <article className="card p-5" key={item.id}>
-          <h3>{item.title}</h3><h4>Why this career is recommended</h4><p>{item.rationale}</p>
-          <ProfileAssociationButton type="CAREER" targetId={item.id} />
-          <Link to={`/student/career-explorer?section=career-path&career=${encodeURIComponent(item.title)}`}>Explore career pathway</Link>
-        </article>)}</div>
-      </>}
-      {data.careerSuggestionsLimited && <p>{data.upgradeMessage}</p>}
-    </>}
-  </>;
+      {ai.result && <CareerResearchReportView report={ai.result.report} />}
+    </>
+  );
 }

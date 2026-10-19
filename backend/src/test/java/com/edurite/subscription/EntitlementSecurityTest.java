@@ -45,7 +45,7 @@ class EntitlementSecurityTest {
             .addInterceptors(new SubscriptionAccessInterceptor(current,entitlements,usage)).build();
     }
     @RestController static class Endpoints {
-        @RequestMapping({"/api/student/career-roadmaps/generate","/api/v1/student/career-roadmaps/generate","/api/student/cv","/api/ai/analyse-university-sources","/api/student/psychometric/latest","/api/student/tutor/ask","/api/student/aps/calculate","/api/careers"})
+        @RequestMapping({"/api/student/career-roadmaps/generate","/api/v1/student/career-roadmaps/generate","/api/student/cv","/api/ai/analyse-university-sources","/api/student/psychometric/latest","/api/student/tutor/ask","/api/student/aps/calculate","/api/careers","/api/ai/career-research","/api/v1/ai/career-research"})
         Map<String,String> response() { return Map.of("result","allowed"); }
     }
     @ParameterizedTest @EnumSource(PlanType.class)
@@ -90,4 +90,11 @@ class EntitlementSecurityTest {
     @ParameterizedTest @ValueSource(strings={"ADMIN","SCHOOL_ADMIN","TEACHER","DISTRICT_ADMIN","CIRCUIT_MANAGER","SUBJECT_ADVISOR"})
     void nonStudentRolesAreNotCharged(String name) throws Exception {Role role=new Role();role.setName(name);user.setRoles(Set.of(role));mvc.perform(post("/api/student/tutor/ask")).andExpect(status().isOk());verifyNoInteractions(usage);}
     @Test void utcMonthlyPeriodRollsOverWithoutScheduledJob() {assertThat(AiUsageService.period(Instant.parse("2026-01-31T23:59:59Z"))).isEqualTo(LocalDate.of(2026,1,1));assertThat(AiUsageService.period(Instant.parse("2026-02-01T00:00:00Z"))).isEqualTo(LocalDate.of(2026,2,1));}
+    @Test void researchStatusAndStartAreEntitledButNotDoubleReservedByTheInterceptor() throws Exception {
+        subscription.setPlanCode("PLAN_PRO");
+        mvc.perform(get("/api/ai/career-research")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/ai/career-research")).andExpect(status().isOk());
+        verifyNoInteractions(usage);
+    }
+
 }

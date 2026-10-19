@@ -1,7 +1,7 @@
 ﻿import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { StaticRouter } from 'react-router-dom/server';
-import { StudentProfileSectionsPage, StudentCareerExplorerPage, StudentLearningResourcesPage, StudentFundingPage, StudentInstitutionsPage, StudentProgressPage } from './StudentSectionPages';
+import { StudentProfileSectionsPage, StudentCareerGuidancePage, StudentCareerExplorerPage, StudentLearningResourcesPage, StudentFundingPage, StudentInstitutionsPage, StudentProgressPage } from './StudentSectionPages';
 
 vi.mock('@/features/subscriptions/access', () => ({ AccessBadge: () => null }));
 vi.mock('@/routes/StudentRedirect', () => ({ StudentRedirect: ({ to }: { to: string }) => <div data-redirect={to} /> }));
@@ -43,6 +43,10 @@ const cases = [
 ] as const;
 
 describe('consolidated feature content', () => {
+  it('opens the redesigned canonical guidance page from the existing guidance navigation', () => {
+    const html = renderToStaticMarkup(<StaticRouter location="/student/career-guidance"><StudentCareerGuidancePage /></StaticRouter>);
+    expect(html).toContain('data-redirect="/student/career-match"');
+  });
   it.each(cases)('mounts the retained feature for %s / %s / %s', (Page, parent, section, feature) => {
     const html = renderToStaticMarkup(<StaticRouter location={`/student/${parent}?section=${section}`}><Page /></StaticRouter>);
     expect(html).toContain(`data-feature="${feature}"`);

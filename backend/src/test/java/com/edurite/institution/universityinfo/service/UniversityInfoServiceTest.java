@@ -91,7 +91,7 @@ class UniversityInfoServiceTest {
         var response = service.getProgrammes("university-of-cape-town");
 
         assertThat(response.fallbackOnly()).isFalse();
-        assertThat(response.retrievalStatus()).isEqualTo("STORED_VERIFIED");
+        assertThat(response.retrievalStatus()).isEqualTo("STORED_SOURCE_RECORDS");
         assertThat(response.programmes()).hasSize(1);
         assertThat(response.programmes().getFirst().name()).isEqualTo("Bachelor of Science");
     }
@@ -126,10 +126,27 @@ class UniversityInfoServiceTest {
         var response = service.refreshUniversityData("university-of-cape-town");
 
         assertThat(response.status()).isIn("SUCCESS", "PARTIAL");
-        verify(programmeRepository).deleteByInstitutionId(institution.getId());
-        verify(requirementRepository).deleteByInstitutionId(institution.getId());
+        verify(programmeRepository, org.mockito.Mockito.never()).deleteByInstitutionId(institution.getId());
+        verify(requirementRepository, org.mockito.Mockito.never()).deleteByInstitutionId(institution.getId());
         verify(requirementRepository).save(any(UniversityAdmissionRequirement.class));
         verify(retrievalLogRepository).save(any(UniversityRetrievalLog.class));
+    }
+    @Test void targetedIngestionPreservesPublishedTitleSourceAndExplicitFieldsWithoutVerifyingAdmissions() {
+        String url="https://www.uct.ac.za/programmes/accounting";
+        var page=new UniversitySourcePageResult(url,"Bachelor of Accounting",UniversityPageType.PROGRAMME_DETAIL,"Bachelor of Accounting. Duration: 4 years. Study mode: Full-time. Admission requirements: English and Mathematics.",Set.of("accounting"),List.of("Bachelor of Accounting"),true,null,null);
+        when(registryService.isAllowedUrlForUniversity(institution.getName(),url)).thenReturn(true);
+        service.ingestOfficialPages(institution,List.of(page));
+        var captured=org.mockito.ArgumentCaptor.forClass(UniversityProgramme.class);verify(programmeRepository).save(captured.capture());
+        assertThat(captured.getValue().getName()).isEqualTo("Bachelor of Accounting");assertThat(captured.getValue().getSourceUrl()).isEqualTo(url);
+        assertThat(captured.getValue().getDuration()).isEqualTo("4 years");assertThat(captured.getValue().getStudyMode()).isEqualTo("Full-time");
+        assertThat(captured.getValue().getRetrievalStatus()).isEqualTo("SOURCE_CONFIRMED");assertThat(captured.getValue().getLastVerifiedAt()).isNotNull();
+        var admission=org.mockito.ArgumentCaptor.forClass(UniversityAdmissionRequirement.class);verify(requirementRepository).save(admission.capture());
+        assertThat(admission.getValue().getRetrievalStatus()).isEqualTo("EXTRACTED_UNVERIFIED");
+    }
+    @Test void unapprovedSourceCannotPolluteOfficialInstitutionCacheOrProgrammeRecords() {
+        var page=new UniversitySourcePageResult("https://untrusted.invalid/programme","Bachelor of Accounting",UniversityPageType.PROGRAMME_DETAIL,"Bachelor of Accounting",Set.of(),true,null,null);
+        service.ingestOfficialPages(institution,List.of(page));
+        org.mockito.Mockito.verifyNoInteractions(crawledUniversityPageRepository,programmeRepository,requirementRepository,retrievalLogRepository);
     }
 }
 

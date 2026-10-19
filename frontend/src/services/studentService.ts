@@ -14,7 +14,15 @@ export interface ProfileAssociation {
   type: 'COURSE' | 'CAREER' | 'PROGRAMME'; targetId: string; title: string; linkedAt: string; careerName?: string;
 }
 
+export interface StudentTranscript {
+  documentId: string;
+  uploadedAt?: string;
+  verifiedAt?: string;
+  extraction: { message: string; grade?: string; year?: string; subjects: StudentSubjectAchievement[] };
+}
+
 export const studentService = {
+  transcripts: () => apiClient.get<StudentTranscript[]>('/student/transcripts').then(r => r.data),
   associations: () => apiClient.get<ProfileAssociation[]>('/student/profile/associations').then(r => r.data),
   linkAssociation: (type: ProfileAssociation['type'], targetId: string) => apiClient.put<ProfileAssociation[]>(`/student/profile/associations/${type}/${encodeURIComponent(targetId)}`).then(r => r.data),
   unlinkAssociation: (type: ProfileAssociation['type'], targetId: string) => apiClient.delete<ProfileAssociation[]>(`/student/profile/associations/${type}/${encodeURIComponent(targetId)}`).then(r => r.data),

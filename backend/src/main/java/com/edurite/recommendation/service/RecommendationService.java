@@ -83,14 +83,14 @@ public class RecommendationService {
             if (plan.premium()) rationale += " Profile correlation is guidance, not an admission or employment guarantee.";
             return new RecommendationItemDto(career.getId().toString(), career.getTitle(), score, rationale);
         }).filter(item -> item.score() > 0).sorted(Comparator.comparingInt(RecommendationItemDto::score).reversed().thenComparing(RecommendationItemDto::title)).toList();
-        int limit = plan.careerSuggestionLimit() == null ? 12 : plan.careerSuggestionLimit();
+        int limit = plan.careerSuggestionLimit() == null ? Integer.MAX_VALUE : plan.careerSuggestionLimit();
         var visible = ranked.stream().limit(limit).toList();
-        List<String> topTitles = ranked.stream().filter(c -> c.score() > 0).limit(3).map(RecommendationItemDto::title).toList();
+        List<String> topTitles = visible.stream().map(RecommendationItemDto::title).toList();
         var study = courses.findAll().stream().map(course -> {
             var related = matches(topTitles, safe(course.getName()).toLowerCase(Locale.ROOT));
             return new RecommendationItemDto("course-" + course.getId(), course.getName(), related.size()*25,
                 "Study pathway related to your career matches: " + String.join(", ", related) + ". Check programme entry requirements.");
-        }).filter(c -> c.score() > 0).sorted(Comparator.comparingInt(RecommendationItemDto::score).reversed()).limit(6).toList();
+        }).filter(c -> c.score() > 0).sorted(Comparator.comparingInt(RecommendationItemDto::score).reversed()).limit(limit).toList();
         List<String> tips = new ArrayList<>();
         if (profile.interests().isEmpty()) tips.add("Add interests to improve your top matches.");
         if (profile.skills().isEmpty()) tips.add("Add your skills to improve matching.");

@@ -48,7 +48,7 @@ const formatDate = (value?: string | null) => {
 
 const statusLabel = (view: { cachedData: boolean; fallbackOnly: boolean; retrievalStatus: string }) => {
   if (view.fallbackOnly) return 'Official website fallback';
-  if (view.cachedData) return 'Cached verified data';
+  if (view.cachedData) return view.retrievalStatus === 'STORED_VERIFIED' ? 'Cached verified data' : 'Cached source records';
   return view.retrievalStatus.replace(/_/g, ' ');
 };
 

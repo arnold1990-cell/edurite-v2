@@ -81,8 +81,8 @@ public class UniversityInfoService {
         if (!stored.isEmpty()) {
             return new UniversityProgrammesViewResponse(
                     institutionSummary(institution),
-                    "STORED_VERIFIED",
-                    "Verified programme information retrieved from EduRite storage.",
+                    "STORED_SOURCE_RECORDS",
+                    "Stored programme source records. Verification status is shown for each record; confirm current requirements on the official website.",
                     stored.stream().map(UniversityProgramme::getLastVerifiedAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(institution.getUpdatedAt()),
                     true,
                     false,
@@ -119,8 +119,8 @@ public class UniversityInfoService {
         if (!stored.isEmpty()) {
             return new UniversityAdmissionRequirementsViewResponse(
                     institutionSummary(institution),
-                    "STORED_VERIFIED",
-                    "Verified admission requirements retrieved from EduRite storage.",
+                    "STORED_SOURCE_RECORDS",
+                    "Stored admission source records. Automatically extracted conditions require programme-specific verification.",
                     stored.stream().map(UniversityAdmissionRequirement::getLastVerifiedAt).filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(institution.getUpdatedAt()),
                     true,
                     false,
@@ -160,8 +160,7 @@ public class UniversityInfoService {
 
         List<UniversitySourcePageResult> fetched = pageFetcherService.fetchPages(candidateUrls);
         persistCrawledPages(institution.getName(), fetched);
-        programmeRepository.deleteByInstitutionId(institution.getId());
-        requirementRepository.deleteByInstitutionId(institution.getId());
+        // A partial/unavailable refresh must not delete previously published records.
 
         int programmeCount = 0;
         int requirementCount = 0;
@@ -182,6 +181,16 @@ public class UniversityInfoService {
         return new UniversityRefreshResponse(slug, programmeCount > 0 || requirementCount > 0 ? "SUCCESS" : "PARTIAL", message, OffsetDateTime.now());
     }
 
+    @Transactional
+    public void ingestOfficialPages(Institution institution, List<UniversitySourcePageResult> pages) {
+        var approved=pages.stream().filter(page->registryService.isAllowedUrlForUniversity(institution.getName(),page.sourceUrl())).toList();
+        persistCrawledPages(institution.getName(), approved);
+        for (var page : approved) {
+            logRetrieval(institution,page.sourceUrl(),page.success()?"SUCCESS":"FAILED",page.success()?"Official source retrieved; extracted fields retain source attribution.":safe(page.failureReason()),"TARGETED_RESEARCH");
+            if (page.success()) { extractProgrammes(institution,page); extractRequirements(institution,page); }
+        }
+    }
+
     private int extractProgrammes(Institution institution, UniversitySourcePageResult page) {
         if (!(page.pageType() == UniversityPageType.PROGRAMME_DETAIL
                 || page.pageType() == UniversityPageType.QUALIFICATION_LIST
@@ -190,30 +199,34 @@ public class UniversityInfoService {
         }
 
         Set<String> matches = new LinkedHashSet<>();
+        for (String heading : page.headings()) {
+            if (heading.matches("(?i)^(Bachelor|Diploma|Certificate|Higher Certificate|Advanced Diploma|Master|Doctor).*")) matches.add(sanitizeProgrammeName(heading));
+        }
+        boolean headingEvidence = !matches.isEmpty();
         Matcher matcher = PROGRAMME_PATTERN.matcher(page.cleanedText());
         while (matcher.find()) {
             String value = sanitizeProgrammeName(matcher.group(1));
-            if (!value.isBlank()) {
+            if (!value.isBlank() && !headingEvidence) {
                 matches.add(value);
             }
         }
 
         int saved = 0;
         for (String match : matches) {
-            if (programmeRepository.findByInstitutionIdAndNameIgnoreCaseAndSourceUrl(institution.getId(), match, page.sourceUrl()).isPresent()) {
-                continue;
-            }
-            UniversityProgramme programme = new UniversityProgramme();
+            UniversityProgramme programme = programmeRepository.findByInstitutionIdAndNameIgnoreCaseAndSourceUrl(institution.getId(), match, page.sourceUrl()).orElseGet(UniversityProgramme::new);
             programme.setInstitution(institution);
             programme.setName(match);
             programme.setQualificationType(qualificationType(match));
-            programme.setFaculty(inferFaculty(page));
-            programme.setDuration(inferDuration(page.cleanedText()));
-            programme.setStudyMode(inferStudyMode(page.cleanedText()));
+            boolean specific = page.pageType() == UniversityPageType.PROGRAMME_DETAIL && matches.size() == 1;
+            programme.setFaculty(null); // A faculty mentioned elsewhere on a page is not programme evidence.
+            programme.setDuration(specific ? inferDuration(page.cleanedText()) : null);
+            programme.setStudyMode(specific ? inferStudyMode(page.cleanedText()) : null);
             programme.setProgrammeUrl(page.sourceUrl());
             programme.setSourceUrl(page.sourceUrl());
             programme.setSourceLabel(sourceLabel(page.pageType()));
-            programme.setRetrievalStatus("VERIFIED");
+            boolean titleConfirmed = (page.headings().stream().anyMatch(h -> h.equalsIgnoreCase(match)) || safe(page.pageTitle()).toLowerCase(Locale.ROOT).contains(match.toLowerCase(Locale.ROOT))) && safe(page.cleanedText()).toLowerCase(Locale.ROOT).contains(match.toLowerCase(Locale.ROOT));
+            programme.setRetrievalStatus(titleConfirmed ? "SOURCE_CONFIRMED" : "EXTRACTED_UNVERIFIED");
+            programme.setActive(true);
             programme.setLastVerifiedAt(OffsetDateTime.now());
             programmeRepository.save(programme);
             saved++;
@@ -243,11 +256,7 @@ public class UniversityInfoService {
         if (aps == null && subjects.isEmpty() && nscRequirement.isBlank() && languageRequirement.isBlank() && internationalRequirement.isBlank() && additionalTests.isBlank()) {
             return 0;
         }
-        if (requirementRepository.findByInstitutionIdAndProgrammeNameIgnoreCaseAndSourceUrlAndRequirementTitleIgnoreCase(institution.getId(), programmeName, page.sourceUrl(), requirementTitle).isPresent()) {
-            return 0;
-        }
-
-        UniversityAdmissionRequirement requirement = new UniversityAdmissionRequirement();
+        UniversityAdmissionRequirement requirement = requirementRepository.findByInstitutionIdAndProgrammeNameIgnoreCaseAndSourceUrlAndRequirementTitleIgnoreCase(institution.getId(), programmeName, page.sourceUrl(), requirementTitle).orElseGet(UniversityAdmissionRequirement::new);
         requirement.setInstitution(institution);
         requirement.setProgrammeName(programmeName);
         requirement.setRequirementTitle(requirementTitle);
@@ -261,7 +270,8 @@ public class UniversityInfoService {
         requirement.setAdditionalTests(trimToLength(additionalTests, 4000));
         requirement.setSourceUrl(page.sourceUrl());
         requirement.setSourceLabel(sourceLabel(page.pageType()));
-        requirement.setRetrievalStatus("VERIFIED");
+        requirement.setRetrievalStatus("EXTRACTED_UNVERIFIED");
+        requirement.setActive(true);
         requirement.setLastVerifiedAt(OffsetDateTime.now());
         requirementRepository.save(requirement);
         return 1;
@@ -273,11 +283,13 @@ public class UniversityInfoService {
             CrawledUniversityPage page = crawledUniversityPageRepository.findBySourceUrl(pageResult.sourceUrl()).orElseGet(CrawledUniversityPage::new);
             page.setUniversityName(universityName);
             page.setSourceUrl(pageResult.sourceUrl());
-            page.setPageTitle(pageResult.pageTitle());
-            page.setPageType(pageResult.pageType().name());
-            page.setExtractedKeywords(pageResult.extractedKeywords());
-            page.setCleanedContent(pageResult.cleanedText());
-            page.setSummaryExcerpt(trimToLength(pageResult.cleanedText(), 320));
+            if (pageResult.success() || page.getLastSuccessfulCrawledAt() == null) {
+                page.setPageTitle(pageResult.pageTitle());
+                page.setPageType(pageResult.pageType().name());
+                page.setExtractedKeywords(pageResult.extractedKeywords());
+                page.setCleanedContent(pageResult.cleanedText());
+                page.setSummaryExcerpt(trimToLength(pageResult.cleanedText(), 320));
+            }
             page.setLastCrawledAt(now);
             if (pageResult.success()) {
                 page.setCrawlStatus(CrawlStatus.SUCCESS);
@@ -418,7 +430,7 @@ public class UniversityInfoService {
     }
 
     private String sanitizeProgrammeName(String value) {
-        return trimToLength(value.replaceAll("\\s+", " ").trim(), 255);
+        return trimToLength(value.replaceAll("(?i)\\s+(?:applicants|requires?|admission|entry requirements|duration)\\b.*", "").replaceAll("\\s+", " ").trim(), 255);
     }
 
     private String qualificationType(String programmeName) {
@@ -445,16 +457,13 @@ public class UniversityInfoService {
     }
 
     private String inferDuration(String text) {
-        Matcher matcher = Pattern.compile("\\b(\\d{1,2}\\s+(?:year|years|month|months))\\b", Pattern.CASE_INSENSITIVE).matcher(safe(text));
+        Matcher matcher = Pattern.compile("\\b(?:duration|length of study)\\s*:?\\s*(\\d{1,2}\\s+(?:years?|months?))\\b", Pattern.CASE_INSENSITIVE).matcher(safe(text));
         return matcher.find() ? trimToLength(matcher.group(1), 120) : null;
     }
 
     private String inferStudyMode(String text) {
-        String lower = safe(text).toLowerCase(Locale.ROOT);
-        if (lower.contains("distance") || lower.contains("online")) return "Distance / Online";
-        if (lower.contains("part-time")) return "Part-time";
-        if (lower.contains("full-time")) return "Full-time";
-        return null;
+        Matcher mode = Pattern.compile("(?i)\\bstudy mode\\s*:?\\s*(full-time|part-time|distance|online)\\b").matcher(safe(text));
+        return mode.find() ? mode.group(1) : null;
     }
 
     private Integer extractAps(String text) {

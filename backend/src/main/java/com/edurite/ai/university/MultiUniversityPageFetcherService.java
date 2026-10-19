@@ -74,17 +74,23 @@ public class MultiUniversityPageFetcherService {
     private final UniversityPageClassifier classifier;
     private final UniversityUrlNormalizer urlNormalizer;
     private final UniversityRegistryProperties properties;
+    private final OfficialPageAccessPolicy accessPolicy;
 
     public MultiUniversityPageFetcherService(
             UniversitySourceRegistryService registryService,
             UniversityPageClassifier classifier,
             UniversityUrlNormalizer urlNormalizer,
             UniversityRegistryProperties properties
-    ) {
+    ) { this(registryService, classifier, urlNormalizer, properties, new OfficialPageAccessPolicy(registryService)); }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public MultiUniversityPageFetcherService(UniversitySourceRegistryService registryService, UniversityPageClassifier classifier,
+            UniversityUrlNormalizer urlNormalizer, UniversityRegistryProperties properties, OfficialPageAccessPolicy accessPolicy) {
         this.registryService = registryService;
         this.classifier = classifier;
         this.urlNormalizer = urlNormalizer;
         this.properties = properties;
+        this.accessPolicy = accessPolicy;
     }
 
     public List<String> discoverCandidateUrls(UniversityRegistryProperties.UniversityRegistryEntry university, int maxUrls) {
@@ -232,7 +238,6 @@ public class MultiUniversityPageFetcherService {
         IOException lastError = null;
         int maxRetries = Math.max(1, crawl().getMaxFetchRetries());
         String candidateUrl = requestedUrl;
-        boolean attemptedHttpFallback = false;
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
                 log.info("University fetch start: url={}, attempt={}", candidateUrl, attempt);
@@ -272,16 +277,6 @@ public class MultiUniversityPageFetcherService {
             } catch (IOException ex) {
                 lastError = ex;
                 log.warn("University fetch failed: url={}, attempt={}, retryable={}, message={}", candidateUrl, attempt, isRetryable(ex), ex.getMessage());
-                if (ex instanceof SSLException
-                        && !attemptedHttpFallback
-                        && candidateUrl.toLowerCase(Locale.ROOT).startsWith("https://")) {
-                    String httpFallbackUrl = "http://" + candidateUrl.substring("https://".length());
-                    log.info("University fetch switching to HTTP fallback after SSL failure: httpsUrl={}, httpUrl={}",
-                            candidateUrl, httpFallbackUrl);
-                    candidateUrl = httpFallbackUrl;
-                    attemptedHttpFallback = true;
-                    continue;
-                }
                 if (!isRetryable(ex) || attempt >= maxRetries) {
                     break;
                 }
@@ -518,16 +513,7 @@ public class MultiUniversityPageFetcherService {
     }
 
     private Document connect(String url) throws IOException {
-        Connection connection = Jsoup.connect(url)
-                .userAgent(USER_AGENT)
-                .header("Accept", ACCEPT_HEADER)
-                .header("Accept-Language", ACCEPT_LANGUAGE)
-                .header("Accept-Encoding", ACCEPT_ENCODING)
-                .timeout(crawl().getTimeoutMs())
-                .followRedirects(true)
-                .ignoreContentType(false)
-                .maxBodySize(crawl().getMaxBodySizeBytes());
-        return connection.get();
+        return accessPolicy.fetch(url, crawl().getTimeoutMs(), crawl().getMaxBodySizeBytes());
     }
 
     private boolean isRetryable(IOException ex) {
@@ -536,7 +522,7 @@ public class MultiUniversityPageFetcherService {
         }
         if (ex instanceof HttpStatusException statusException) {
             int statusCode = statusException.getStatusCode();
-            return statusCode == 403 || statusCode == 408 || statusCode == 429 || statusCode >= 500;
+            return statusCode == 408 || statusCode >= 500;
         }
         return true;
     }

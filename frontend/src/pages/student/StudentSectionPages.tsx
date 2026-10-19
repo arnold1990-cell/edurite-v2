@@ -1,4 +1,5 @@
 import { StudentRedirect } from '@/routes/StudentRedirect';
+import { SavedResearchStudyOptions } from '@/components/student/guidance/SavedResearchStudyOptions';
 import { recommendationService } from '@/services/recommendationService';
 import { AccessBadge, RequireEntitlement } from '@/features/subscriptions/access';
 import { StudentProfilePage, StudentMySchoolPage, StudentLearningCentrePage, StudentSavedPage, StudentApplicationsPage, StudentBursaryRecommendationsPage, StudentRewardsPage } from './StudentPages';
@@ -22,13 +23,14 @@ export function StudentStudyOptionsPage() {
   const [params, setParams] = useSearchParams();
   const recs = useAppQuery({ queryKey: ['recs'], queryFn: recommendationService.mine });
   const section = params.get('section') || 'recommended';
+  if (section === 'research') return <SavedResearchStudyOptions />;
   if (section !== 'recommended' && section !== 'explore') return <StudentInstitutionsPage />;
   const options = recs.data?.suggestedCoursesOrImprovements?.filter(item => item.id.startsWith('course-')) ?? [];
   return <section className="ex-workspace student-page-section"><h2 className="student-page-title">Recommended for You</h2><p>Study pathways connected to your career matches, interests and academic profile.</p>
     {recs.isLoading && <p role="status">Loading your study recommendations...</p>}{recs.isError && <p role="alert">Recommendations could not load. <button onClick={() => recs.refetch()}>Retry</button></p>}
     <div className="ed-feature-grid">{options.map(item => <article className="card p-5" key={item.id}><h3>{item.title}</h3><p>{item.rationale}</p><Link to={`/courses/${item.id.replace('course-', '')}`}>Programme details</Link></article>)}</div>
     {!recs.isLoading && !recs.isError && !options.length && <p>No matching study programmes yet. <Link to="/student/profile?section=interests">Update your interests and academic profile</Link> or explore institutions below.</p>}
-    <Link to="/student/career-match">Update Career Recommendations</Link><h2 className="mt-6 text-xl font-semibold">Explore Institutions</h2>
+    <Link to="/student/career-match">Update Career Recommendations</Link><Link className="ml-4 underline" to="/student/study-options?section=research">View Career Research Programmes</Link><h2 className="mt-6 text-xl font-semibold">Explore Institutions</h2>
     <label className="block">Search institutions and programmes<input className="w-full rounded border p-2" value={params.get('q') || ''} onChange={e => setParams(previous => { const next = new URLSearchParams(previous); next.set('q', e.target.value); return next; }, { replace: true })} /></label>
     <ExploreStudyOptions roadmap={null} query={params.get('q') || ''} expanded onExpand={() => {}} /></section>;
 }
@@ -48,11 +50,7 @@ export function StudentProfileSectionsPage() {
   return <StudentProfilePage />;
 }
 export function StudentCareerGuidancePage() {
-  return <section className="ex-workspace student-page-section"><h1 className="student-page-title">Career Guidance</h1>
-    <p>Use your interests, skills and academic results to plan your next step.</p>
-    <div className="ec-controls"><Link className="ep-primary !bg-primary-500 !text-white hover:!bg-primary-600" to="/student/career-explorer">Open Career Explorer</Link><Link to="/student/profile?section=career">My career aspirations</Link></div>
-    <Link className="ep-primary !bg-primary-500 !text-white hover:!bg-primary-600" to="/student/career-match">Open Career Match</Link>
-  </section>;
+  return <StudentRedirect to="/student/career-match" />;
 }
 export function StudentCareerExplorerPage() {
   const section = useSection('discover');

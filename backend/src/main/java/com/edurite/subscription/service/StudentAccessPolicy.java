@@ -38,6 +38,8 @@ public final class StudentAccessPolicy {
         new ApiRule("*", "/ai/bursary-guidance/me", Feature.PRIORITY_OPPORTUNITY_MATCHING, false),
         new ApiRule("POST", "/ai/career-advice", Feature.PERSONALISED_CAREER_RECOMMENDATIONS, true),
         new ApiRule("GET", "/ai/career-advice/me", Feature.PERSONALISED_CAREER_RECOMMENDATIONS, true),
+        // Research jobs reserve/finish one credit themselves, after cross-instance deduplication.
+        new ApiRule("*", "/ai/career-research", Feature.PERSONALISED_CAREER_RECOMMENDATIONS, false),
         new ApiRule("POST", "/ai/analyse-university-sources", Feature.ADVANCED_MATCHING, true),
         new ApiRule("GET", "/ai/dashboard-summary", Feature.PROGRESS_ADVANCED, true),
         new ApiRule("GET", "/ai/gemini-health", Feature.AI_SUPPORT, true),
