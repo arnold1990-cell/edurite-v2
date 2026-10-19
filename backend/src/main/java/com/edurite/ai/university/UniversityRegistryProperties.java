@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "edurite.university")
 public class UniversityRegistryProperties {
 
-    private List<UniversityRegistryEntry> registry = new ArrayList<>();
+    private volatile List<UniversityRegistryEntry> registry = new ArrayList<>();
     private CrawlProperties crawl = new CrawlProperties();
 
     public List<UniversityRegistryEntry> getRegistry() {
@@ -137,7 +137,25 @@ public class UniversityRegistryProperties {
         }
     }
 
+    @lombok.Getter
+    @lombok.Setter
     public static class UniversityRegistryEntry {
+
+        private String country;
+        private String institutionType;
+        private String province;
+        private String officialWebsite;
+        private String admissionsWebsite;
+        private List<String> facultyWebsites = new ArrayList<>();
+        private List<String> programmeCatalogueUrls = new ArrayList<>();
+        private String applicationPortalUrl;
+        private String registrationStatus = "Information not yet verified.";
+        private String accreditationStatus = "Information not yet verified.";
+        private String registrationNumber;
+        private String registrySourceUrl;
+        private java.time.LocalDate lastVerificationDate;
+        // Explicit operator restrictions always override robots permission.
+        private boolean crawlingPermitted = true;
 
         @NotBlank
         private String universityName;

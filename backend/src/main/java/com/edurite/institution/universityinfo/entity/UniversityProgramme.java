@@ -58,6 +58,9 @@ public class UniversityProgramme extends BaseEntity {
     @Column(name = "last_verified_at")
     private OffsetDateTime lastVerifiedAt;
 
+    @Column(name = "published_evidence_json", columnDefinition = "TEXT")
+    private String publishedEvidenceJson;
+
     @Column(name = "active", nullable = false)
     private boolean active;
 }

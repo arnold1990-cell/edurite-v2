@@ -61,6 +61,56 @@ def schema_sensitive(paths):
         for p in paths)
 
 
+def reviewed_registry_config_only(before, after):
+    """Fail closed outside three reviewed, schema-inert research property subtrees.
+
+    This deliberately is not a general YAML interpreter. Aliases, tags, documents,
+    flow-style syntax and ambiguous indentation cannot qualify for the exception.
+    Datasource, Flyway, Hibernate, SQL initialization and configuration imports are
+    never exempted. Historical migration inventory checks still run independently.
+    """
+    safe = {('edurite', 'university', 'registry'), ('edurite', 'university', 'crawl'),
+            ('edurite', 'career-research')}
+
+    def scrub(text):
+        stack, result, skip, found = [], [], None, False
+        for line in text.splitlines(keepends=True):
+            if '\t' in line or re.match(r'\s*(?:---|\.\.\.|%)', line):
+                raise ValueError('Ambiguous YAML requires schema review')
+            # Prevent cross-tree YAML effects (anchors/merge/tags), including aliases
+            # used outside the changed block. Quoted special characters also fail closed.
+            if re.search(r'(?:^|[\s:])(?:[&*!]|<<:)', line):
+                raise ValueError('YAML indirection requires schema review')
+            if not line.strip() or line.lstrip().startswith('#'):
+                if skip is None:
+                    result.append(line)
+                continue
+            indent = len(line) - len(line.lstrip(' '))
+            if skip is not None and indent > skip:
+                if re.search(r'(?i)(ddl-auto|hbm2ddl|flyway|datasource|sql\.init|spring\.config)', line):
+                    raise ValueError('Schema/runtime configuration needs review')
+                continue
+            skip = None
+            while stack and stack[-1][0] >= indent:
+                stack.pop()
+            match = re.fullmatch(r' *(\w[\w-]*):\s*(?:#.*)?\r?\n?', line)
+            if match:
+                path = tuple(key for _, key in stack) + (match[1],)
+                if path in safe:
+                    result.append(' ' * indent + match[1] + ': <reviewed-registry-config>\n')
+                    skip, found = indent, True
+                    continue
+                stack.append((indent, match[1]))
+            result.append(line)
+        return ''.join(result), found
+    try:
+        old, old_found = scrub(before)
+        new, new_found = scrub(after)
+        return old_found and new_found and old == new
+    except ValueError:
+        return False
+
+
 def classify(root, commit, backend_base, frontend_base):
     for sha in (commit, backend_base, frontend_base):
         revision(root, sha)
@@ -84,7 +134,17 @@ def classify(root, commit, backend_base, frontend_base):
         raise ValueError("Unclassified paths; review classification policy before deployment: " + ", ".join(unclassified))
     diff = git(root, 'diff', '-U0', backend_base, commit, '--', 'backend/src/main').decode()
     schema_edits = bool(re.search(r'(?im)^[+-](?![+-]).*(?:\b(?:CREATE|ALTER|DROP|TRUNCATE)\s+(?:TABLE|INDEX|SCHEMA|TYPE|SEQUENCE)|@(?:Entity|Table|Column|JoinColumn)\b|ddl-auto|hibernate\.hbm2ddl)', diff))
-    schema_change = schema_sensitive(changes) or schema_edits
+    sensitive_changes = list(changes)
+    config = 'backend/src/main/resources/application.yml'
+    if config in changes:
+        try:
+            before = git(root, 'show', backend_base + ':' + config).decode()
+            after = git(root, 'show', commit + ':' + config).decode()
+            if reviewed_registry_config_only(before, after):
+                sensitive_changes.remove(config)
+        except (subprocess.CalledProcessError, UnicodeError):
+            pass
+    schema_change = schema_sensitive(sensitive_changes) or schema_edits
     kind = "DATABASE_MIGRATION" if added or schema_change else (
         "FRONTEND_ONLY" if changes and all(p.startswith("frontend/") for p in changes)
         else "BACKEND_NO_SCHEMA_CHANGE")

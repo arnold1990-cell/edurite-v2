@@ -69,7 +69,15 @@ public final class CareerResearchDtos {
             String apsRule,
             List<SubjectCheck> subjects,
             List<String> gaps,
-            List<String> uncheckedConditions) {}
+            List<String> uncheckedConditions) {
+        @com.fasterxml.jackson.annotation.JsonProperty(value="category", access=com.fasterxml.jackson.annotation.JsonProperty.Access.READ_ONLY)
+        public String category() {
+            if (ProgrammeEligibilityService.MEETS.equals(status)) return "Meets published minimum requirements";
+            if (ProgrammeEligibilityService.GAP.equals(status) || "Does not meet published minimum requirements".equals(status))
+                return "Does not meet published minimum requirements";
+            return "Eligibility cannot be determined";
+        }
+    }
 
     public record ProgrammeFinding(
             String id,
@@ -87,7 +95,16 @@ public final class CareerResearchDtos {
             String verifiedAt,
             String verificationStatus,
             Eligibility eligibility,
-            List<String> careerIds) {}
+            List<String> careerIds,
+            PublishedProgrammeEvidence publishedEvidence) {
+        public ProgrammeFinding(String id, String institution, String country, String name, String qualification,
+                String duration, String campus, String studyMode, String programmeUrl, String applicationUrl,
+                String requirements, String sourceUrl, String verifiedAt, String verificationStatus,
+                Eligibility eligibility, List<String> careerIds) {
+            this(id,institution,country,name,qualification,duration,campus,studyMode,programmeUrl,applicationUrl,
+                    requirements,sourceUrl,verifiedAt,verificationStatus,eligibility,careerIds,null);
+        }
+    }
 
     public record CareerFinding(
             String id,

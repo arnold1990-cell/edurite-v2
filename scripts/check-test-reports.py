@@ -8,7 +8,7 @@ REQUIRED = {
     "TrialMigrationTest", "ComplimentaryProGrantIntegrationTest",
     "RoadmapMigrationIntegrationTest", "StudyPlanPersistenceIntegrationTest",
     "AcademicProfilePersistenceIntegrationTest", "DevProfileDatasourceIntegrationTest",
-    "AiUsageConcurrencyTest", "EmailRecoveryPostgresTest",
+    "AiUsageConcurrencyTest", "EmailRecoveryPostgresTest", "UniversityIntelligenceMigrationTest",
 }
 
 

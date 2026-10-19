@@ -8,6 +8,8 @@ public interface CrawledUniversityPageRepository extends JpaRepository<CrawledUn
 
     Optional<CrawledUniversityPage> findBySourceUrl(String sourceUrl);
 
+    List<CrawledUniversityPage> findByUniversityNameIgnoreCaseAndActiveTrue(String universityName);
+
     List<CrawledUniversityPage> findByActiveTrueAndCrawlStatus(CrawlStatus crawlStatus);
 
     List<CrawledUniversityPage> findTop10ByUniversityNameIgnoreCaseAndActiveTrueOrderByLastSuccessfulCrawledAtDesc(String universityName);

@@ -123,8 +123,8 @@ public class ResearchCatalogueService {
                                 row.getCampus(),
                                 row.getStudyMode(),
                                 safeUrl(row.getProgrammeUrl()),
-                                null,
-                                null,
+                                evidence(row) == null ? null : evidence(row).applicationUrl(),
+                                evidence(row) == null ? null : evidence(row).publishedRequirements(),
                                 safeUrl(row.getSourceUrl()),
                                 row.getLastVerifiedAt() == null
                                         ? null
@@ -133,10 +133,10 @@ public class ResearchCatalogueService {
                                         ? "Programme title verified; admission requirements not yet"
                                                 + " verified."
                                         : "Admission requirements not yet verified.",
-                                unknown(
-                                        "Published programme-specific, curriculum-compatible"
-                                                + " admission conditions have not been verified."),
-                                related);
+                                official && fresh && evidence(row)!=null
+                                        ? eligibility.assessPublished(row,subjects,institution.getCountry())
+                                        : unknown("Information not yet verified."),
+                                related, evidence(row));
                 String key = identity(finding);
                 if (!result.containsKey(key)) result.put(key, finding);
                 else
@@ -170,7 +170,11 @@ public class ResearchCatalogueService {
                 kept.verifiedAt(),
                 kept.verificationStatus(),
                 kept.eligibility(),
-                List.copyOf(careerIds));
+                List.copyOf(careerIds), kept.publishedEvidence());
+    }
+
+    private PublishedProgrammeEvidence evidence(com.edurite.institution.universityinfo.entity.UniversityProgramme row) {
+        return PublishedProgrammeEvidence.fromJson(row.getPublishedEvidenceJson());
     }
 
     public static Eligibility unknown(String reason) {

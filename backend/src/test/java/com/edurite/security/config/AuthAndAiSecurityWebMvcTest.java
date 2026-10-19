@@ -40,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(
-        controllers = {com.edurite.auth.controller.EmailPasswordRecoveryController.class, AuthController.class, AccountController.class, AiController.class, GoogleOAuthCompatibilityController.class, com.edurite.auth.controller.EmailVerificationController.class},
+        controllers = {com.edurite.ai.university.UniversityIntelligenceController.class, com.edurite.auth.controller.EmailPasswordRecoveryController.class, AuthController.class, AccountController.class, AiController.class, GoogleOAuthCompatibilityController.class, com.edurite.auth.controller.EmailVerificationController.class},
         properties = {
                 "spring.flyway.enabled=false",
                 "spring.jpa.hibernate.ddl-auto=none",
@@ -51,6 +51,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @SuppressWarnings("unused")
 class AuthAndAiSecurityWebMvcTest {
+    @MockitoBean private com.edurite.ai.university.UniversitySourceRegistryService intelligenceRegistry;
+    @MockitoBean private com.edurite.ai.university.CrawledUniversityPageRepository intelligencePages;
+    @MockitoBean private com.edurite.institution.universityinfo.repository.UniversityProgrammeRepository intelligenceProgrammes;
+    @MockitoBean private com.edurite.ai.university.GovernmentUniversityDirectoryService intelligenceDirectory;
+
+    @Test @WithMockUser(roles="STUDENT")
+    void studentsCanReadCoverageButCannotChangeGovernmentRegistrationEvidence() throws Exception {
+        when(intelligenceDirectory.lastOutcome()).thenReturn("Information not yet verified.");
+        mockMvc.perform(get("/api/ai/university-intelligence/coverage")).andExpect(status().isOk());
+        for(String prefix: new String[]{"/api/ai/", "/api/v1/ai/"}) {
+            mockMvc.perform(post(prefix+"university-intelligence/refresh-directory")).andExpect(status().isForbidden());
+            mockMvc.perform(post(prefix+"university-intelligence/private-registration").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isForbidden());
+        }
+        org.mockito.Mockito.verify(intelligenceDirectory,org.mockito.Mockito.never()).refresh();
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void administratorsCanRequestGovernmentDirectoryRefresh() throws Exception {
+        when(intelligenceDirectory.refresh()).thenReturn("Government directory verified");
+        mockMvc.perform(post("/api/ai/university-intelligence/refresh-directory")).andExpect(status().isOk());
+        verify(intelligenceDirectory).refresh();
+    }
     @org.springframework.test.context.bean.override.mockito.MockitoBean
     private com.edurite.subscription.service.SubscriptionAccessInterceptor subscriptionAccessInterceptor;
     @org.springframework.test.context.bean.override.mockito.MockitoBean

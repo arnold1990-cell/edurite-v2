@@ -1,58 +1,27 @@
 package com.edurite.ai.university;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import com.edurite.ai.research.OfficialCatalogueResearchService;
+import java.util.*;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import static com.edurite.ai.university.UniversityPageType.PROGRAMME_DETAIL;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
 class UniversityCrawlOrchestratorTest {
-
-    @Mock
-    private UniversitySourceRegistryService registryService;
-    @Mock
-    private MultiUniversityPageFetcherService fetcherService;
-    @Mock
-    private CrawledUniversityPageRepository repository;
-
-    @InjectMocks
-    private UniversityCrawlOrchestrator orchestrator;
-
-    @Test
-    void crawlBoundsLargeUniversitySetAndContinuesAfterFailures() {
-        List<UniversityRegistryProperties.UniversityRegistryEntry> universities = new ArrayList<>();
-        for (int index = 1; index <= 50; index++) {
-            UniversityRegistryProperties.UniversityRegistryEntry entry = new UniversityRegistryProperties.UniversityRegistryEntry();
-            entry.setUniversityName("University " + index);
-            entry.setSeedUrls(List.of("https://www.university-" + index + ".ac.za/programmes"));
-            universities.add(entry);
+    @Test void scheduledCrawlIncludesEveryInstitutionAndContinuesAfterIndividualFailure() {
+        var registry=mock(UniversitySourceRegistryService.class);
+        var research=mock(OfficialCatalogueResearchService.class);
+        var entries=new ArrayList<UniversityRegistryProperties.UniversityRegistryEntry>();
+        for(int i=0;i<26;i++) {
+            var entry=new UniversityRegistryProperties.UniversityRegistryEntry();
+            entry.setUniversityName("Public University "+i);entry.setSeedUrls(List.of("https://u"+i+".ac.za/"));entries.add(entry);
         }
-
-        when(registryService.getActiveUniversities()).thenReturn(universities);
-        when(fetcherService.discoverCandidateUrls(any(), any(Integer.class))).thenAnswer(invocation -> List.of(invocation.getArgument(0, UniversityRegistryProperties.UniversityRegistryEntry.class).getSeedUrls().get(0)));
-        when(fetcherService.fetchPages(any())).thenReturn(List.of(
-                new UniversitySourcePageResult("https://www.university-1.ac.za/programmes", "Programmes", PROGRAMME_DETAIL, "text", Set.of("software"), true, null, null),
-                new UniversitySourcePageResult("https://www.university-1.ac.za/forbidden", "", UniversityPageType.UNKNOWN, "", Set.of(), false, "forbidden", UniversityCrawlFailureType.ACCESS_DENIED)
-        ));
-        when(repository.findBySourceUrl(anyString())).thenReturn(Optional.empty());
-        when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-
-        UniversityCrawlSummary summary = orchestrator.crawlAllActiveUniversities();
-
-        assertThat(summary.universitiesProcessed()).isEqualTo(2);
-        assertThat(summary.pagesSaved()).isEqualTo(4);
-        assertThat(summary.failures()).isEqualTo(2);
+        when(registry.getActiveUniversities()).thenReturn(entries);
+        when(research.refreshInstitution(any())).thenReturn(new OfficialCatalogueResearchService.RefreshOutcome(3,6,1,"partial"));
+        when(research.refreshInstitution(entries.get(4))).thenThrow(new IllegalStateException("restricted"));
+        var result=new UniversityCrawlOrchestrator(registry,research).crawlAllActiveUniversities();
+        assertThat(result.universitiesProcessed()).isEqualTo(26);
+        assertThat(result.pagesSaved()).isEqualTo(150);
+        assertThat(result.failures()).isEqualTo(26);
+        verify(research).refreshInstitution(entries.get(25));
     }
 }
-

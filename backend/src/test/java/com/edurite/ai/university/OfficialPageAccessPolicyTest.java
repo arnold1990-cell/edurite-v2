@@ -11,6 +11,23 @@ import java.net.*;
 import java.util.*;
 
 class OfficialPageAccessPolicyTest {
+    @Test void conditionalResponsesReuseOnlyPreviouslyCheckedPublicContentAndTermsAreHonoured() throws Exception {
+        var registry=mock(UniversitySourceRegistryService.class);when(registry.isAllowedUrl(anyString())).thenReturn(true);
+        var client=spy(new OfficialPageAccessPolicy(registry));
+        doReturn(new InetAddress[]{InetAddress.getByName("8.8.8.8")}).when(client).resolve(anyString());
+        var robots=mock(Connection.Response.class);when(robots.statusCode()).thenReturn(404);
+        var ok=mock(Connection.Response.class);when(ok.statusCode()).thenReturn(200);when(ok.contentType()).thenReturn("text/html");
+        when(ok.header("ETag")).thenReturn("v1");when(ok.parse()).thenReturn(org.jsoup.Jsoup.parse("<main>Published programme evidence</main>","https://official.example/programme"));
+        var unchanged=mock(Connection.Response.class);when(unchanged.statusCode()).thenReturn(304);
+        doReturn(robots).when(client).request(contains("robots.txt"),anyInt(),anyInt());
+        doReturn(ok,unchanged).when(client).request(eq("https://official.example/programme"),anyInt(),anyInt());
+        assertThat(client.fetch("https://official.example/programme",1000,10000).text()).contains("Published programme");
+        assertThat(client.fetch("https://official.example/programme",1000,10000).text()).contains("Published programme");
+        var restricted=mock(Connection.Response.class);when(restricted.statusCode()).thenReturn(200);when(restricted.contentType()).thenReturn("text/html");
+        when(restricted.parse()).thenReturn(org.jsoup.Jsoup.parse("<main>Automated access is prohibited</main>"));
+        doReturn(restricted).when(client).request(eq("https://official.example/restricted"),anyInt(),anyInt());
+        assertThatThrownBy(()->client.fetch("https://official.example/restricted",1000,10000)).hasMessageContaining("terms prohibit");
+    }
     @Test
     void robotsDisallowAndLongestAllowAreHonoured() {
         var rules =

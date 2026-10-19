@@ -1,0 +1,574 @@
+[
+  {
+    "universityName": "Cape Peninsula University of Technology",
+    "baseDomain": "cput.ac.za",
+    "allowedDomains": [
+      "cput.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.cput.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "UNIVERSITY_OF_TECHNOLOGY",
+    "province": "Western Cape",
+    "officialWebsite": "https://www.cput.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of Cape Town",
+    "baseDomain": "uct.ac.za",
+    "allowedDomains": [
+      "uct.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.uct.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Western Cape",
+    "officialWebsite": "https://www.uct.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Central University of Technology",
+    "baseDomain": "cut.ac.za",
+    "allowedDomains": [
+      "cut.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.cut.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "UNIVERSITY_OF_TECHNOLOGY",
+    "province": "Free State",
+    "officialWebsite": "https://www.cut.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Durban University of Technology",
+    "baseDomain": "dut.ac.za",
+    "allowedDomains": [
+      "dut.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.dut.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "UNIVERSITY_OF_TECHNOLOGY",
+    "province": "KwaZulu-Natal",
+    "officialWebsite": "https://www.dut.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of Fort Hare",
+    "baseDomain": "ufh.ac.za",
+    "allowedDomains": [
+      "ufh.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.ufh.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Eastern Cape",
+    "officialWebsite": "https://www.ufh.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of the Free State",
+    "baseDomain": "ufs.ac.za",
+    "allowedDomains": [
+      "ufs.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.ufs.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Free State",
+    "officialWebsite": "https://www.ufs.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of Johannesburg",
+    "baseDomain": "uj.ac.za",
+    "allowedDomains": [
+      "uj.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.uj.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "COMPREHENSIVE",
+    "province": "Gauteng",
+    "officialWebsite": "https://www.uj.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of KwaZulu-Natal",
+    "baseDomain": "ukzn.ac.za",
+    "allowedDomains": [
+      "ukzn.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.ukzn.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "KwaZulu-Natal",
+    "officialWebsite": "https://www.ukzn.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of Limpopo",
+    "baseDomain": "ul.ac.za",
+    "allowedDomains": [
+      "ul.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.ul.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Limpopo",
+    "officialWebsite": "https://www.ul.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Mangosuthu University of Technology",
+    "baseDomain": "mut.ac.za",
+    "allowedDomains": [
+      "mut.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.mut.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "UNIVERSITY_OF_TECHNOLOGY",
+    "province": "KwaZulu-Natal",
+    "officialWebsite": "https://www.mut.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of Mpumalanga",
+    "baseDomain": "ump.ac.za",
+    "allowedDomains": [
+      "ump.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.ump.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "COMPREHENSIVE",
+    "province": "Mpumalanga",
+    "officialWebsite": "https://www.ump.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Nelson Mandela University",
+    "baseDomain": "nmu.ac.za",
+    "allowedDomains": [
+      "nmu.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.nmu.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "COMPREHENSIVE",
+    "province": "Eastern Cape",
+    "officialWebsite": "https://www.nmu.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "North-West University",
+    "baseDomain": "nwu.ac.za",
+    "allowedDomains": [
+      "nwu.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.nwu.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "North West; Gauteng",
+    "officialWebsite": "https://www.nwu.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of Pretoria",
+    "baseDomain": "up.ac.za",
+    "allowedDomains": [
+      "up.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.up.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Gauteng",
+    "officialWebsite": "https://www.up.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Rhodes University",
+    "baseDomain": "ru.ac.za",
+    "allowedDomains": [
+      "ru.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.ru.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Eastern Cape",
+    "officialWebsite": "https://www.ru.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Sefako Makgatho Health Sciences University",
+    "baseDomain": "smu.ac.za",
+    "allowedDomains": [
+      "smu.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.smu.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Gauteng",
+    "officialWebsite": "https://www.smu.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Sol Plaatje University",
+    "baseDomain": "spu.ac.za",
+    "allowedDomains": [
+      "spu.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.spu.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "COMPREHENSIVE",
+    "province": "Northern Cape",
+    "officialWebsite": "https://www.spu.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of South Africa",
+    "baseDomain": "unisa.ac.za",
+    "allowedDomains": [
+      "unisa.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.unisa.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "COMPREHENSIVE",
+    "province": "National / distance",
+    "officialWebsite": "https://www.unisa.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Stellenbosch University",
+    "baseDomain": "sun.ac.za",
+    "allowedDomains": [
+      "sun.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.sun.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Western Cape",
+    "officialWebsite": "https://www.sun.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Tshwane University of Technology",
+    "baseDomain": "tut.ac.za",
+    "allowedDomains": [
+      "tut.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.tut.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "UNIVERSITY_OF_TECHNOLOGY",
+    "province": "Gauteng; Limpopo; Mpumalanga",
+    "officialWebsite": "https://www.tut.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Vaal University of Technology",
+    "baseDomain": "vut.ac.za",
+    "allowedDomains": [
+      "vut.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.vut.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "UNIVERSITY_OF_TECHNOLOGY",
+    "province": "Gauteng",
+    "officialWebsite": "https://www.vut.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of Venda",
+    "baseDomain": "univen.ac.za",
+    "allowedDomains": [
+      "univen.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.univen.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "COMPREHENSIVE",
+    "province": "Limpopo",
+    "officialWebsite": "https://www.univen.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "Walter Sisulu University",
+    "baseDomain": "wsu.ac.za",
+    "allowedDomains": [
+      "wsu.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.wsu.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "COMPREHENSIVE",
+    "province": "Eastern Cape",
+    "officialWebsite": "https://www.wsu.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of the Western Cape",
+    "baseDomain": "uwc.ac.za",
+    "allowedDomains": [
+      "uwc.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.uwc.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Western Cape",
+    "officialWebsite": "https://www.uwc.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of the Witwatersrand",
+    "baseDomain": "wits.ac.za",
+    "allowedDomains": [
+      "wits.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.wits.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "TRADITIONAL",
+    "province": "Gauteng",
+    "officialWebsite": "https://www.wits.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  },
+  {
+    "universityName": "University of Zululand",
+    "baseDomain": "unizulu.ac.za",
+    "allowedDomains": [
+      "unizulu.ac.za"
+    ],
+    "seedUrls": [
+      "https://www.unizulu.ac.za/"
+    ],
+    "country": "South Africa",
+    "institutionType": "COMPREHENSIVE",
+    "province": "KwaZulu-Natal",
+    "officialWebsite": "https://www.unizulu.ac.za/",
+    "registrationStatus": "PUBLIC_ESTABLISHED",
+    "accreditationStatus": "Programme accreditation must be verified separately.",
+    "registrySourceUrl": "https://www.education.gov.za/FurtherStudies/Universities.aspx",
+    "lastVerificationDate": "2026-10-19",
+    "qualificationLevelsSupported": [
+      "undergraduate",
+      "postgraduate"
+    ]
+  }
+]

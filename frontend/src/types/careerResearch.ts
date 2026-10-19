@@ -22,6 +22,7 @@ export interface AcademicAnalysis {
 }
 export interface ProgrammeEligibility {
   status: string;
+  category?: string;
   studentAps: number | null;
   requiredAps: number | null;
   apsRule?: string;
@@ -52,6 +53,22 @@ export interface ResearchProgramme {
   verificationStatus: string;
   eligibility: ProgrammeEligibility;
   careerIds: string[];
+  publishedEvidence?: {
+    minimumAps?: number;
+    apsRule?: string;
+    subjectRequirements: Record<string, string>;
+    intakeYear?: number;
+    publishedRequirements?: string;
+    applicationOpening?: string;
+    applicationClosing?: string;
+    tuitionFees?: string;
+    campus?: string;
+    faculty?: string;
+    applicationUrl?: string;
+    fundingLinks: Record<string, string>;
+    evidenceUrl: string;
+    limitations: string[];
+  } | null;
 }
 export interface ResearchCareer {
   id: string;

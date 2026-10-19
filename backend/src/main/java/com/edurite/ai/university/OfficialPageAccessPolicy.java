@@ -18,6 +18,8 @@ public class OfficialPageAccessPolicy {
     private final Map<String, Robots> robots = new ConcurrentHashMap<>();
     private final Map<String, Long> lastRequest = new ConcurrentHashMap<>();
     private final Map<String, Object> hostLocks = new ConcurrentHashMap<>();
+    private record CachedPage(Document document,String etag,String modified) {}
+    private final Map<String,CachedPage> conditionalCache = new ConcurrentHashMap<>();
 
     public OfficialPageAccessPolicy(UniversitySourceRegistryService registry) {
         this.registry = registry;
@@ -104,6 +106,8 @@ public class OfficialPageAccessPolicy {
                             Math.min(10_000, Math.max(1000, timeout)),
                             Math.min(bytes, 1_500_000));
             if (response.statusCode() >= 300 && response.statusCode() < 400) {
+                if (response.statusCode()==304 && conditionalCache.containsKey(url))
+                    return conditionalCache.get(url).document().clone();
                 String location = response.header("Location");
                 if (location == null)
                     throw new IOException("Official page redirected without a location");
@@ -138,26 +142,36 @@ public class OfficialPageAccessPolicy {
                 document = response.parse();
             }
             String text = document.text().toLowerCase(Locale.ROOT);
+            if (text.contains("automated access is prohibited") || text.contains("automated scraping is prohibited")
+                    || text.contains("crawling is not permitted"))
+                throw new IOException("Published website terms prohibit automated retrieval; research stopped");
             if (text.contains("verify you are human")
                     || text.contains("checking your browser")
                     || text.contains("captcha") && text.length() < 3000
                     || !document.select("input[type=password]").isEmpty())
                 throw new IOException(
                         "Access challenge or authentication required; research stopped");
+            if(conditionalCache.size()>=200) conditionalCache.clear();
+            conditionalCache.put(url,new CachedPage(document.clone(),response.header("ETag"),response.header("Last-Modified")));
             return document;
         }
         throw new IOException("Official source redirect budget exceeded");
     }
 
     protected Connection.Response request(String url, int timeout, int bytes) throws IOException {
-        return Jsoup.connect(url)
+        var connection=Jsoup.connect(url)
                 .userAgent(AGENT)
                 .timeout(timeout)
                 .maxBodySize(bytes)
                 .followRedirects(false)
                 .ignoreHttpErrors(true)
-                .ignoreContentType(true)
-                .execute();
+                .ignoreContentType(true);
+        var cached=conditionalCache.get(url);
+        if(cached!=null) {
+            if(cached.etag()!=null) connection.header("If-None-Match",cached.etag());
+            if(cached.modified()!=null) connection.header("If-Modified-Since",cached.modified());
+        }
+        return connection.execute();
     }
 
     protected InetAddress[] resolve(String host) throws UnknownHostException {

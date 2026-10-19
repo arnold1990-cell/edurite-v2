@@ -55,6 +55,27 @@ class ClassificationTests(unittest.TestCase):
         for text in ['+@Entity', '+ execute("ALTER TABLE learners ADD COLUMN value TEXT")']:
             self.assertEqual(self.classify(['backend/src/main/java/com/edurite/custom/Schema.java'], diff_text=text)['classification'], 'DATABASE_MIGRATION')
 
+    def test_only_reviewed_registry_subtrees_are_schema_inert(self):
+        original = 'spring:\n  flyway:\n    enabled: true\nedurite:\n  university:\n    registry:\n      - university-name: Old\n        base-domain: old.ac.za\n    crawl:\n      max-fetch-retries: 2\n'
+        changed = original.replace('Old', 'New').replace('old.ac.za', 'new.ac.za')
+        self.assertTrue(classifier.reviewed_registry_config_only(original, changed))
+        self.assertTrue(classifier.reviewed_registry_config_only(original, original.replace('max-fetch-retries: 2', 'max-fetch-retries: 3')))
+        for unsafe in [changed.replace('enabled: true', 'enabled: false'),
+                       changed + 'spring.config.import: optional:file:external.yml\n',
+                       changed.replace('base-domain: new.ac.za', 'base-domain: &alias new.ac.za'),
+                       changed.replace('base-domain: new.ac.za', 'base-domain: !!str new.ac.za'),
+                       changed.replace('max-fetch-retries: 2', 'ddl-auto: update'),
+                       changed + '---\nspring:\n  flyway:\n    enabled: false\n']:
+            with self.subTest(unsafe=unsafe):
+                self.assertFalse(classifier.reviewed_registry_config_only(original, unsafe))
+
+    def test_reviewed_config_exception_cannot_hide_migrations_or_schema_edits(self):
+        with patch.object(classifier, 'reviewed_registry_config_only', return_value=True):
+            config = ['backend/src/main/resources/application.yml']
+            self.assertEqual(self.classify(config)['classification'], 'BACKEND_NO_SCHEMA_CHANGE')
+            self.assertEqual(self.classify(config, added=True)['classification'], 'DATABASE_MIGRATION')
+            self.assertEqual(self.classify(config, diff_text='+ spring.jpa.hibernate.ddl-auto: update')['classification'], 'DATABASE_MIGRATION')
+
     def test_unknown_path_fails_closed(self):
         with self.assertRaises(ValueError):
             self.classify(['unknown-root-script.sh'])

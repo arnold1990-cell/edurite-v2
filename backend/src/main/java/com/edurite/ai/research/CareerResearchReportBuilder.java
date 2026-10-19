@@ -29,6 +29,7 @@ public class CareerResearchReportBuilder {
     private final ProviderBursarySource funding;
     private final CrawledUniversityPageRepository pages;
     private final UniversitySourceRegistryService registry;
+    private final com.edurite.student.repository.StudentPreferenceRepository studentPreferences;
 
     public CareerResearchReportBuilder(
             StudentService students,
@@ -40,7 +41,8 @@ public class CareerResearchReportBuilder {
             ResearchNarrativeService narrative,
             ProviderBursarySource funding,
             CrawledUniversityPageRepository pages,
-            UniversitySourceRegistryService registry) {
+            UniversitySourceRegistryService registry,
+            com.edurite.student.repository.StudentPreferenceRepository studentPreferences) {
         this.students = students;
         this.recommendations = recommendations;
         this.academic = academic;
@@ -51,11 +53,26 @@ public class CareerResearchReportBuilder {
         this.funding = funding;
         this.pages = pages;
         this.registry = registry;
+        this.studentPreferences = studentPreferences;
     }
 
     public Report build(Principal principal, Consumer<String> progress) {
         progress.accept("Gathering academic and preference evidence");
         var profile = students.getProfile(principal);
+        var preferences=studentPreferences.findByStudentId(profile.id()).orElse(null);
+        String preferredLocation=preferences!=null && preferences.getPreferredLocations()!=null && !preferences.getPreferredLocations().isBlank()
+                ? preferences.getPreferredLocations() : profile.location();
+        java.math.BigDecimal tuitionBudget=null;
+        boolean fundingPreferred=false;
+        if(preferences!=null) {
+            try {
+                var extra=new com.fasterxml.jackson.databind.ObjectMapper().readTree(preferences.getExtra());
+                var budget=extra.path("annualTuitionBudgetZar");
+                if(budget.isNumber() && budget.decimalValue().signum()>0 && budget.decimalValue().compareTo(new java.math.BigDecimal("10000000"))<=0)
+                    tuitionBudget=budget.decimalValue();
+                fundingPreferred=extra.path("fundingRequired").isBoolean() && extra.path("fundingRequired").booleanValue();
+            } catch(Exception ignored) { /* Missing financial preferences are never inferred. */ }
+        }
         List<com.edurite.student.dto.StudentSubjectAchievementDto> historical = new ArrayList<>();
         var converter = new com.fasterxml.jackson.databind.ObjectMapper();
         for (var entry : students.transcriptHistory(principal)) {
@@ -76,6 +93,11 @@ public class CareerResearchReportBuilder {
                     "No supported career evidence. Update academic results, interests, skills or"
                             + " assessment responses.");
         List<String> limits = new ArrayList<>(ranked.limitations());
+        limits.add(tuitionBudget==null ? "Financial suitability cannot be certified without a recorded budget and verified full costs. Published fees and funding sources are provided where available."
+                : "Saved annual tuition budget: ZAR "+tuitionBudget.toPlainString()+". Only explicitly published annual ZAR tuition is compared; living costs and funding eligibility remain unverified.");
+        if(fundingPreferred) limits.add("The student has recorded a need for funding; bursary eligibility and availability must be checked separately.");
+        if(preferredLocation!=null && !preferredLocation.isBlank())
+            limits.add("Location preferences inform programme ordering where a matching published province is recorded; other regions remain available.");
         limits.addAll(analysis.limitations());
         if (ranked.careerSuggestionsLimited())
             limits.add(
@@ -120,6 +142,13 @@ public class CareerResearchReportBuilder {
             limits.add(
                     "No supported programme records were found within this research budget. This is"
                             + " not evidence that no suitable programmes exist.");
+        String preference=Objects.toString(preferredLocation, "").toLowerCase(Locale.ROOT);
+        var preferredNames=registry.getRegistryEntries().stream().filter(e -> e.getProvince()!=null
+                && Arrays.stream(e.getProvince().split(";")).map(String::strip).anyMatch(p -> preference.contains(p.toLowerCase(Locale.ROOT))))
+                .map(e -> e.getUniversityName().toLowerCase(Locale.ROOT)).collect(java.util.stream.Collectors.toSet());
+        java.math.BigDecimal budgetForOrdering=tuitionBudget;
+        matched=matched.stream().sorted(Comparator.comparing((ProgrammeFinding p) -> !preferredNames.contains(p.institution().toLowerCase(Locale.ROOT)))
+                .thenComparingInt(p -> ProgrammePreferenceOrdering.budgetOrder(p.publishedEvidence(),budgetForOrdering))).toList();
         progress.accept("Assessing programme-specific admission conditions");
         Map<String, com.edurite.career.entity.Career> canonical = new HashMap<>();
         careers.findAllById(

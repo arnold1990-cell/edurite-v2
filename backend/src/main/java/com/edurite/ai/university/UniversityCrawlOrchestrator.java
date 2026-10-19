@@ -1,97 +1,25 @@
 package com.edurite.ai.university;
 
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.edurite.ai.research.OfficialCatalogueResearchService;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UniversityCrawlOrchestrator {
-
-    private static final Logger log = LoggerFactory.getLogger(UniversityCrawlOrchestrator.class);
-
-    private final UniversitySourceRegistryService registryService;
-    private final MultiUniversityPageFetcherService pageFetcherService;
-    private final CrawledUniversityPageRepository repository;
-
-    public UniversityCrawlOrchestrator(UniversitySourceRegistryService registryService,
-                                       MultiUniversityPageFetcherService pageFetcherService,
-                                       CrawledUniversityPageRepository repository) {
-        this.registryService = registryService;
-        this.pageFetcherService = pageFetcherService;
-        this.repository = repository;
+    private final UniversitySourceRegistryService registry;
+    private final OfficialCatalogueResearchService research;
+    public UniversityCrawlOrchestrator(UniversitySourceRegistryService registry,OfficialCatalogueResearchService research) {
+        this.registry=registry;this.research=research;
     }
-
     public UniversityCrawlSummary crawlAllActiveUniversities() {
-        long startedAt = System.currentTimeMillis();
-        int universitiesProcessed = 0;
-        int seedUrlsProcessed = 0;
-        int pagesDiscovered = 0;
-        int pagesSaved = 0;
-        int failures = 0;
-
-        for (UniversityRegistryProperties.UniversityRegistryEntry university : registryService.getActiveUniversities()) {
-            if (universitiesProcessed >= 2) break;
-            var prior = repository.findTop10ByUniversityNameIgnoreCaseAndActiveTrueOrderByLastSuccessfulCrawledAtDesc(university.getUniversityName());
-            if (prior.stream().anyMatch(p -> p.getLastSuccessfulCrawledAt()!=null && p.getLastSuccessfulCrawledAt().isAfter(OffsetDateTime.now().minusDays(14)))) continue;
-            if (prior.stream().anyMatch(p -> p.getLastFailureAt()!=null && p.getLastFailureAt().isAfter(OffsetDateTime.now().minusHours(12)))) continue;
-            universitiesProcessed++;
+        long start=System.currentTimeMillis();int processed=0,seeds=0,discovered=0,saved=0,failed=0;
+        for(var entry:registry.getActiveUniversities()) {
+            if(Thread.currentThread().isInterrupted()) break;
+            processed++;seeds+=entry.getSeedUrls().size();
             try {
-                List<String> discovered = pageFetcherService.discoverCandidateUrls(university, Math.min(4,pageFetcherService.maxFetchBudgetPerUniversity()));
-                seedUrlsProcessed += university.getSeedUrls().size();
-                pagesDiscovered += discovered.size();
-
-                for (UniversitySourcePageResult page : pageFetcherService.fetchPages(discovered)) {
-                    pagesSaved++;
-                    upsert(university.getUniversityName(), page);
-                    if (!page.success()) {
-                        failures++;
-                    }
-                }
-            } catch (Exception ex) {
-                failures++;
-                log.warn("Crawl failed for university={}: {}", university.getUniversityName(), ex.getMessage());
-            }
+                var outcome=research.refreshInstitution(entry);
+                discovered+=outcome.discovered();saved+=outcome.fetched();failed+=outcome.failed();
+            } catch(RuntimeException ex) { failed++; }
         }
-
-        return new UniversityCrawlSummary(universitiesProcessed, seedUrlsProcessed, pagesDiscovered,
-                pagesSaved, failures, System.currentTimeMillis() - startedAt);
-    }
-
-    private void upsert(String universityName, UniversitySourcePageResult pageResult) {
-        CrawledUniversityPage page = repository.findBySourceUrl(pageResult.sourceUrl()).orElseGet(CrawledUniversityPage::new);
-        page.setUniversityName(universityName);
-        page.setSourceUrl(pageResult.sourceUrl());
-        if (pageResult.success() || page.getLastSuccessfulCrawledAt() == null) {
-            page.setPageTitle(pageResult.pageTitle());
-            page.setPageType(pageResult.pageType().name());
-            page.setExtractedKeywords(pageResult.extractedKeywords());
-            page.setCleanedContent(pageResult.cleanedText());
-            page.setSummaryExcerpt(buildSummary(pageResult.cleanedText()));
-        }
-        page.setLastCrawledAt(OffsetDateTime.now());
-        if (pageResult.success()) {
-            page.setCrawlStatus(CrawlStatus.SUCCESS);
-            page.setLastSuccessfulCrawledAt(OffsetDateTime.now());
-            page.setFailureReason(null);
-            page.setErrorType(null);
-        } else {
-            page.setCrawlStatus(CrawlStatus.FAILED);
-            page.setFailureReason(pageResult.failureReason());
-            page.setErrorType(pageResult.failureType() == null ? UniversityCrawlFailureType.FETCH_ERROR.name() : pageResult.failureType().name());
-            page.setLastFailureAt(OffsetDateTime.now());
-        }
-        repository.save(page);
-    }
-
-    private String buildSummary(String text) {
-        if (text == null || text.isBlank()) {
-            return "";
-        }
-        String normalized = text.replaceAll("\\s+", " ").trim();
-        return normalized.length() <= 320 ? normalized : normalized.substring(0, 320);
+        return new UniversityCrawlSummary(processed,seeds,discovered,saved,failed,System.currentTimeMillis()-start);
     }
 }
-

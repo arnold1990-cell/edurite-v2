@@ -273,7 +273,14 @@ public class MultiUniversityPageFetcherService {
                             "Page was deprioritised because it does not look like a useful official programme or admissions page",
                             UniversityCrawlFailureType.FETCH_ERROR, title, headings);
                 }
-                return new UniversitySourcePageResult(finalUrl, title, pageType, visibleText, keywords, headings, true, null, null);
+                Map<String,String> links = new LinkedHashMap<>();
+                for (var link : document.select("a[href]")) {
+                    String target = urlNormalizer.normalize(link.absUrl("href"));
+                    if (target.length()<=1200 && com.edurite.ai.research.ResearchCatalogueService.safeUrl(target)!=null && !link.text().isBlank())
+                        links.putIfAbsent(target, truncate(link.text(), 200));
+                    if (links.size() >= 100) break;
+                }
+                return new UniversitySourcePageResult(finalUrl, title, pageType, visibleText, keywords, headings, true, null, null, Map.copyOf(links));
             } catch (IOException ex) {
                 lastError = ex;
                 log.warn("University fetch failed: url={}, attempt={}, retryable={}, message={}", candidateUrl, attempt, isRetryable(ex), ex.getMessage());

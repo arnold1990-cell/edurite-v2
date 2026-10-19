@@ -28,6 +28,7 @@ public class UniversitySourceRegistryService {
 
     @PostConstruct
     void logRegistryStatus() {
+        loadGovernmentSnapshot();
         int configured = configuredUniversityCount();
         int active = getActiveUniversities().size();
         long seedUrls = getActiveUniversities().stream()
@@ -44,6 +45,8 @@ public class UniversitySourceRegistryService {
     public List<UniversityRegistryProperties.UniversityRegistryEntry> getActiveUniversities() {
         return properties.getRegistry().stream()
                 .filter(UniversityRegistryProperties.UniversityRegistryEntry::isActive)
+                .filter(UniversityRegistryProperties.UniversityRegistryEntry::isCrawlingPermitted)
+                .filter(this::registrationAllowsResearch)
                 .sorted(Comparator.comparingInt(UniversityRegistryProperties.UniversityRegistryEntry::getCrawlPriority)
                         .thenComparing(UniversityRegistryProperties.UniversityRegistryEntry::getUniversityName))
                 .toList();
@@ -84,7 +87,8 @@ public class UniversitySourceRegistryService {
         if (host == null) {
             return false;
         }
-        return properties.getRegistry().stream().anyMatch(university -> matchesAllowedDomain(host, university));
+        if (Set.of("www.education.gov.za", "www.dhet.gov.za").contains(host)) return true;
+        return getActiveUniversities().stream().anyMatch(university -> matchesAllowedDomain(host, university));
     }
 
     public boolean isAllowedUrlForUniversity(String universityName, String url) {
@@ -92,8 +96,8 @@ public class UniversitySourceRegistryService {
         if (host == null) {
             return false;
         }
-        return properties.getRegistry().stream()
-                .filter(university -> university.getUniversityName().equalsIgnoreCase(universityName))
+        return getActiveUniversities().stream()
+                .filter(university -> canonical(university.getUniversityName()).equals(canonical(universityName)))
                 .anyMatch(university -> matchesAllowedDomain(host, university));
     }
 
@@ -110,6 +114,83 @@ public class UniversitySourceRegistryService {
 
     public int configuredUniversityCount() {
         return properties.getRegistry().size();
+    }
+
+    public List<UniversityRegistryProperties.UniversityRegistryEntry> getRegistryEntries() {
+        return List.copyOf(properties.getRegistry());
+    }
+
+    public void observeOfficialLinks(UniversityRegistryProperties.UniversityRegistryEntry entry, java.util.Map<String,String> links) {
+        var faculties=new LinkedHashSet<>(entry.getFacultyWebsites());
+        var catalogues=new LinkedHashSet<>(entry.getProgrammeCatalogueUrls());
+        links.forEach((url,label) -> {
+            if(!isAllowedUrlForUniversity(entry.getUniversityName(),url)) return;
+            String lower=label.toLowerCase(Locale.ROOT);
+            if(lower.contains("facult") && faculties.size()<50) faculties.add(url);
+            if(lower.matches(".*(programme|qualification|course finder|course catalogue).*" ) && catalogues.size()<100) catalogues.add(url);
+            if(entry.getAdmissionsWebsite()==null && lower.contains("admission")) entry.setAdmissionsWebsite(url);
+            if(entry.getApplicationPortalUrl()==null && lower.matches(".*(apply|application portal|online application).*")) entry.setApplicationPortalUrl(url);
+        });
+        entry.setFacultyWebsites(List.copyOf(faculties));entry.setProgrammeCatalogueUrls(List.copyOf(catalogues));
+    }
+
+    private boolean registrationAllowsResearch(UniversityRegistryProperties.UniversityRegistryEntry entry) {
+        return !"PRIVATE_HIGHER_EDUCATION".equals(entry.getInstitutionType())
+                || ("REGISTERED".equals(entry.getRegistrationStatus())
+                    && entry.getRegistrationNumber() != null
+                    && entry.getLastVerificationDate() != null
+                    && entry.getLastVerificationDate().isAfter(java.time.LocalDate.now().minusDays(90)));
+    }
+
+    /** Merge government evidence without discarding reviewed institution-specific seeds/restrictions. */
+    public synchronized void mergeGovernmentEntries(List<UniversityRegistryProperties.UniversityRegistryEntry> entries) {
+        var merged = new java.util.ArrayList<>(properties.getRegistry());
+        for (var incoming : entries) {
+            var existing = merged.stream().filter(e -> canonical(e.getUniversityName()).equals(canonical(incoming.getUniversityName()))
+                    || e.getBaseDomain().equalsIgnoreCase(incoming.getBaseDomain())).findFirst().orElse(null);
+            if (existing != null) {
+                var seeds = new LinkedHashSet<>(existing.getSeedUrls());
+                seeds.addAll(incoming.getSeedUrls());
+                incoming.setSeedUrls(List.copyOf(seeds));
+                var domains = new LinkedHashSet<>(existing.getAllowedDomains());
+                domains.add(existing.getBaseDomain());
+                domains.add(incoming.getBaseDomain());
+                incoming.setAllowedDomains(List.copyOf(domains));
+                incoming.setActive(existing.isActive());
+                incoming.setCrawlingPermitted(existing.isCrawlingPermitted());
+                incoming.setAdmissionsWebsite(existing.getAdmissionsWebsite());
+                incoming.setFacultyWebsites(existing.getFacultyWebsites());
+                incoming.setProgrammeCatalogueUrls(existing.getProgrammeCatalogueUrls());
+                incoming.setApplicationPortalUrl(existing.getApplicationPortalUrl());
+                merged.remove(existing);
+            }
+            merged.add(incoming);
+        }
+        properties.setRegistry(List.copyOf(merged));
+    }
+
+    private static String canonical(String name) {
+        return name.toLowerCase(Locale.ROOT).replaceAll("\\([^)]*\\)", "").replaceAll("[^a-z0-9]", "");
+    }
+
+    private void loadGovernmentSnapshot() {
+        try (var source = getClass().getResourceAsStream("/university-registry/sa-public-universities.json")) {
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+            List<UniversityRegistryProperties.UniversityRegistryEntry> entries = mapper.readValue(source,
+                    new com.fasterxml.jackson.core.type.TypeReference<>() {});
+            mergeGovernmentEntries(entries);
+            for (var entry : properties.getRegistry()) {
+                if (entry.getInstitutionType() == null && !entry.getBaseDomain().endsWith(".bw")
+                        && !entry.getBaseDomain().endsWith(".zw")
+                        && (entry.getCountry()==null || "South Africa".equals(entry.getCountry()))) {
+                    entry.setCountry("South Africa");
+                    entry.setInstitutionType("PRIVATE_HIGHER_EDUCATION");
+                    entry.setRegistrySourceUrl("https://www.dhet.gov.za/SitePages/DocRegisters.aspx");
+                }
+            }
+        } catch (Exception ex) {
+            throw new IllegalStateException("Official public university registry snapshot cannot be loaded", ex);
+        }
     }
 
     private String host(String url) {

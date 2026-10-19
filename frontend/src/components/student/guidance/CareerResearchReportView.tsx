@@ -7,6 +7,7 @@ import type {
 import { CareerComparison } from "./CareerComparison";
 import { CareerSaveButton } from "./CareerGuidanceDetails";
 import { careerPathLink, subjectResult } from "./careerGuidanceModel";
+import { UniversityCoveragePanel } from "./UniversityCoveragePanel";
 
 const href = (url?: string) => {
   try {
@@ -168,7 +169,7 @@ export function ResearchProgrammeCollection({
               <span
                 className={`cg-pill ${p.eligibility.status === "Meets published requirements" ? "cg-met" : p.eligibility.status === "Insufficient information" ? "" : "cg-gap"}`}
               >
-                {p.eligibility.status}
+                {p.eligibility.category || p.eligibility.status}
               </span>
               <div className="cg-inline-links">
                 {sourceLink(p.programmeUrl || p.sourceUrl, "Programme source")}
@@ -184,6 +185,16 @@ export function ResearchProgrammeCollection({
               {selected === p.id && (
                 <div className="cg-research-eligibility">
                   <h4>Checked academic requirements</h4>
+                  <p>Admission is never guaranteed.</p>
+                  {p.publishedEvidence && <dl>
+                    <dt>Published intake</dt><dd>{p.publishedEvidence.intakeYear || "Information not yet verified."}</dd>
+                    <dt>Applications open</dt><dd>{p.publishedEvidence.applicationOpening || "Information not yet verified."}</dd>
+                    <dt>Applications close</dt><dd>{p.publishedEvidence.applicationClosing || "Information not yet verified."}</dd>
+                    <dt>Published tuition fees</dt><dd>{p.publishedEvidence.tuitionFees || "Information not yet verified."}</dd>
+                    <dt>Published subject requirements</dt><dd>{Object.entries(p.publishedEvidence.subjectRequirements).map(([subject, threshold]) => `${subject}: ${threshold}`).join("; ") || "Information not yet verified."}</dd>
+                    <dt>Programme evidence</dt><dd>{sourceLink(p.publishedEvidence.evidenceUrl, "Official published evidence")}</dd>
+                    <dt>Official funding information</dt><dd>{Object.entries(p.publishedEvidence.fundingLinks).map(([url,label]) => <span key={url}>{sourceLink(url,label)}{" "}</span>)}</dd>
+                  </dl>}
                   {p.eligibility.subjects.length > 0 && (
                     <div className="cg-table-scroll">
                       <table>
@@ -301,6 +312,7 @@ export function CareerResearchReportView({
   );
   return (
     <div className="cg-generated" aria-label="Generated AI guidance">
+      <UniversityCoveragePanel />
       <section className="cg-panel ed-panel">
         <h2>Student Profile Summary</h2>
         <p>

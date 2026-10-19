@@ -184,10 +184,18 @@ public class UniversityInfoService {
     @Transactional
     public void ingestOfficialPages(Institution institution, List<UniversitySourcePageResult> pages) {
         var approved=pages.stream().filter(page->registryService.isAllowedUrlForUniversity(institution.getName(),page.sourceUrl())).toList();
+        var changed=approved.stream().filter(page -> page.success() && crawledUniversityPageRepository.findBySourceUrl(page.sourceUrl())
+                .map(previous -> !Objects.equals(previous.getContentHash(), contentHash(page)))
+                .orElse(true)).toList();
         persistCrawledPages(institution.getName(), approved);
         for (var page : approved) {
             logRetrieval(institution,page.sourceUrl(),page.success()?"SUCCESS":"FAILED",page.success()?"Official source retrieved; extracted fields retain source attribution.":safe(page.failureReason()),"TARGETED_RESEARCH");
-            if (page.success()) { extractProgrammes(institution,page); extractRequirements(institution,page); }
+            if (changed.contains(page)) { extractProgrammes(institution,page); extractRequirements(institution,page); }
+            else if(page.success()) {
+                // A conditional/unchanged successful check refreshes verification without re-extracting.
+                for(var row:programmeRepository.findByInstitutionIdAndActiveTrueOrderByFacultyAscNameAsc(institution.getId()))
+                    if(page.sourceUrl().equals(row.getSourceUrl())) { row.setLastVerifiedAt(OffsetDateTime.now());programmeRepository.save(row); }
+            }
         }
     }
 
@@ -217,10 +225,23 @@ public class UniversityInfoService {
             programme.setInstitution(institution);
             programme.setName(match);
             programme.setQualificationType(qualificationType(match));
-            boolean specific = page.pageType() == UniversityPageType.PROGRAMME_DETAIL && matches.size() == 1;
+            boolean specific = page.pageType() == UniversityPageType.PROGRAMME_DETAIL && matches.size() == 1
+                    && (page.headings().stream().anyMatch(h -> h.equalsIgnoreCase(match))
+                        || safe(page.pageTitle()).toLowerCase(Locale.ROOT).contains(match.toLowerCase(Locale.ROOT)));
+            if (programme.getId()==null && specific) {
+                var existing = programmeRepository.findByInstitutionIdAndNameIgnoreCaseAndActiveTrue(institution.getId(),match);
+                // Replace a broad listing observation with its detail page; preserve distinct campus/admission variants.
+                programme=existing.stream().filter(p -> p.getCampus()==null && !"SOURCE_CONFIRMED".equals(p.getRetrievalStatus()))
+                        .findFirst().orElse(programme);
+                programme.setInstitution(institution);programme.setName(match);programme.setQualificationType(qualificationType(match));
+            }
             programme.setFaculty(null); // A faculty mentioned elsewhere on a page is not programme evidence.
             programme.setDuration(specific ? inferDuration(page.cleanedText()) : null);
             programme.setStudyMode(specific ? inferStudyMode(page.cleanedText()) : null);
+            var evidence = new com.edurite.ai.research.PublishedProgrammeEvidenceExtractor().extract(page, specific);
+            programme.setPublishedEvidenceJson(evidence.toJson());
+            programme.setCampus(evidence.campus());
+            programme.setFaculty(evidence.faculty());
             programme.setProgrammeUrl(page.sourceUrl());
             programme.setSourceUrl(page.sourceUrl());
             programme.setSourceLabel(sourceLabel(page.pageType()));
@@ -263,6 +284,16 @@ public class UniversityInfoService {
         requirement.setApsMinimum(aps);
         requirement.setRequiredSubjects(String.join("|", subjects));
         requirement.setMinimumMarks("");
+        var linked=programmeRepository.findByInstitutionIdAndNameIgnoreCaseAndSourceUrl(institution.getId(),programmeName,page.sourceUrl()).orElse(null);
+        if(linked!=null && linked.getPublishedEvidenceJson()!=null) {
+            var evidence=com.edurite.ai.research.PublishedProgrammeEvidence.fromJson(linked.getPublishedEvidenceJson());
+            if(evidence!=null && evidence.programmeSpecific()) {
+                requirement.setProgramme(linked);requirement.setApsMinimum(evidence.minimumAps());
+                requirement.setRequiredSubjects(String.join("|",evidence.subjectRequirements().keySet()));
+                try { requirement.setMinimumMarks(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(evidence.subjectRequirements())); }
+                catch(com.fasterxml.jackson.core.JsonProcessingException ex) { throw new IllegalStateException(ex); }
+            }
+        }
         requirement.setNscRequirement(trimToLength(nscRequirement, 4000));
         requirement.setLanguageRequirement(trimToLength(languageRequirement, 4000));
         requirement.setFacultySpecificRequirement(trimToLength(facultySpecific, 4000));
@@ -292,6 +323,7 @@ public class UniversityInfoService {
             }
             page.setLastCrawledAt(now);
             if (pageResult.success()) {
+                page.setContentHash(contentHash(pageResult));
                 page.setCrawlStatus(CrawlStatus.SUCCESS);
                 page.setLastSuccessfulCrawledAt(now);
                 page.setFailureReason(null);
@@ -304,6 +336,13 @@ public class UniversityInfoService {
             }
             crawledUniversityPageRepository.save(page);
         }
+    }
+
+    private static String contentHash(UniversitySourcePageResult page) {
+        try {
+            String content=page.pageTitle()+"\n"+page.pageType()+"\n"+page.cleanedText()+"\n"+new java.util.TreeMap<>(page.officialLinks());
+            return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(content.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        } catch(java.security.NoSuchAlgorithmException ex) { throw new IllegalStateException(ex); }
     }
 
     private void logRetrieval(Institution institution, String sourceUrl, String status, String message, String retrievalType) {

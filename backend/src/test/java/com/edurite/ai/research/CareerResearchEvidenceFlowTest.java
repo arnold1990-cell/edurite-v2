@@ -151,7 +151,7 @@ class CareerResearchEvidenceFlowTest {
                         new ResearchNarrativeService(gemini, mapper),
                         funding,
                         pages,
-                        registry);
+                        registry, mock(StudentPreferenceRepository.class));
     }
 
     @Test

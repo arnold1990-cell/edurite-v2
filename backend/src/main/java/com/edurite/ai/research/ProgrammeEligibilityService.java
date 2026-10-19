@@ -20,6 +20,28 @@ public class ProgrammeEligibilityService {
     public static final String GAP = "Does not currently meet requirements";
     public static final String MEETS = "Meets published requirements";
 
+    public Eligibility assessPublished(com.edurite.institution.universityinfo.entity.UniversityProgramme row,
+            List<StudentSubjectAchievementDto> results, String country) {
+        var evidence=PublishedProgrammeEvidence.fromJson(row.getPublishedEvidenceJson());
+        if(evidence==null || !evidence.programmeSpecific()) return ResearchCatalogueService.unknown("Information not yet verified.");
+        var requirement=new CareerProgramRequirement();
+        requirement.setVerified(Set.of("VERIFIED","SOURCE_CONFIRMED").contains(Objects.toString(row.getRetrievalStatus(),"")));
+        requirement.setLastVerifiedAt(row.getLastVerifiedAt());requirement.setAdmissionYear(evidence.intakeYear());
+        requirement.setApsRequired(evidence.minimumAps());requirement.setApsRule(evidence.apsRule());
+        var thresholds=evidence.subjectRequirements();
+        requirement.setMathematicsRequirement(thresholds.get("Mathematics"));
+        requirement.setMathematicalLiteracyRequirement(thresholds.get("Mathematical Literacy"));
+        requirement.setEnglishRequirement(thresholds.get("English"));requirement.setAccountingRequirement(thresholds.get("Accounting"));
+        requirement.setPhysicalSciencesRequirement(thresholds.get("Physical Sciences"));requirement.setLifeSciencesRequirement(thresholds.get("Life Sciences"));
+        var checked=assess(requirement,results,country);
+        var unknown=new ArrayList<>(checked.uncheckedConditions()); unknown.addAll(evidence.limitations());
+        if(thresholds.keySet().stream().anyMatch(s -> !Set.of("Mathematics","Mathematical Literacy","English","Accounting","Physical Sciences","Life Sciences").contains(s)))
+            unknown.add("Additional compulsory subjects require review.");
+        // A partial extractor cannot certify that the complete published condition set was checked.
+        return new Eligibility(checked.gaps().isEmpty()?"Eligibility cannot be determined":"Does not meet published minimum requirements",
+                checked.studentAps(),checked.requiredAps(),checked.apsRule(),checked.subjects(),checked.gaps(),List.copyOf(unknown));
+    }
+
     public Eligibility assess(
             CareerProgramRequirement programme,
             List<StudentSubjectAchievementDto> results,

@@ -12,8 +12,15 @@ public record UniversitySourcePageResult(
         List<String> headings,
         boolean success,
         String failureReason,
-        UniversityCrawlFailureType failureType
+        UniversityCrawlFailureType failureType,
+        java.util.Map<String, String> officialLinks
 ) {
+
+    public UniversitySourcePageResult(String sourceUrl, String pageTitle, UniversityPageType pageType,
+            String cleanedText, Set<String> keywords, List<String> headings, boolean success,
+            String reason, UniversityCrawlFailureType failureType) {
+        this(sourceUrl, pageTitle, pageType, cleanedText, keywords, headings, success, reason, failureType, java.util.Map.of());
+    }
 
     public UniversitySourcePageResult(
             String sourceUrl,
